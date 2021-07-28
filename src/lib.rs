@@ -4,13 +4,30 @@ pub use cpu::Cpu;
 pub fn go() {
     let mut cpu = Cpu::new();
     cpu.set_disassemble(true);
-    let rom_file = "./resources/roms/invaders.h".to_string();
 
-    // TODO: This will eventually end up really loading the rom
-    match cpu.load_rom(rom_file.clone()) {
-        Ok(_) => println!("Loaded rom file: {}", rom_file),
-        Err(err) => {
-            panic!("Unable to load rom file: {}", err);
+    // The list of rom files to load for this particular collection/game
+    let rom_files: [String; 4] = [
+        String::from("./resources/roms/invaders.h"),
+        String::from("./resources/roms/invaders.g"),
+        String::from("./resources/roms/invaders.f"),
+        String::from("./resources/roms/invaders.e"),
+    ];
+    let mut dims: (usize, usize) = (0, 0);
+
+    for f in rom_files {
+        match cpu.load_rom(f.clone(), dims.1) {
+            Ok(i) => {
+                dims = i;
+            }
+            Err(err) => {
+                panic!("Unable to load rom file {}: {}", f, err);
+            }
         }
+        println!(
+            "Loaded rom file: {} start at: {:#06X} end at: {:#06X}",
+            f,
+            dims.0,
+            dims.1 - 1
+        );
     }
 }
