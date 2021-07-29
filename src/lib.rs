@@ -4,6 +4,7 @@ pub use cpu::Cpu;
 pub fn go() {
     let mut cpu = Cpu::new();
     cpu.set_disassemble(true);
+    cpu.set_nop(true);
 
     // The list of rom files to load for this particular collection/game
     let rom_files: [String; 4] = [
@@ -29,5 +30,11 @@ pub fn go() {
             dims.0,
             dims.1 - 1
         );
+    }
+
+    println!("Beginning cpu ticks.");
+
+    for _ in 0..0x10 {
+        cpu.tick();
     }
 }
