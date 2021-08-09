@@ -1,4 +1,5 @@
 mod cpu;
+mod disassembler;
 pub use cpu::Cpu;
 
 pub fn go() {
@@ -32,7 +33,9 @@ pub fn go() {
         );
     }
 
-    println!("Beginning cpu ticks.");
+    if cpu.disassemble {
+        println!("PC\tIns  S\tData(hi,lo)\tCommand");
+    }
 
     for _ in 0..0x10 {
         cpu.tick();

@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 
+use super::disassembler;
+
 // Memory related constants
 pub const RAM_SIZE: usize = 0xFFFF;
 pub const RAM_WORK_START: usize = 0x2000;
@@ -9,16 +11,11 @@ pub const RAM_MIRROR_START: usize = 0x4000;
 
 pub const OPCODE_SIZE: usize = 1;
 
-enum ProgramCounter {
-    Next,
-    Two,
-    Three,
-    Jump(usize),
-}
-
-pub struct Instr {
-    code: String,
-    size: ProgramCounter,
+pub enum ProgramCounter {
+    Next,        // The operation does not use any data
+    Two,         // The operation uses only 1 byte of data
+    Three,       // The operation uses the full 2 bytes of data
+    Jump(usize), // The operation jumps to a point in memory
 }
 
 pub struct Cpu {
@@ -27,6 +24,14 @@ pub struct Cpu {
 
     // Registers
     pub pc: usize, // Program Counter
+    pub sp: u16,   // Stack Pointer
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub h: u8,
+    pub l: u8,
 
     // A flag that indicates we wish to print human readable command references
     pub disassemble: bool,
@@ -45,6 +50,14 @@ impl Cpu {
         Cpu {
             memory: [0; RAM_SIZE],
             pc: 0x00,
+            sp: 0x00,
+            a: 0x00,
+            b: 0x00,
+            c: 0x00,
+            d: 0x00,
+            e: 0x00,
+            h: 0x00,
+            l: 0x00,
             disassemble: false,
             nop: false,
         }
@@ -111,38 +124,29 @@ impl Cpu {
         let x = opcode.1; // Potential data points for usage by an instruction
         let y = opcode.2; // Potential data points for usage by an instruction
 
+        // If needed/wanted, call off to the disassembler to print some pretty details
+        if self.disassemble {
+            disassembler::disassemble(self.pc, opcode, x, y);
+        }
+
+        // D8 = 8 bits (1st byte = y)
+        // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
             0x00 => self.op_00(),     // NOP
+            0x06 => self.op_06(x),    // MVI B, D8
+            0x11 => self.op_11(x, y), // LXI D,D16
+            0x21 => self.op_21(x, y), // LXI D,D16
+            0x31 => self.op_31(x, y), // LXI SP, D16
             0xC3 => self.op_c3(x, y), // JMP
             0xC5 => self.op_c5(),     // PUSH B
+            0xCD => self.op_cd(x, y), // CALL Addr
             0xD5 => self.op_d5(),     // PUSH D
             0xE5 => self.op_e5(),     // PUSH H
             0xF5 => self.op_f5(),     // PUSH PSW
             _ => self.op_unk(),       // UNK
         };
 
-        if self.disassemble {
-            match i.size {
-                ProgramCounter::Next => {
-                    println!("{:#06X}\t{:#06X}\t\t\tCode: {}", self.pc, opcode.0, i.code)
-                }
-                ProgramCounter::Two => {
-                    println!(
-                        "{:#06X}\t{:#06X}\t{:#04X}\t\tCode: {}",
-                        self.pc, opcode.0, x, i.code
-                    )
-                }
-                ProgramCounter::Three => {
-                    println!(
-                        "{:#06X}\t{:#06X}\t{:#04X},{:#04X}\tCode: {}",
-                        self.pc, opcode.0, x, y, i.code
-                    )
-                }
-                _ => println!("TBD"),
-            }
-        }
-
-        match i.size {
+        match i {
             ProgramCounter::Next => self.pc += OPCODE_SIZE,
             ProgramCounter::Two => self.pc += OPCODE_SIZE * 2,
             ProgramCounter::Three => self.pc += OPCODE_SIZE * 3,
@@ -150,52 +154,81 @@ impl Cpu {
         }
     }
 
-    pub fn op_00(&self) -> Instr {
-        Instr {
-            code: "NOP".to_string(),
-            size: ProgramCounter::Next,
-        }
+    pub fn op_unk(&self) -> ProgramCounter {
+        ProgramCounter::Next
     }
 
-    pub fn op_c3(&self, x: u8, y: u8) -> Instr {
-        Instr {
-            code: format!("JMP ${:02X}{:02X}", y, x),
-            size: ProgramCounter::Three,
-        }
+    pub fn op_00(&self) -> ProgramCounter {
+        ProgramCounter::Next
     }
 
-    pub fn op_c5(&self) -> Instr {
-        Instr {
-            code: format!("PUSH B"),
-            size: ProgramCounter::Next,
-        }
+    // B <- x
+    pub fn op_06(&mut self, x: u8) -> ProgramCounter {
+        self.b = x;
+        ProgramCounter::Two
     }
 
-    pub fn op_d5(&self) -> Instr {
-        Instr {
-            code: format!("PUSH D"),
-            size: ProgramCounter::Next,
-        }
+    // LXI D, D16
+    pub fn op_11(&mut self, x: u8, y: u8) -> ProgramCounter {
+        self.d = y;
+        self.e = x;
+        ProgramCounter::Three
     }
 
-    pub fn op_e5(&self) -> Instr {
-        Instr {
-            code: format!("PUSH H"),
-            size: ProgramCounter::Next,
-        }
+    //LXI H,D16
+    pub fn op_21(&mut self, x: u8, y: u8) -> ProgramCounter {
+        self.h = y;
+        self.l = x;
+        ProgramCounter::Three
     }
 
-    pub fn op_f5(&self) -> Instr {
-        Instr {
-            code: format!("PUSH PSW"),
-            size: ProgramCounter::Next,
-        }
+    // Load Stack Pointer with the value (y<<8|x)
+    // SP.hi <- byte 3, SP.lo <- byte 2
+    pub fn op_31(&mut self, x: u8, y: u8) -> ProgramCounter {
+        self.sp = u16::from(y) << 8 | u16::from(x);
+        ProgramCounter::Three
     }
 
-    pub fn op_unk(&self) -> Instr {
-        Instr {
-            code: "!UNK!".to_string(),
-            size: ProgramCounter::Next,
-        }
+    // Jump to a given location as provided by (y<<8 | x)
+    pub fn op_c3(&self, x: u8, y: u8) -> ProgramCounter {
+        let ys: u16 = u16::from(y) << 8;
+        let dest: u16 = ys | u16::from(x);
+        ProgramCounter::Jump(dest.into())
+    }
+
+    // (sp-2)<-C; (sp-1)<-B; sp <- sp - 2
+    pub fn op_c5(&mut self) -> ProgramCounter {
+        self.memory[usize::from(self.sp - 2)] = self.c;
+        self.memory[usize::from(self.sp - 1)] = self.b;
+        self.sp -= 2;
+        ProgramCounter::Next
+    }
+
+    // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP+2;PC=adr
+    pub fn op_cd(&mut self, x: u8, y: u8) -> ProgramCounter {
+        // Save away the current PC hi/lo into the stack
+        let pc_hi = self.pc >> 4;
+        let pc_lo = self.pc & 0x0F;
+        self.memory[usize::from(self.sp - 1)] = pc_hi as u8;
+        self.memory[usize::from(self.sp - 2)] = pc_lo as u8;
+        self.sp += 2;
+
+        // Tell the program counter where we want to go next
+        let ys: u16 = u16::from(y) << 8;
+        self.pc = usize::from(ys | u16::from(x));
+
+        ProgramCounter::Jump(self.pc)
+    }
+
+    pub fn op_d5(&self) -> ProgramCounter {
+        ProgramCounter::Next
+    }
+
+    pub fn op_e5(&self) -> ProgramCounter {
+        ProgramCounter::Next
+    }
+
+    pub fn op_f5(&self) -> ProgramCounter {
+        ProgramCounter::Next
     }
 }
