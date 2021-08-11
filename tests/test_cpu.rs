@@ -63,6 +63,17 @@ fn test_op_31() {
 }
 
 #[test]
+fn test_op_77() {
+    let mut cpu = Cpu::new();
+    cpu.h = 0x20; // H and L registers specify target location
+    cpu.l = 0x01; // in memory to load the value of register A
+    cpu.a = 0x45;
+    cpu.memory[0x2001] = 0; // Reset it.
+    cpu.run_opcode((0x77, 0x00, 0x00));
+    assert_eq!(cpu.memory[0x2001], 0x45);
+}
+
+#[test]
 fn test_op_c3() {
     let mut cpu = Cpu::new();
     cpu.run_opcode((0xC3, 0x01, 0x02));

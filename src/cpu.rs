@@ -63,6 +63,10 @@ impl Cpu {
         }
     }
 
+    pub fn get_registers(&self) -> (usize, u16, u8, u8) {
+        (self.pc, self.sp, self.h, self.l)
+    }
+
     pub fn set_disassemble(&mut self, d: bool) {
         self.disassemble = d;
     }
@@ -126,24 +130,26 @@ impl Cpu {
 
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.disassemble {
-            disassembler::disassemble(self.pc, opcode, x, y);
+            disassembler::disassemble(opcode, self.get_registers());
         }
 
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
-            0x00 => self.op_00(),     // NOP
-            0x06 => self.op_06(x),    // MVI B, D8
-            0x11 => self.op_11(x, y), // LXI D,D16
-            0x21 => self.op_21(x, y), // LXI D,D16
-            0x31 => self.op_31(x, y), // LXI SP, D16
-            0xC3 => self.op_c3(x, y), // JMP
-            0xC5 => self.op_c5(),     // PUSH B
-            0xCD => self.op_cd(x, y), // CALL Addr
-            0xD5 => self.op_d5(),     // PUSH D
-            0xE5 => self.op_e5(),     // PUSH H
-            0xF5 => self.op_f5(),     // PUSH PSW
-            _ => self.op_unk(),       // UNK
+            0x00 => self.op_00(),       // NOP
+            0x06 => self.op_06(x),      // MVI B, D8
+            0x11 => self.op_11(x, y),   // LXI D,D16
+            0x1A => self.op_1a(),       // LDAX D
+            0x21 => self.op_21(x, y),   // LXI D,D16
+            0x31 => self.op_31(x, y),   // LXI SP, D16
+            0x77 => self.op_77(),       // MOV M,A
+            0xC3 => self.op_c3(x, y),   // JMP
+            0xC5 => self.op_c5(),       // PUSH B
+            0xCD => self.op_cd(x, y),   // CALL Addr
+            0xD5 => self.op_d5(),       // PUSH D
+            0xE5 => self.op_e5(),       // PUSH H
+            0xF5 => self.op_f5(),       // PUSH PSW
+            _ => self.op_unk(opcode.0), // UNK
         };
 
         match i {
@@ -154,7 +160,8 @@ impl Cpu {
         }
     }
 
-    pub fn op_unk(&self) -> ProgramCounter {
+    pub fn op_unk(&self, o: u8) -> ProgramCounter {
+        println!("!!OPCODE: {:#04X} is unknown!! BITMASK: {:#010b}", o, o);
         ProgramCounter::Next
     }
 
@@ -175,6 +182,18 @@ impl Cpu {
         ProgramCounter::Three
     }
 
+    // LDAX DE
+    pub fn op_1a(&mut self) -> ProgramCounter {
+        let loc: u16 = u16::from(self.d) << 8 | u16::from(self.e);
+
+        self.a = match self.memory.get(loc as usize) {
+            Some(&v) => v,
+            None => 0,
+        };
+
+        ProgramCounter::Next
+    }
+
     //LXI H,D16
     pub fn op_21(&mut self, x: u8, y: u8) -> ProgramCounter {
         self.h = y;
@@ -187,6 +206,15 @@ impl Cpu {
     pub fn op_31(&mut self, x: u8, y: u8) -> ProgramCounter {
         self.sp = u16::from(y) << 8 | u16::from(x);
         ProgramCounter::Three
+    }
+
+    // MOV M,A
+    // Address specified by H and L registers.
+    // Load the value of A into this address in memory.
+    fn op_77(&mut self) -> ProgramCounter {
+        let loc: u16 = u16::from(self.h) << 8 | u16::from(self.l);
+        self.memory[usize::from(loc)] = self.a;
+        ProgramCounter::Next
     }
 
     // Jump to a given location as provided by (y<<8 | x)

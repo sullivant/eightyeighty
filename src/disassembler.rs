@@ -12,40 +12,52 @@ enum ProgramCounter {
 
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
-pub fn disassemble(pc: usize, opcode: (u8, u8, u8), x: u8, y: u8) {
+pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8)) {
+    let pc = regs.0;
+    let h = regs.2;
+    let l = regs.3;
+    let dl = opcode.1;
+    let dh = opcode.2;
     let i = match opcode.0 {
-        0x00 => op_00(),     // NOP
-        0x06 => op_06(),     // MVI B, D8
-        0x11 => op_11(),     // LXI D,D16
-        0x1A => op_1a(),     // LDAX D
-        0x21 => op_21(),     //	LXI H,D16
-        0x31 => op_31(),     // LXI SP, D16
-        0xC3 => op_c3(x, y), // JMP
-        0xC5 => op_c5(),     // PUSH B
-        0xCD => op_cd(x, y), // CALL Addr
-        0xD5 => op_d5(),     // PUSH D
-        0xE5 => op_e5(),     // PUSH H
-        0xF5 => op_f5(),     // PUSH PSW
-        _ => op_unk(),       // UNK
+        0x00 => op_00(),       // NOP
+        0x06 => op_06(),       // MVI B, D8
+        0x11 => op_11(),       // LXI D,D16
+        0x1A => op_1a(),       // LDAX D
+        0x21 => op_21(),       //	LXI H,D16
+        0x31 => op_31(),       // LXI SP, D16
+        0x77 => op_77(),       // MOV M,A
+        0xC3 => op_c3(dl, dh), // JMP
+        0xC5 => op_c5(),       // PUSH B
+        0xCD => op_cd(dl, dh), // CALL Addr
+        0xD5 => op_d5(),       // PUSH D
+        0xE5 => op_e5(),       // PUSH H
+        0xF5 => op_f5(),       // PUSH PSW
+        _ => op_unk(),         // UNK
     };
 
     match i.size {
         ProgramCounter::Next => {
-            println!("{:#06X}\t{:#04X} 1\t\t\t{}", pc, opcode.0, i.code)
+            println!(
+                "{:#06X}\t{:#04X} 1\t{:#04X},{:#04X}\t\t\t{}",
+                pc, opcode.0, l, h, i.code,
+            )
         }
         ProgramCounter::Two => {
-            println!("{:#06X}\t{:#04X} 2\t{:#04X}\t\t{}", pc, opcode.0, x, i.code)
+            println!(
+                "{:#06X}\t{:#04X} 2\t{:#04X},{:#04X}\t{:#04X}\t\t{}",
+                pc, opcode.0, l, h, dl, i.code
+            )
         }
         ProgramCounter::Three => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{}",
-                pc, opcode.0, x, y, i.code
+                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:#04X},{:#04X}\t{}",
+                pc, opcode.0, l, h, dl, dh, i.code
             )
         }
         ProgramCounter::Jump(j) => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\tJMP {:#06X}",
-                pc, opcode.0, x, y, j
+                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:#04X},{:#04X}\tJMP ${:#06X}",
+                pc, opcode.0, l, h, dl, dh, j
             )
         }
     }
@@ -76,7 +88,7 @@ fn op_11() -> Instr {
 // LDAX DE (A <- $DE)
 fn op_1a() -> Instr {
     Instr {
-        code: "LDAX D: A <- (DE)".to_string(),
+        code: "LDAX D, A".to_string(),
         size: ProgramCounter::Next,
     }
 }
@@ -93,6 +105,16 @@ fn op_31() -> Instr {
     Instr {
         code: "LXI SP, D16".to_string(),
         size: ProgramCounter::Three,
+    }
+}
+
+// MOV M,A
+// Address specified by H and L registers.
+// Load the value of A into this address in memory.
+fn op_77() -> Instr {
+    Instr {
+        code: "MOV M,A".to_string(),
+        size: ProgramCounter::Next,
     }
 }
 

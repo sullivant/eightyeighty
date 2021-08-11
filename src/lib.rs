@@ -34,7 +34,7 @@ pub fn go() {
     }
 
     if cpu.disassemble {
-        println!("PC\tIns  S\tData(hi,lo)\tCommand");
+        println!("PC\tIns  S\t[l,h]\t\tData(lo,hi)\tCommand");
     }
 
     for _ in 0..0x10 {
