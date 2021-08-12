@@ -141,6 +141,7 @@ impl Cpu {
             0x11 => self.op_11(x, y),   // LXI D,D16
             0x1A => self.op_1a(),       // LDAX D
             0x21 => self.op_21(x, y),   // LXI D,D16
+            0x23 => self.op_23(),       // INCX H
             0x31 => self.op_31(x, y),   // LXI SP, D16
             0x77 => self.op_77(),       // MOV M,A
             0xC3 => self.op_c3(x, y),   // JMP
@@ -194,11 +195,21 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    //LXI H,D16
+    // LXI H,D16
     pub fn op_21(&mut self, x: u8, y: u8) -> ProgramCounter {
         self.h = y;
         self.l = x;
         ProgramCounter::Three
+    }
+
+    // INCX H
+    pub fn op_23(&mut self) -> ProgramCounter {
+        let mut c: u16 = u16::from(self.h) << 8 | u16::from(self.l);
+        c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
+        self.h = (c >> 8) as u8;
+        self.l = (c & 0x0F) as u8;
+
+        ProgramCounter::Next
     }
 
     // Load Stack Pointer with the value (y<<8|x)
