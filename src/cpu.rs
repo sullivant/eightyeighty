@@ -137,12 +137,13 @@ impl Cpu {
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
             0x00 => self.op_00(),       // NOP
+            0x03 => self.op_03(),       // INX B
             0x06 => self.op_06(x),      // MVI B, D8
             0x11 => self.op_11(x, y),   // LXI D,D16
-            0x13 => self.op_13(),       // INCX D
+            0x13 => self.op_13(),       // INX D
             0x1A => self.op_1a(),       // LDAX D
             0x21 => self.op_21(x, y),   // LXI D,D16
-            0x23 => self.op_23(),       // INCX H
+            0x23 => self.op_23(),       // INX H
             0x31 => self.op_31(x, y),   // LXI SP, D16
             0x77 => self.op_77(),       // MOV M,A
             0xC3 => self.op_c3(x, y),   // JMP
@@ -171,6 +172,16 @@ impl Cpu {
         ProgramCounter::Next
     }
 
+    // INX B
+    pub fn op_03(&mut self) -> ProgramCounter {
+        let mut c: u16 = u16::from(self.b) << 8 | u16::from(self.c);
+        c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
+        self.b = (c >> 8) as u8;
+        self.c = (c & 0x0F) as u8;
+
+        ProgramCounter::Next
+    }
+
     // B <- x
     pub fn op_06(&mut self, x: u8) -> ProgramCounter {
         self.b = x;
@@ -184,7 +195,7 @@ impl Cpu {
         ProgramCounter::Three
     }
 
-    // INC D
+    // INX D
     pub fn op_13(&mut self) -> ProgramCounter {
         let mut c: u16 = u16::from(self.d) << 8 | u16::from(self.e);
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
@@ -213,7 +224,7 @@ impl Cpu {
         ProgramCounter::Three
     }
 
-    // INC H
+    // INX H
     pub fn op_23(&mut self) -> ProgramCounter {
         let mut c: u16 = u16::from(self.h) << 8 | u16::from(self.l);
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);

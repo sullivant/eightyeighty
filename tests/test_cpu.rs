@@ -20,6 +20,25 @@ fn test_nop() {
 }
 
 #[test]
+fn test_op_03() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.b = 0x18;
+    cpu.c = 0xff;
+    cpu.run_opcode((0x03, 0x00, 0x00));
+    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.b, 0x19);
+    assert_eq!(cpu.c, 0x00);
+
+    // try again with the overflow protection
+    cpu.b = 0xff;
+    cpu.c = 0xff;
+    cpu.run_opcode((0x03, 0x00, 0x00));
+    assert_eq!(cpu.b, 0x00);
+    assert_eq!(cpu.c, 0x00);
+}
+
+#[test]
 fn test_op_11() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
