@@ -21,6 +21,7 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8), flags: u8) 
     let i = match opcode.0 {
         0x00 => op_00(),       // NOP
         0x03 => op_03(),       // INX BC
+        0x05 => op_05(),       // DCR B
         0x06 => op_06(),       // MVI B, D8
         0x11 => op_11(),       // LXI D,D16
         0x13 => op_13(),       // INX DE
@@ -78,6 +79,14 @@ fn op_00() -> Instr {
 fn op_03() -> Instr {
     Instr {
         code: "INX BC".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+// DCR B
+fn op_05() -> Instr {
+    Instr {
+        code: "DCR B".to_string(),
         size: ProgramCounter::Next,
     }
 }

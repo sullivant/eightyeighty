@@ -10,11 +10,11 @@ pub const RAM_VIDEO_START: usize = 0x2400;
 pub const RAM_MIRROR_START: usize = 0x4000;
 
 // Flag bitmasks
-pub const FLAG_CARRY: u8 = 0b10000;
-pub const FLAG_ZERO: u8 = 0b01000;
-pub const FLAG_SIGN: u8 = 0b00100;
-pub const FLAG_PARITY: u8 = 0b00010;
-pub const FLAG_AUXCARRY: u8 = 0b00001;
+pub const FLAG_CARRY: u8 = 4;
+pub const FLAG_ZERO: u8 = 3;
+pub const FLAG_SIGN: u8 = 2;
+pub const FLAG_PARITY: u8 = 1;
+pub const FLAG_AUXCARRY: u8 = 0;
 
 pub const OPCODE_SIZE: usize = 1;
 
@@ -80,6 +80,20 @@ impl Cpu {
 
     pub fn get_flags(&self) -> u8 {
         self.flags
+    }
+
+    // Sets a flag using a bitwise OR operation
+    // Mask of 2 (00100) with a value of 1 = 00100
+    // if flags = 10010 new value will be 10110
+    pub fn set_flag(&mut self, mask: u8) {
+        self.flags |= 1 << mask;
+    }
+
+    // Resets a flag using bitwise AND operation
+    // Mask of 2 (00100) with a value of 0 = 11011
+    // if flags = 11111 new value will be 11011
+    pub fn reset_flag(&mut self, mask: u8) {
+        self.flags &= !(1 << mask);
     }
 
     pub fn set_disassemble(&mut self, d: bool) {

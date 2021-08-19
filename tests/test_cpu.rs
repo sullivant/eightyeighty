@@ -12,6 +12,32 @@ fn test_cpu_default() {
 }
 
 #[test]
+fn test_set_flag() {
+    let mut cpu = Cpu::new();
+    cpu.flags = 0b00000;
+    cpu.set_flag(1);
+    assert_eq!(cpu.flags, 0b00010);
+
+    // Test an already set flag
+    cpu.flags = 0b00100;
+    cpu.set_flag(2);
+    assert_eq!(cpu.flags, 0b00100);
+}
+
+#[test]
+fn test_reset_flag() {
+    let mut cpu = Cpu::new();
+    cpu.flags = 0b11111;
+    cpu.reset_flag(2);
+    assert_eq!(cpu.flags, 0b11011);
+
+    // Test an already reset flag
+    cpu.flags = 0b11011;
+    cpu.reset_flag(2);
+    assert_eq!(cpu.flags, 0b11011);
+}
+
+#[test]
 fn test_nop() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
@@ -72,7 +98,6 @@ fn test_op_13() {
 fn test_op_1a() {
     let mut cpu = Cpu::new();
     cpu.memory[0x1122] = 0x56;
-    let op = cpu.pc;
     cpu.d = 0x11;
     cpu.e = 0x22;
     cpu.a = 0x00;
