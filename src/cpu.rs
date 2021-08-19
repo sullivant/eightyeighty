@@ -9,6 +9,13 @@ pub const RAM_WORK_START: usize = 0x2000;
 pub const RAM_VIDEO_START: usize = 0x2400;
 pub const RAM_MIRROR_START: usize = 0x4000;
 
+// Flag bitmasks
+pub const FLAG_CARRY: u8 = 0b10000;
+pub const FLAG_ZERO: u8 = 0b01000;
+pub const FLAG_SIGN: u8 = 0b00100;
+pub const FLAG_PARITY: u8 = 0b00010;
+pub const FLAG_AUXCARRY: u8 = 0b00001;
+
 pub const OPCODE_SIZE: usize = 1;
 
 pub enum ProgramCounter {
@@ -32,6 +39,9 @@ pub struct Cpu {
     pub e: u8,
     pub h: u8,
     pub l: u8,
+
+    // Flags Z,S,P,AC
+    pub flags: u8,
 
     // A flag that indicates we wish to print human readable command references
     pub disassemble: bool,
@@ -58,6 +68,7 @@ impl Cpu {
             e: 0x00,
             h: 0x00,
             l: 0x00,
+            flags: 0x00, // 0,0,0,0,0
             disassemble: false,
             nop: false,
         }
@@ -65,6 +76,10 @@ impl Cpu {
 
     pub fn get_registers(&self) -> (usize, u16, u8, u8) {
         (self.pc, self.sp, self.h, self.l)
+    }
+
+    pub fn get_flags(&self) -> u8 {
+        self.flags
     }
 
     pub fn set_disassemble(&mut self, d: bool) {
@@ -130,7 +145,7 @@ impl Cpu {
 
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.disassemble {
-            disassembler::disassemble(opcode, self.get_registers());
+            disassembler::disassemble(opcode, self.get_registers(), self.get_flags());
         }
 
         // D8 = 8 bits (1st byte = y)
@@ -145,6 +160,7 @@ impl Cpu {
             0x21 => self.op_21(x, y),   // LXI D,D16
             0x23 => self.op_23(),       // INX H
             0x31 => self.op_31(x, y),   // LXI SP, D16
+            0x33 => self.op_33(),       // INX SP
             0x77 => self.op_77(),       // MOV M,A
             0xC3 => self.op_c3(x, y),   // JMP
             0xC5 => self.op_c5(),       // PUSH B
@@ -239,6 +255,13 @@ impl Cpu {
     pub fn op_31(&mut self, x: u8, y: u8) -> ProgramCounter {
         self.sp = u16::from(y) << 8 | u16::from(x);
         ProgramCounter::Three
+    }
+
+    // INX SP
+    pub fn op_33(&mut self) -> ProgramCounter {
+        self.sp = self.sp.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
+
+        ProgramCounter::Next
     }
 
     // MOV M,A

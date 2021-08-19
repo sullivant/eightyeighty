@@ -120,6 +120,21 @@ fn test_op_31() {
 }
 
 #[test]
+fn test_op_33() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.sp = 0x0018;
+    cpu.run_opcode((0x33, 0x00, 0x00));
+    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.sp, 0x19);
+
+    // try again with the overflow protection
+    cpu.sp = 0xffff;
+    cpu.run_opcode((0x33, 0x00, 0x00));
+    assert_eq!(cpu.sp, 0x0000);
+}
+
+#[test]
 fn test_op_77() {
     let mut cpu = Cpu::new();
     cpu.h = 0x20; // H and L registers specify target location

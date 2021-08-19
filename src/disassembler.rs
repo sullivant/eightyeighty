@@ -12,7 +12,7 @@ enum ProgramCounter {
 
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
-pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8)) {
+pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8), flags: u8) {
     let pc = regs.0;
     let h = regs.2;
     let l = regs.3;
@@ -28,6 +28,7 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8)) {
         0x21 => op_21(),       //	LXI H,D16
         0x23 => op_23(),       // INX HL
         0x31 => op_31(),       // LXI SP, D16
+        0x33 => op_33(),       // INX SP
         0x77 => op_77(),       // MOV M,A
         0xC3 => op_c3(dl, dh), // JMP
         0xC5 => op_c5(),       // PUSH B
@@ -41,26 +42,26 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8)) {
     match i.size {
         ProgramCounter::Next => {
             println!(
-                "{:#06X}\t{:#04X} 1\t{:#04X},{:#04X}\t\t\t{}",
-                pc, opcode.0, l, h, i.code,
+                "{:#06X}\t{:#04X} 1\t{:#04X},{:#04X}\t{:05b}\t\t\t{}",
+                pc, opcode.0, l, h, flags, i.code,
             )
         }
         ProgramCounter::Two => {
             println!(
-                "{:#06X}\t{:#04X} 2\t{:#04X},{:#04X}\t{:#04X}\t\t{}",
-                pc, opcode.0, l, h, dl, i.code
+                "{:#06X}\t{:#04X} 2\t{:#04X},{:#04X}\t{:05b}\t{:#04X}\t\t{}",
+                pc, opcode.0, l, h, flags, dl, i.code
             )
         }
         ProgramCounter::Three => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:#04X},{:#04X}\t{}",
-                pc, opcode.0, l, h, dl, dh, i.code
+                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{}",
+                pc, opcode.0, l, h, flags, dl, dh, i.code
             )
         }
         ProgramCounter::Jump(j) => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:#04X},{:#04X}\tJMP ${:#06X}",
-                pc, opcode.0, l, h, dl, dh, j
+                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\tJMP ${:#06X}",
+                pc, opcode.0, l, h, flags, dl, dh, j
             )
         }
     }
@@ -132,6 +133,14 @@ fn op_31() -> Instr {
     Instr {
         code: "LXI SP, D16".to_string(),
         size: ProgramCounter::Three,
+    }
+}
+
+// INX SP
+fn op_33() -> Instr {
+    Instr {
+        code: "INX SP".to_string(),
+        size: ProgramCounter::Next,
     }
 }
 
