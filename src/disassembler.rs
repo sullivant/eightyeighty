@@ -22,9 +22,10 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8)) {
         0x00 => op_00(),       // NOP
         0x06 => op_06(),       // MVI B, D8
         0x11 => op_11(),       // LXI D,D16
+        0x13 => op_13(),       // INX DE
         0x1A => op_1a(),       // LDAX D
         0x21 => op_21(),       //	LXI H,D16
-        0x23 => op_23(),       // INCX H
+        0x23 => op_23(),       // INX H
         0x31 => op_31(),       // LXI SP, D16
         0x77 => op_77(),       // MOV M,A
         0xC3 => op_c3(dl, dh), // JMP
@@ -86,9 +87,10 @@ fn op_11() -> Instr {
     }
 }
 
+// INX DE
 fn op_13() -> Instr {
     Instr {
-        code: "".to_string(),
+        code: "INX DE".to_string(),
         size: ProgramCounter::Next,
     }
 }

@@ -139,6 +139,7 @@ impl Cpu {
             0x00 => self.op_00(),       // NOP
             0x06 => self.op_06(x),      // MVI B, D8
             0x11 => self.op_11(x, y),   // LXI D,D16
+            0x13 => self.op_13(),       // INCX D
             0x1A => self.op_1a(),       // LDAX D
             0x21 => self.op_21(x, y),   // LXI D,D16
             0x23 => self.op_23(),       // INCX H
@@ -183,6 +184,16 @@ impl Cpu {
         ProgramCounter::Three
     }
 
+    // INC D
+    pub fn op_13(&mut self) -> ProgramCounter {
+        let mut c: u16 = u16::from(self.d) << 8 | u16::from(self.e);
+        c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
+        self.d = (c >> 8) as u8;
+        self.e = (c & 0x0F) as u8;
+
+        ProgramCounter::Next
+    }
+
     // LDAX DE
     pub fn op_1a(&mut self) -> ProgramCounter {
         let loc: u16 = u16::from(self.d) << 8 | u16::from(self.e);
@@ -202,7 +213,7 @@ impl Cpu {
         ProgramCounter::Three
     }
 
-    // INCX H
+    // INC H
     pub fn op_23(&mut self) -> ProgramCounter {
         let mut c: u16 = u16::from(self.h) << 8 | u16::from(self.l);
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);

@@ -30,6 +30,25 @@ fn test_op_11() {
 }
 
 #[test]
+fn test_op_13() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.d = 0x18;
+    cpu.e = 0xff;
+    cpu.run_opcode((0x13, 0x00, 0x00));
+    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.d, 0x19);
+    assert_eq!(cpu.e, 0x00);
+
+    // try again with the overflow protection
+    cpu.d = 0xff;
+    cpu.e = 0xff;
+    cpu.run_opcode((0x13, 0x00, 0x00));
+    assert_eq!(cpu.d, 0x00);
+    assert_eq!(cpu.e, 0x00);
+}
+
+#[test]
 // A gets memory value at memory[DE]
 fn test_op_1a() {
     let mut cpu = Cpu::new();
@@ -57,15 +76,15 @@ fn test_op_23() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
     cpu.h = 0x18;
-    cpu.l = 0xFF;
+    cpu.l = 0xff;
     cpu.run_opcode((0x23, 0x00, 0x00));
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
     assert_eq!(cpu.h, 0x19);
     assert_eq!(cpu.l, 0x00);
 
-    // Try again with the overflow protection
-    cpu.h = 0xFF;
-    cpu.l = 0xFF;
+    // try again with the overflow protection
+    cpu.h = 0xff;
+    cpu.l = 0xff;
     cpu.run_opcode((0x23, 0x00, 0x00));
     assert_eq!(cpu.h, 0x00);
     assert_eq!(cpu.l, 0x00);
