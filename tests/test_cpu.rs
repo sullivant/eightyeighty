@@ -2,6 +2,11 @@ extern crate lib;
 use lib::Cpu;
 
 pub const OPCODE_SIZE: usize = 1; // TODO: This needs to be in super/lib/cpu
+pub const FLAG_CARRY: u8 = 0b0001_0000; //4
+pub const FLAG_ZERO: u8 = 0b0000_1000; //3
+pub const FLAG_SIGN: u8 = 0b0000_0100; //2
+pub const FLAG_PARITY: u8 = 0b0000_0010; //1
+pub const FLAG_AUXCARRY: u8 = 0b0000_0000; //0
 
 #[test]
 fn test_cpu_default() {
@@ -14,27 +19,83 @@ fn test_cpu_default() {
 #[test]
 fn test_set_flag() {
     let mut cpu = Cpu::new();
-    cpu.flags = 0b00000;
-    cpu.set_flag(1);
-    assert_eq!(cpu.flags, 0b00010);
+    cpu.flags = 0b0;
+    cpu.set_flag(FLAG_PARITY);
+    assert_eq!(cpu.flags, 0b0010);
 
     // Test an already set flag
-    cpu.flags = 0b00100;
-    cpu.set_flag(2);
-    assert_eq!(cpu.flags, 0b00100);
+    cpu.set_flag(FLAG_PARITY);
+    assert_eq!(cpu.flags, 0b0010);
+    cpu.flags = 0b0;
+
+    // Test setting multiple at once
+    cpu.set_flag(FLAG_PARITY | FLAG_CARRY);
+    assert_eq!(cpu.flags, 0b0001_0010);
 }
 
 #[test]
 fn test_reset_flag() {
     let mut cpu = Cpu::new();
     cpu.flags = 0b11111;
-    cpu.reset_flag(2);
+    cpu.reset_flag(FLAG_SIGN);
     assert_eq!(cpu.flags, 0b11011);
 
     // Test an already reset flag
     cpu.flags = 0b11011;
-    cpu.reset_flag(2);
+    cpu.reset_flag(FLAG_SIGN);
     assert_eq!(cpu.flags, 0b11011);
+
+    cpu.flags = 0b1111_1111;
+    cpu.reset_flag(FLAG_SIGN | FLAG_ZERO);
+    assert_eq!(cpu.flags, 0b1111_0011);
+}
+
+#[test]
+fn test_get_parity() {
+    let mut cpu = Cpu::new();
+    let mut n: u16 = 0b1100;
+    assert_eq!(cpu.get_parity(n), true); // Even 1s, = parity 1
+    n = 0b1110;
+    assert_eq!(cpu.get_parity(n), false); // Odd 1s, = parity 0
+    n = 0b11000011;
+    assert_eq!(cpu.get_parity(n), true);
+
+    // Ensure zero is true
+    assert_eq!(cpu.get_parity(0b0000), true);
+}
+
+#[test]
+fn test_get_sign() {
+    let mut cpu = Cpu::new();
+    assert_eq!(cpu.get_sign(0b11110000), true);
+    assert_eq!(cpu.get_sign(0b01110000), false);
+    assert_eq!(cpu.get_sign(0b1000u8), false);
+    assert_eq!(cpu.get_sign(0b1000 << 4), true);
+}
+
+#[test]
+fn test_test_flag() {
+    let mut cpu = Cpu::new();
+    cpu.set_flag(FLAG_ZERO); // Flag zero
+    cpu.set_flag(FLAG_PARITY); // Zero and Parity
+    assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(FLAG_ZERO), true);
+}
+
+#[test]
+fn test_update_flags() {
+    let mut cpu = Cpu::new();
+    // Should update: PARITY (TRUE) SIGN(FALSE) ZERO (TRUE)
+    cpu.update_flags(0b0000);
+    assert_eq!(cpu.test_flag(FLAG_SIGN), false);
+
+    cpu.flags = 0;
+
+    // Should update: PARITY (TRUE) SIGN(TRUE) and ZERO (FALSE)
+    cpu.update_flags(0b10001000);
+    assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(FLAG_SIGN), true);
+    assert_eq!(cpu.test_flag(FLAG_ZERO), false);
 }
 
 #[test]
@@ -62,6 +123,23 @@ fn test_op_03() {
     cpu.run_opcode((0x03, 0x00, 0x00));
     assert_eq!(cpu.b, 0x00);
     assert_eq!(cpu.c, 0x00);
+}
+
+#[test]
+fn test_op_05() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    // A simple decrement
+    cpu.b = 0x02;
+    cpu.run_opcode((0x05, 0x00, 0x00));
+    assert_eq!(cpu.b, 0x01);
+    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+
+    // A wrapping decrement
+    cpu.b = 0x00;
+    cpu.run_opcode((0x05, 0x00, 0x00));
+    assert_eq!(cpu.b, 0xFF);
 }
 
 #[test]

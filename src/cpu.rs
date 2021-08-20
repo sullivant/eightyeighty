@@ -3,18 +3,17 @@ use std::io::prelude::*;
 
 use super::disassembler;
 
-// Memory related constants
 pub const RAM_SIZE: usize = 0xFFFF;
 pub const RAM_WORK_START: usize = 0x2000;
 pub const RAM_VIDEO_START: usize = 0x2400;
 pub const RAM_MIRROR_START: usize = 0x4000;
 
 // Flag bitmasks
-pub const FLAG_CARRY: u8 = 4;
-pub const FLAG_ZERO: u8 = 3;
-pub const FLAG_SIGN: u8 = 2;
-pub const FLAG_PARITY: u8 = 1;
-pub const FLAG_AUXCARRY: u8 = 0;
+pub const FLAG_CARRY: u8 = 0b0001_0000; //4
+pub const FLAG_ZERO: u8 = 0b0000_1000; //3
+pub const FLAG_SIGN: u8 = 0b0000_0100; //2
+pub const FLAG_PARITY: u8 = 0b0000_0010; //1
+pub const FLAG_AUXCARRY: u8 = 0b0000_0000; //0
 
 pub const OPCODE_SIZE: usize = 1;
 
@@ -74,26 +73,63 @@ impl Cpu {
         }
     }
 
-    pub fn get_registers(&self) -> (usize, u16, u8, u8) {
-        (self.pc, self.sp, self.h, self.l)
+    pub fn get_registers(&self) -> (usize, u16, u8, u8, u8) {
+        (self.pc, self.sp, self.h, self.l, self.b)
     }
 
+    // Returns the current flag values
     pub fn get_flags(&self) -> u8 {
         self.flags
+    }
+
+    // Returns true if a flag is set
+    pub fn test_flag(&mut self, mask: u8) -> bool {
+        self.flags & mask != 0
     }
 
     // Sets a flag using a bitwise OR operation
     // Mask of 2 (00100) with a value of 1 = 00100
     // if flags = 10010 new value will be 10110
     pub fn set_flag(&mut self, mask: u8) {
-        self.flags |= 1 << mask;
+        self.flags |= mask;
     }
 
     // Resets a flag using bitwise AND operation
     // Mask of 2 (00100) with a value of 0 = 11011
     // if flags = 11111 new value will be 11011
     pub fn reset_flag(&mut self, mask: u8) {
-        self.flags &= !(1 << mask);
+        self.flags &= !mask;
+    }
+
+    // Computes and sets the mask of flags for a supplied value
+    // sets flags: Zero, Sign, Parity
+    // Carry and Auxillary Carry are computed ad-hoc
+    pub fn update_flags(&mut self, val: u8) {
+        match val == 0 {
+            true => self.set_flag(FLAG_ZERO),
+            false => self.reset_flag(FLAG_ZERO),
+        };
+
+        match self.get_sign(val) {
+            true => self.set_flag(FLAG_SIGN),
+            false => self.reset_flag(FLAG_SIGN),
+        };
+
+        match self.get_parity(val.into()) {
+            true => self.set_flag(FLAG_PARITY),
+            false => self.reset_flag(FLAG_PARITY),
+        };
+    }
+
+    // If number of ones in a number's binary representation is even,
+    // parity flag is TRUE (1) else it is FALSE (0)
+    pub fn get_parity(&mut self, v: u16) -> bool {
+        v.count_ones() % 2 == 0
+    }
+
+    // Returns true if MSB = 1
+    pub fn get_sign(&mut self, x: u8) -> bool {
+        (0b10000000 & x) != 0
     }
 
     pub fn set_disassemble(&mut self, d: bool) {
@@ -123,9 +159,9 @@ impl Cpu {
 
     // Gathers a word from memory based on program counter location,
     // then passes it along to the run_opcode() function
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> Result<(), String> {
         let opcode = self.read_opcode();
-        self.run_opcode(opcode);
+        self.run_opcode(opcode)
     }
 
     // Reads an instruction at ProgramCounter
@@ -153,7 +189,8 @@ impl Cpu {
     //  Instruction (1 byte)
     //  Data (1 or 2 bytes) depending on opcode.  Little endian.
     //
-    pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) {
+    // It will also return ERROR if the opcode was not recognized
+    pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
         let x = opcode.1; // Potential data points for usage by an instruction
         let y = opcode.2; // Potential data points for usage by an instruction
 
@@ -165,24 +202,30 @@ impl Cpu {
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
-            0x00 => self.op_00(),       // NOP
-            0x03 => self.op_03(),       // INX B
-            0x06 => self.op_06(x),      // MVI B, D8
-            0x11 => self.op_11(x, y),   // LXI D,D16
-            0x13 => self.op_13(),       // INX D
-            0x1A => self.op_1a(),       // LDAX D
-            0x21 => self.op_21(x, y),   // LXI D,D16
-            0x23 => self.op_23(),       // INX H
-            0x31 => self.op_31(x, y),   // LXI SP, D16
-            0x33 => self.op_33(),       // INX SP
-            0x77 => self.op_77(),       // MOV M,A
-            0xC3 => self.op_c3(x, y),   // JMP
-            0xC5 => self.op_c5(),       // PUSH B
-            0xCD => self.op_cd(x, y),   // CALL Addr
-            0xD5 => self.op_d5(),       // PUSH D
-            0xE5 => self.op_e5(),       // PUSH H
-            0xF5 => self.op_f5(),       // PUSH PSW
-            _ => self.op_unk(opcode.0), // UNK
+            0x00 => self.op_00(),     // NOP
+            0x03 => self.op_03(),     // INX B
+            0x05 => self.op_05(),     // DCR B
+            0x06 => self.op_06(x),    // MVI B, D8
+            0x11 => self.op_11(x, y), // LXI D,D16
+            0x13 => self.op_13(),     // INX D
+            0x1A => self.op_1a(),     // LDAX D
+            0x21 => self.op_21(x, y), // LXI D,D16
+            0x23 => self.op_23(),     // INX H
+            0x31 => self.op_31(x, y), // LXI SP, D16
+            0x33 => self.op_33(),     // INX SP
+            0x77 => self.op_77(),     // MOV M,A
+            0xC3 => self.op_c3(x, y), // JMP
+            0xC5 => self.op_c5(),     // PUSH B
+            0xCD => self.op_cd(x, y), // CALL Addr
+            0xD5 => self.op_d5(),     // PUSH D
+            0xE5 => self.op_e5(),     // PUSH H
+            0xF5 => self.op_f5(),     // PUSH PSW
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown!!",
+                    opcode.0, opcode.0
+                ))
+            }
         };
 
         match i {
@@ -191,11 +234,8 @@ impl Cpu {
             ProgramCounter::Three => self.pc += OPCODE_SIZE * 3,
             ProgramCounter::Jump(d) => self.pc = d,
         }
-    }
 
-    pub fn op_unk(&self, o: u8) -> ProgramCounter {
-        println!("!!OPCODE: {:#04X} is unknown!! BITMASK: {:#010b}", o, o);
-        ProgramCounter::Next
+        Ok(())
     }
 
     pub fn op_00(&self) -> ProgramCounter {
@@ -208,6 +248,20 @@ impl Cpu {
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
         self.b = (c >> 8) as u8;
         self.c = (c & 0x0F) as u8;
+
+        ProgramCounter::Next
+    }
+
+    // DCR B
+    // Flags affected: Z,S,P,AC
+    pub fn op_05(&mut self) -> ProgramCounter {
+        let new_val = self.b.wrapping_sub(1);
+
+        if (1 & 0x0F) > (self.b & 0x0F) {
+            self.set_flag(FLAG_AUXCARRY);
+        }
+
+        self.b = new_val;
 
         ProgramCounter::Next
     }

@@ -34,10 +34,15 @@ pub fn go() {
     }
 
     if cpu.disassemble {
-        println!("PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tCommand");
+        println!("PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tB\tCommand");
     }
 
-    for _ in 0..0x10 {
-        cpu.tick();
+    for _ in 0..0x20 {
+        match cpu.tick() {
+            Ok(_) => {}
+            Err(err) => {
+                panic!("Unable to tick: {}", err);
+            }
+        }
     }
 }

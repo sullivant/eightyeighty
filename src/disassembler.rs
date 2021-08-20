@@ -12,10 +12,12 @@ enum ProgramCounter {
 
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
-pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8), flags: u8) {
+pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8, u8), flags: u8) {
     let pc = regs.0;
+    let sp = regs.1;
     let h = regs.2;
     let l = regs.3;
+    let b = regs.4;
     let dl = opcode.1;
     let dh = opcode.2;
     let i = match opcode.0 {
@@ -41,28 +43,16 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8), flags: u8) 
     };
 
     match i.size {
-        ProgramCounter::Next => {
-            println!(
-                "{:#06X}\t{:#04X} 1\t{:#04X},{:#04X}\t{:05b}\t\t\t{}",
-                pc, opcode.0, l, h, flags, i.code,
-            )
-        }
-        ProgramCounter::Two => {
-            println!(
-                "{:#06X}\t{:#04X} 2\t{:#04X},{:#04X}\t{:05b}\t{:#04X}\t\t{}",
-                pc, opcode.0, l, h, flags, dl, i.code
-            )
-        }
-        ProgramCounter::Three => {
-            println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{}",
-                pc, opcode.0, l, h, flags, dl, dh, i.code
-            )
-        }
         ProgramCounter::Jump(j) => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\tJMP ${:#06X}",
-                pc, opcode.0, l, h, flags, dl, dh, j
+                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\tJMP ${:#06X}",
+                pc, opcode.0, l, h, flags, dl, dh,b, j
+            )
+        }
+        _ => {
+            println!(
+                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
+                pc, opcode.0, l, h, flags, dl, dh, b, i.code
             )
         }
     }
