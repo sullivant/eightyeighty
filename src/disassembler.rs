@@ -10,11 +10,20 @@ enum ProgramCounter {
     Jump(usize), // The operation jumps to a point in memory
 }
 
+pub fn print_header() {
+    println!("CYCLE:PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tB\tCommand");
+}
+
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
-pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8, u8), flags: u8) {
+pub fn disassemble(
+    opcode: (u8, u8, u8),
+    regs: (usize, u16, u8, u8, u8),
+    flags: u8,
+    cycle_count: usize,
+) {
     let pc = regs.0;
-    let sp = regs.1;
+    let _sp = regs.1;
     let h = regs.2;
     let l = regs.3;
     let b = regs.4;
@@ -33,11 +42,13 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8, u8), flags: 
         0x31 => op_31(),       // LXI SP, D16
         0x33 => op_33(),       // INX SP
         0x77 => op_77(),       // MOV M,A
+        0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
         0xC5 => op_c5(),       // PUSH B
         0xCD => op_cd(dl, dh), // CALL Addr
         0xD5 => op_d5(),       // PUSH D
         0xE5 => op_e5(),       // PUSH H
+        0xF4 => op_f4(dl, dh), // CALL if Plus
         0xF5 => op_f5(),       // PUSH PSW
         _ => op_unk(),         // UNK
     };
@@ -45,14 +56,14 @@ pub fn disassemble(opcode: (u8, u8, u8), regs: (usize, u16, u8, u8, u8), flags: 
     match i.size {
         ProgramCounter::Jump(j) => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\tJMP ${:#06X}",
-                pc, opcode.0, l, h, flags, dl, dh,b, j
+                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}->JMP ${:#06X}",
+                cycle_count, pc, opcode.0, l, h, flags, dl, dh,b, i.code, j
             )
         }
         _ => {
             println!(
-                "{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
-                pc, opcode.0, l, h, flags, dl, dh, b, i.code
+                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
+                cycle_count, pc, opcode.0, l, h, flags, dl, dh, b, i.code
             )
         }
     }
@@ -153,6 +164,16 @@ fn op_77() -> Instr {
     }
 }
 
+// JNZ adr
+fn op_c2(x: u8, y: u8) -> Instr {
+    let ys: u16 = u16::from(y) << 8;
+    let dest: u16 = ys | u16::from(x);
+    Instr {
+        code: format!("JNZ {:#06X}", dest),
+        size: ProgramCounter::Jump(dest.into()),
+    }
+}
+
 fn op_c3(x: u8, y: u8) -> Instr {
     let ys: u16 = u16::from(y) << 8;
     let dest: u16 = ys | u16::from(x);
@@ -191,6 +212,16 @@ fn op_e5() -> Instr {
     Instr {
         code: "PUSH H".to_string(),
         size: ProgramCounter::Next,
+    }
+}
+
+fn op_f4(x: u8, y: u8) -> Instr {
+    let ys: u16 = u16::from(y) << 8;
+    let adr = usize::from(ys | u16::from(x));
+
+    Instr {
+        code: format!("CP {:#06X}", adr),
+        size: ProgramCounter::Three,
     }
 }
 

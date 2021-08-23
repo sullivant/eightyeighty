@@ -111,8 +111,8 @@ impl Cpu {
         };
 
         match self.get_sign(val) {
-            true => self.set_flag(FLAG_SIGN),
-            false => self.reset_flag(FLAG_SIGN),
+            true => self.set_flag(FLAG_SIGN),    // A negative number
+            false => self.reset_flag(FLAG_SIGN), // A positive number
         };
 
         match self.get_parity(val.into()) {
@@ -159,8 +159,17 @@ impl Cpu {
 
     // Gathers a word from memory based on program counter location,
     // then passes it along to the run_opcode() function
-    pub fn tick(&mut self) -> Result<(), String> {
+    pub fn tick(&mut self, cycle_count: usize) -> Result<(), String> {
         let opcode = self.read_opcode();
+
+        // If needed/wanted, call off to the disassembler to print some pretty details
+        if self.disassemble {
+            if cycle_count % 50 == 0 {
+                disassembler::print_header();
+            }
+            disassembler::disassemble(opcode, self.get_registers(), self.get_flags(), cycle_count);
+        }
+
         self.run_opcode(opcode)
     }
 
@@ -194,11 +203,6 @@ impl Cpu {
         let x = opcode.1; // Potential data points for usage by an instruction
         let y = opcode.2; // Potential data points for usage by an instruction
 
-        // If needed/wanted, call off to the disassembler to print some pretty details
-        if self.disassemble {
-            disassembler::disassemble(opcode, self.get_registers(), self.get_flags());
-        }
-
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
@@ -214,12 +218,11 @@ impl Cpu {
             0x31 => self.op_31(x, y), // LXI SP, D16
             0x33 => self.op_33(),     // INX SP
             0x77 => self.op_77(),     // MOV M,A
+            0xC2 => self.op_c2(x, y), // JNZ
             0xC3 => self.op_c3(x, y), // JMP
             0xC5 => self.op_c5(),     // PUSH B
             0xCD => self.op_cd(x, y), // CALL Addr
-            0xD5 => self.op_d5(),     // PUSH D
-            0xE5 => self.op_e5(),     // PUSH H
-            0xF5 => self.op_f5(),     // PUSH PSW
+            0xF4 => self.op_f4(x, y), // CP If Plus
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -260,6 +263,8 @@ impl Cpu {
         if (1 & 0x0F) > (self.b & 0x0F) {
             self.set_flag(FLAG_AUXCARRY);
         }
+
+        self.update_flags(new_val);
 
         self.b = new_val;
 
@@ -341,6 +346,16 @@ impl Cpu {
         ProgramCounter::Next
     }
 
+    // JNZ (Jump if nonzero)
+    pub fn op_c2(&mut self, x: u8, y: u8) -> ProgramCounter {
+        let ys: u16 = u16::from(y) << 8;
+        let dest: u16 = ys | u16::from(x);
+        match self.test_flag(FLAG_ZERO) {
+            true => ProgramCounter::Three,
+            false => ProgramCounter::Jump(dest.into()),
+        }
+    }
+
     // Jump to a given location as provided by (y<<8 | x)
     pub fn op_c3(&self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
@@ -372,15 +387,16 @@ impl Cpu {
         ProgramCounter::Jump(self.pc)
     }
 
-    pub fn op_d5(&self) -> ProgramCounter {
-        ProgramCounter::Next
-    }
+    // Call if Plus
+    pub fn op_f4(&mut self, x: u8, y: u8) -> ProgramCounter {
+        let ys: u16 = u16::from(y) << 8;
+        let dest: u16 = ys | u16::from(x);
 
-    pub fn op_e5(&self) -> ProgramCounter {
-        ProgramCounter::Next
-    }
-
-    pub fn op_f5(&self) -> ProgramCounter {
-        ProgramCounter::Next
+        // If FLAG_SIGN is zero the result was positive
+        // so we call (jump) to our destination
+        match self.test_flag(FLAG_SIGN) {
+            true => ProgramCounter::Three,
+            false => ProgramCounter::Jump(dest.into()),
+        }
     }
 }

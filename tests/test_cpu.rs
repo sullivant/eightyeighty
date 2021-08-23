@@ -132,14 +132,24 @@ fn test_op_05() {
 
     // A simple decrement
     cpu.b = 0x02;
-    cpu.run_opcode((0x05, 0x00, 0x00));
+    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0x01);
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.test_flag(FLAG_ZERO), false);
+    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.b, 0x00);
+    assert_eq!(cpu.test_flag(FLAG_ZERO), true);
 
     // A wrapping decrement
     cpu.b = 0x00;
-    cpu.run_opcode((0x05, 0x00, 0x00));
+    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0xFF);
+    assert_eq!(cpu.test_flag(FLAG_SIGN), true);
+
+    cpu.b = 0x04;
+    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.b, 0x03);
+    assert_eq!(cpu.test_flag(FLAG_PARITY), true);
 }
 
 #[test]
@@ -244,14 +254,27 @@ fn test_op_77() {
     cpu.l = 0x01; // in memory to load the value of register A
     cpu.a = 0x45;
     cpu.memory[0x2001] = 0; // Reset it.
-    cpu.run_opcode((0x77, 0x00, 0x00));
+    cpu.run_opcode((0x77, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.memory[0x2001], 0x45);
+}
+
+#[test]
+fn test_op_c2() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.set_flag(FLAG_ZERO);
+    cpu.run_opcode((0xC2, 0x01, 0x02)).unwrap();
+    assert_eq!(cpu.pc, op + (OPCODE_SIZE * 3));
+
+    cpu.reset_flag(FLAG_ZERO);
+    cpu.run_opcode((0xC2, 0x01, 0x10)).unwrap();
+    assert_eq!(cpu.pc, 0x1001);
 }
 
 #[test]
 fn test_op_c3() {
     let mut cpu = Cpu::new();
-    cpu.run_opcode((0xC3, 0x01, 0x02));
+    cpu.run_opcode((0xC3, 0x01, 0x02)).unwrap();
     assert_eq!(cpu.pc, 0x0201);
 }
 
@@ -298,4 +321,26 @@ fn test_op_cd() {
 
     // Check program counter
     assert_eq!(cpu.pc, (0x0503));
+}
+
+#[test]
+fn test_op_f4() {
+    let mut cpu = Cpu::new();
+    // Setup a current PC value and stack pointer
+    cpu.pc = 0x12;
+    let op = cpu.pc;
+
+    // Set a negative test bit register
+    cpu.set_flag(FLAG_SIGN);
+    // Run opcode with address to NOT jump to
+    cpu.run_opcode((0xF4, 0x05, 0x10)).unwrap();
+    // PC should be +3 not at the new address
+    assert_eq!(cpu.pc, op + (OPCODE_SIZE * 3));
+
+    // Set a positive test bit register
+    cpu.reset_flag(FLAG_SIGN);
+    // Run the opcode with an address to jump to
+    cpu.run_opcode((0xF4, 0x05, 0x10)).unwrap();
+    // PC should be the new address.
+    assert_eq!(cpu.pc, 0x1005);
 }

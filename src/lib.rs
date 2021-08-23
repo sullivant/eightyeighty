@@ -8,11 +8,9 @@ pub fn go() {
     cpu.set_nop(true);
 
     // The list of rom files to load for this particular collection/game
-    let rom_files: [String; 4] = [
-        String::from("./resources/roms/invaders.h"),
-        String::from("./resources/roms/invaders.g"),
-        String::from("./resources/roms/invaders.f"),
-        String::from("./resources/roms/invaders.e"),
+    let rom_files: [String; 1] = [
+        //String::from("./resources/roms/TST8080.COM"),
+        String::from("./resources/roms/INVADERS.COM"),
     ];
     let mut dims: (usize, usize) = (0, 0);
 
@@ -34,15 +32,17 @@ pub fn go() {
     }
 
     if cpu.disassemble {
-        println!("PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tB\tCommand");
+        println!("CYCLE:PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tB\tCommand");
     }
 
-    for _ in 0..0x20 {
-        match cpu.tick() {
+    let mut i = 0;
+    loop {
+        match cpu.tick(i) {
             Ok(_) => {}
             Err(err) => {
                 panic!("Unable to tick: {}", err);
             }
         }
+        i += 1;
     }
 }
