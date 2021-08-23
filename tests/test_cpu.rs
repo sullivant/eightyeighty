@@ -156,7 +156,7 @@ fn test_op_05() {
 fn test_op_11() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
-    cpu.run_opcode((0x11, 0x01, 0x02));
+    cpu.run_opcode((0x11, 0x01, 0x02)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
     assert_eq!(cpu.d, 0x02);
     assert_eq!(cpu.e, 0x01);
@@ -284,12 +284,12 @@ fn test_op_c5() {
     cpu.c = 0x01;
     cpu.b = 0x02;
     assert_eq!(cpu.sp, 0x00); //Starting stack pointer of 0x00
-    cpu.run_opcode((0x31, 0x00, 0x24)); // Set the stack pointer to a reasonable spot
+    cpu.run_opcode((0x31, 0x00, 0x24)).unwrap(); // Set the stack pointer to a reasonable spot
     assert_eq!(cpu.sp, 0x2400);
     let sp = cpu.sp;
 
     let pc = cpu.pc; // For to check after this opcode runs
-    cpu.run_opcode((0xc5, 0x00, 0x00));
+    cpu.run_opcode((0xc5, 0x00, 0x00)).unwrap();
 
     // Assert memory looks good
     assert_eq!(cpu.memory[usize::from(sp - 2)], cpu.c);
@@ -300,6 +300,22 @@ fn test_op_c5() {
 
     // Assert PC is correct
     assert_eq!(cpu.pc, pc + OPCODE_SIZE);
+}
+
+#[test]
+fn test_op_c9() {
+    let mut cpu = Cpu::new();
+    // Setup a current PC value and stack pointer
+    cpu.pc = 0x12;
+    cpu.sp = 0x2400;
+
+    // Setup a location to RETurn to on the stack pointer
+    cpu.memory[usize::from(cpu.sp)] = 0x32; // LO
+    cpu.memory[usize::from(cpu.sp + 1)] = 0x10; // HI
+
+    cpu.run_opcode((0xC9, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, 0x1032);
+    assert_eq!(cpu.sp, 0x2402);
 }
 
 #[test]

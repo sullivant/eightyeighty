@@ -11,7 +11,7 @@ enum ProgramCounter {
 }
 
 pub fn print_header() {
-    println!("CYCLE:PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tB\tCommand");
+    println!("CYCLE:PC\tIns  S\t[l,h,sp]\t\tczspa\tData(lo,hi)\tB\tCommand");
 }
 
 // Really this just prints stuff to the standard output so we can view details on what is
@@ -23,7 +23,7 @@ pub fn disassemble(
     cycle_count: usize,
 ) {
     let pc = regs.0;
-    let _sp = regs.1;
+    let sp = regs.1;
     let h = regs.2;
     let l = regs.3;
     let b = regs.4;
@@ -45,6 +45,7 @@ pub fn disassemble(
         0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
         0xC5 => op_c5(),       // PUSH B
+        0xC9 => op_c9(),       // RET
         0xCD => op_cd(dl, dh), // CALL Addr
         0xD5 => op_d5(),       // PUSH D
         0xE5 => op_e5(),       // PUSH H
@@ -56,14 +57,14 @@ pub fn disassemble(
     match i.size {
         ProgramCounter::Jump(j) => {
             println!(
-                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}->JMP ${:#06X}",
-                cycle_count, pc, opcode.0, l, h, flags, dl, dh,b, i.code, j
+                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}->JMP ${:#06X}",
+                cycle_count, pc, opcode.0, l, h, sp, flags, dl, dh,b, i.code, j
             )
         }
         _ => {
             println!(
-                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
-                cycle_count, pc, opcode.0, l, h, flags, dl, dh, b, i.code
+                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
+                cycle_count, pc, opcode.0, l, h, sp, flags, dl, dh, b, i.code
             )
         }
     }
@@ -186,6 +187,13 @@ fn op_c3(x: u8, y: u8) -> Instr {
 fn op_c5() -> Instr {
     Instr {
         code: "PUSH B".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_c9() -> Instr {
+    Instr {
+        code: "RET".to_string(),
         size: ProgramCounter::Next,
     }
 }

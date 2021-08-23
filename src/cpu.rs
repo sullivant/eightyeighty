@@ -164,7 +164,7 @@ impl Cpu {
 
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.disassemble {
-            if cycle_count % 50 == 0 {
+            if cycle_count % 25 == 0 {
                 disassembler::print_header();
             }
             disassembler::disassemble(opcode, self.get_registers(), self.get_flags(), cycle_count);
@@ -221,6 +221,7 @@ impl Cpu {
             0xC2 => self.op_c2(x, y), // JNZ
             0xC3 => self.op_c3(x, y), // JMP
             0xC5 => self.op_c5(),     // PUSH B
+            0xC9 => self.op_c9(),     // RET
             0xCD => self.op_cd(x, y), // CALL Addr
             0xF4 => self.op_f4(x, y), // CP If Plus
             _ => {
@@ -369,6 +370,23 @@ impl Cpu {
         self.memory[usize::from(self.sp - 1)] = self.b;
         self.sp -= 2;
         ProgramCounter::Next
+    }
+
+    // RET (PC.lo <- (sp); PC.hi<-(sp+1); SP <- SP+2)
+    pub fn op_c9(&mut self) -> ProgramCounter {
+        let pc_lo = match self.memory.get(usize::from(self.sp)) {
+            Some(&v) => v,
+            None => 0,
+        };
+        let pc_hi = match self.memory.get(usize::from(self.sp + 1)) {
+            Some(&v) => v,
+            None => 0,
+        };
+        let dest: u16 = u16::from(pc_hi) << 8 | u16::from(pc_lo);
+
+        self.sp += 2;
+
+        ProgramCounter::Jump(dest.into())
     }
 
     // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP+2;PC=adr
