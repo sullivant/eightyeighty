@@ -102,7 +102,7 @@ fn test_update_flags() {
 fn test_nop() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
-    cpu.run_opcode((0x00, 0x00, 0x00));
+    cpu.run_opcode((0x00, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
 }
 
@@ -112,7 +112,7 @@ fn test_op_03() {
     let op = cpu.pc;
     cpu.b = 0x18;
     cpu.c = 0xff;
-    cpu.run_opcode((0x03, 0x00, 0x00));
+    cpu.run_opcode((0x03, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
     assert_eq!(cpu.b, 0x19);
     assert_eq!(cpu.c, 0x00);
@@ -120,7 +120,7 @@ fn test_op_03() {
     // try again with the overflow protection
     cpu.b = 0xff;
     cpu.c = 0xff;
-    cpu.run_opcode((0x03, 0x00, 0x00));
+    cpu.run_opcode((0x03, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0x00);
     assert_eq!(cpu.c, 0x00);
 }
@@ -168,7 +168,7 @@ fn test_op_13() {
     let op = cpu.pc;
     cpu.d = 0x18;
     cpu.e = 0xff;
-    cpu.run_opcode((0x13, 0x00, 0x00));
+    cpu.run_opcode((0x13, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
     assert_eq!(cpu.d, 0x19);
     assert_eq!(cpu.e, 0x00);
@@ -176,7 +176,7 @@ fn test_op_13() {
     // try again with the overflow protection
     cpu.d = 0xff;
     cpu.e = 0xff;
-    cpu.run_opcode((0x13, 0x00, 0x00));
+    cpu.run_opcode((0x13, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.d, 0x00);
     assert_eq!(cpu.e, 0x00);
 }
@@ -189,7 +189,7 @@ fn test_op_1a() {
     cpu.d = 0x11;
     cpu.e = 0x22;
     cpu.a = 0x00;
-    cpu.run_opcode((0x1A, 0x00, 0x00));
+    cpu.run_opcode((0x1A, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.a, 0x56);
 }
 
@@ -197,7 +197,7 @@ fn test_op_1a() {
 fn test_op_21() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
-    cpu.run_opcode((0x21, 0x01, 0x02));
+    cpu.run_opcode((0x21, 0x01, 0x02)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
     assert_eq!(cpu.h, 0x02);
     assert_eq!(cpu.l, 0x01);
@@ -209,7 +209,7 @@ fn test_op_23() {
     let op = cpu.pc;
     cpu.h = 0x18;
     cpu.l = 0xff;
-    cpu.run_opcode((0x23, 0x00, 0x00));
+    cpu.run_opcode((0x23, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
     assert_eq!(cpu.h, 0x19);
     assert_eq!(cpu.l, 0x00);
@@ -217,7 +217,7 @@ fn test_op_23() {
     // try again with the overflow protection
     cpu.h = 0xff;
     cpu.l = 0xff;
-    cpu.run_opcode((0x23, 0x00, 0x00));
+    cpu.run_opcode((0x23, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.h, 0x00);
     assert_eq!(cpu.l, 0x00);
 }
@@ -227,7 +227,7 @@ fn test_op_31() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
 
-    cpu.run_opcode((0x31, 0x00, 0x24));
+    cpu.run_opcode((0x31, 0x00, 0x24)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
     assert_eq!(cpu.sp, 0x2400);
 }
@@ -237,13 +237,13 @@ fn test_op_33() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
     cpu.sp = 0x0018;
-    cpu.run_opcode((0x33, 0x00, 0x00));
+    cpu.run_opcode((0x33, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + OPCODE_SIZE);
     assert_eq!(cpu.sp, 0x19);
 
     // try again with the overflow protection
     cpu.sp = 0xffff;
-    cpu.run_opcode((0x33, 0x00, 0x00));
+    cpu.run_opcode((0x33, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.sp, 0x0000);
 }
 
