@@ -8,15 +8,6 @@ pub const RAM_WORK_START: usize = 0x2000;
 pub const RAM_VIDEO_START: usize = 0x2400;
 pub const RAM_MIRROR_START: usize = 0x4000;
 
-// Flag bitmasks
-pub const FLAG_CARRY: u8 = 0b0001_0000; //4
-pub const FLAG_ZERO: u8 = 0b0000_1000; //3
-pub const FLAG_SIGN: u8 = 0b0000_0100; //2
-pub const FLAG_PARITY: u8 = 0b0000_0010; //1
-pub const FLAG_AUXCARRY: u8 = 0b0000_0000; //0
-
-pub const OPCODE_SIZE: usize = 1;
-
 pub enum ProgramCounter {
     Next,        // The operation does not use any data
     Two,         // The operation uses only 1 byte of data
@@ -106,18 +97,18 @@ impl Cpu {
     // Carry and Auxillary Carry are computed ad-hoc
     pub fn update_flags(&mut self, val: u8) {
         match val == 0 {
-            true => self.set_flag(FLAG_ZERO),
-            false => self.reset_flag(FLAG_ZERO),
+            true => self.set_flag(super::FLAG_ZERO),
+            false => self.reset_flag(super::FLAG_ZERO),
         };
 
         match self.get_sign(val) {
-            true => self.set_flag(FLAG_SIGN),    // A negative number
-            false => self.reset_flag(FLAG_SIGN), // A positive number
+            true => self.set_flag(super::FLAG_SIGN), // A negative number
+            false => self.reset_flag(super::FLAG_SIGN), // A positive number
         };
 
         match self.get_parity(val.into()) {
-            true => self.set_flag(FLAG_PARITY),
-            false => self.reset_flag(FLAG_PARITY),
+            true => self.set_flag(super::FLAG_PARITY),
+            false => self.reset_flag(super::FLAG_PARITY),
         };
     }
 
@@ -233,9 +224,9 @@ impl Cpu {
         };
 
         match i {
-            ProgramCounter::Next => self.pc += OPCODE_SIZE,
-            ProgramCounter::Two => self.pc += OPCODE_SIZE * 2,
-            ProgramCounter::Three => self.pc += OPCODE_SIZE * 3,
+            ProgramCounter::Next => self.pc += super::OPCODE_SIZE,
+            ProgramCounter::Two => self.pc += super::OPCODE_SIZE * 2,
+            ProgramCounter::Three => self.pc += super::OPCODE_SIZE * 3,
             ProgramCounter::Jump(d) => self.pc = d,
         }
 
@@ -262,7 +253,7 @@ impl Cpu {
         let new_val = self.b.wrapping_sub(1);
 
         if (1 & 0x0F) > (self.b & 0x0F) {
-            self.set_flag(FLAG_AUXCARRY);
+            self.set_flag(super::FLAG_AUXCARRY);
         }
 
         self.update_flags(new_val);
@@ -351,7 +342,7 @@ impl Cpu {
     pub fn op_c2(&mut self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
         let dest: u16 = ys | u16::from(x);
-        match self.test_flag(FLAG_ZERO) {
+        match self.test_flag(super::FLAG_ZERO) {
             true => ProgramCounter::Three,
             false => ProgramCounter::Jump(dest.into()),
         }
@@ -412,7 +403,7 @@ impl Cpu {
 
         // If FLAG_SIGN is zero the result was positive
         // so we call (jump) to our destination
-        match self.test_flag(FLAG_SIGN) {
+        match self.test_flag(super::FLAG_SIGN) {
             true => ProgramCounter::Three,
             false => ProgramCounter::Jump(dest.into()),
         }

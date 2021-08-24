@@ -1,12 +1,4 @@
-extern crate lib;
 use lib::Cpu;
-
-pub const OPCODE_SIZE: usize = 1; // TODO: This needs to be in super/lib/cpu
-pub const FLAG_CARRY: u8 = 0b0001_0000; //4
-pub const FLAG_ZERO: u8 = 0b0000_1000; //3
-pub const FLAG_SIGN: u8 = 0b0000_0100; //2
-pub const FLAG_PARITY: u8 = 0b0000_0010; //1
-pub const FLAG_AUXCARRY: u8 = 0b0000_0000; //0
 
 #[test]
 fn test_cpu_default() {
@@ -20,16 +12,16 @@ fn test_cpu_default() {
 fn test_set_flag() {
     let mut cpu = Cpu::new();
     cpu.flags = 0b0;
-    cpu.set_flag(FLAG_PARITY);
+    cpu.set_flag(lib::FLAG_PARITY);
     assert_eq!(cpu.flags, 0b0010);
 
     // Test an already set flag
-    cpu.set_flag(FLAG_PARITY);
+    cpu.set_flag(lib::FLAG_PARITY);
     assert_eq!(cpu.flags, 0b0010);
     cpu.flags = 0b0;
 
     // Test setting multiple at once
-    cpu.set_flag(FLAG_PARITY | FLAG_CARRY);
+    cpu.set_flag(lib::FLAG_PARITY | lib::FLAG_CARRY);
     assert_eq!(cpu.flags, 0b0001_0010);
 }
 
@@ -37,16 +29,16 @@ fn test_set_flag() {
 fn test_reset_flag() {
     let mut cpu = Cpu::new();
     cpu.flags = 0b11111;
-    cpu.reset_flag(FLAG_SIGN);
+    cpu.reset_flag(lib::FLAG_SIGN);
     assert_eq!(cpu.flags, 0b11011);
 
     // Test an already reset flag
     cpu.flags = 0b11011;
-    cpu.reset_flag(FLAG_SIGN);
+    cpu.reset_flag(lib::FLAG_SIGN);
     assert_eq!(cpu.flags, 0b11011);
 
     cpu.flags = 0b1111_1111;
-    cpu.reset_flag(FLAG_SIGN | FLAG_ZERO);
+    cpu.reset_flag(lib::FLAG_SIGN | lib::FLAG_ZERO);
     assert_eq!(cpu.flags, 0b1111_0011);
 }
 
@@ -76,10 +68,10 @@ fn test_get_sign() {
 #[test]
 fn test_test_flag() {
     let mut cpu = Cpu::new();
-    cpu.set_flag(FLAG_ZERO); // Flag zero
-    cpu.set_flag(FLAG_PARITY); // Zero and Parity
-    assert_eq!(cpu.test_flag(FLAG_PARITY), true);
-    assert_eq!(cpu.test_flag(FLAG_ZERO), true);
+    cpu.set_flag(lib::FLAG_ZERO); // Flag zero
+    cpu.set_flag(lib::FLAG_PARITY); // Zero and Parity
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
 }
 
 #[test]
@@ -87,15 +79,15 @@ fn test_update_flags() {
     let mut cpu = Cpu::new();
     // Should update: PARITY (TRUE) SIGN(FALSE) ZERO (TRUE)
     cpu.update_flags(0b0000);
-    assert_eq!(cpu.test_flag(FLAG_SIGN), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), false);
 
     cpu.flags = 0;
 
     // Should update: PARITY (TRUE) SIGN(TRUE) and ZERO (FALSE)
     cpu.update_flags(0b10001000);
-    assert_eq!(cpu.test_flag(FLAG_PARITY), true);
-    assert_eq!(cpu.test_flag(FLAG_SIGN), true);
-    assert_eq!(cpu.test_flag(FLAG_ZERO), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
 }
 
 #[test]
@@ -103,7 +95,7 @@ fn test_nop() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
     cpu.run_opcode((0x00, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }
 
 #[test]
@@ -113,7 +105,7 @@ fn test_op_03() {
     cpu.b = 0x18;
     cpu.c = 0xff;
     cpu.run_opcode((0x03, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
     assert_eq!(cpu.b, 0x19);
     assert_eq!(cpu.c, 0x00);
 
@@ -134,22 +126,22 @@ fn test_op_05() {
     cpu.b = 0x02;
     cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0x01);
-    assert_eq!(cpu.pc, op + OPCODE_SIZE);
-    assert_eq!(cpu.test_flag(FLAG_ZERO), false);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
     cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0x00);
-    assert_eq!(cpu.test_flag(FLAG_ZERO), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
 
     // A wrapping decrement
     cpu.b = 0x00;
     cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0xFF);
-    assert_eq!(cpu.test_flag(FLAG_SIGN), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
 
     cpu.b = 0x04;
     cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.b, 0x03);
-    assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
 }
 
 #[test]
@@ -157,7 +149,7 @@ fn test_op_11() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
     cpu.run_opcode((0x11, 0x01, 0x02)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
     assert_eq!(cpu.d, 0x02);
     assert_eq!(cpu.e, 0x01);
 }
@@ -169,7 +161,7 @@ fn test_op_13() {
     cpu.d = 0x18;
     cpu.e = 0xff;
     cpu.run_opcode((0x13, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
     assert_eq!(cpu.d, 0x19);
     assert_eq!(cpu.e, 0x00);
 
@@ -198,7 +190,7 @@ fn test_op_21() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
     cpu.run_opcode((0x21, 0x01, 0x02)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
     assert_eq!(cpu.h, 0x02);
     assert_eq!(cpu.l, 0x01);
 }
@@ -210,7 +202,7 @@ fn test_op_23() {
     cpu.h = 0x18;
     cpu.l = 0xff;
     cpu.run_opcode((0x23, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
     assert_eq!(cpu.h, 0x19);
     assert_eq!(cpu.l, 0x00);
 
@@ -228,7 +220,7 @@ fn test_op_31() {
     let op = cpu.pc;
 
     cpu.run_opcode((0x31, 0x00, 0x24)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
     assert_eq!(cpu.sp, 0x2400);
 }
 
@@ -238,7 +230,7 @@ fn test_op_33() {
     let op = cpu.pc;
     cpu.sp = 0x0018;
     cpu.run_opcode((0x33, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
     assert_eq!(cpu.sp, 0x19);
 
     // try again with the overflow protection
@@ -262,11 +254,11 @@ fn test_op_77() {
 fn test_op_c2() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
-    cpu.set_flag(FLAG_ZERO);
+    cpu.set_flag(lib::FLAG_ZERO);
     cpu.run_opcode((0xC2, 0x01, 0x02)).unwrap();
-    assert_eq!(cpu.pc, op + (OPCODE_SIZE * 3));
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 
-    cpu.reset_flag(FLAG_ZERO);
+    cpu.reset_flag(lib::FLAG_ZERO);
     cpu.run_opcode((0xC2, 0x01, 0x10)).unwrap();
     assert_eq!(cpu.pc, 0x1001);
 }
@@ -299,7 +291,7 @@ fn test_op_c5() {
     assert_eq!(cpu.sp, (0x2400 - 2));
 
     // Assert PC is correct
-    assert_eq!(cpu.pc, pc + OPCODE_SIZE);
+    assert_eq!(cpu.pc, pc + lib::OPCODE_SIZE);
 }
 
 #[test]
@@ -347,14 +339,14 @@ fn test_op_f4() {
     let op = cpu.pc;
 
     // Set a negative test bit register
-    cpu.set_flag(FLAG_SIGN);
+    cpu.set_flag(lib::FLAG_SIGN);
     // Run opcode with address to NOT jump to
     cpu.run_opcode((0xF4, 0x05, 0x10)).unwrap();
     // PC should be +3 not at the new address
-    assert_eq!(cpu.pc, op + (OPCODE_SIZE * 3));
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 
     // Set a positive test bit register
-    cpu.reset_flag(FLAG_SIGN);
+    cpu.reset_flag(lib::FLAG_SIGN);
     // Run the opcode with an address to jump to
     cpu.run_opcode((0xF4, 0x05, 0x10)).unwrap();
     // PC should be the new address.

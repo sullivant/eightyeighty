@@ -2,6 +2,13 @@ mod cpu;
 mod disassembler;
 pub use cpu::Cpu;
 
+pub const OPCODE_SIZE: usize = 1;
+pub const FLAG_CARRY: u8 = 0b0001_0000; //4
+pub const FLAG_ZERO: u8 = 0b0000_1000; //3
+pub const FLAG_SIGN: u8 = 0b0000_0100; //2
+pub const FLAG_PARITY: u8 = 0b0000_0010; //1
+pub const FLAG_AUXCARRY: u8 = 0b0000_0000; //0
+
 pub fn go() {
     let mut cpu = Cpu::new();
     cpu.set_disassemble(true);
