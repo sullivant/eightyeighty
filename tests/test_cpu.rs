@@ -326,7 +326,7 @@ fn test_op_cd() {
     cpu.sp = 0x2400;
 
     // Pretend we are going to CALL addr of 0x53
-    cpu.run_opcode((0xCD, 0x03, 0x05));
+    cpu.run_opcode((0xCD, 0x03, 0x05)).unwrap();
 
     // memory should be set now
     assert_eq!(cpu.memory[0x23FF], 0x12 >> 4);
