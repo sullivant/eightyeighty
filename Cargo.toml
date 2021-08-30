@@ -12,3 +12,8 @@ name = "lib"
 path = "src/lib.rs"
 
 [dependencies]
+rand = "0.7.0"
+structopt = "0.3.21"
+ggez = "0.5.1"
+glam = { version = "0.12", features = ["mint"]}
+

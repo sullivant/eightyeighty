@@ -37,6 +37,9 @@ pub struct Cpu {
     pub disassemble: bool,
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
     pub nop: bool,
+
+    // Cycle count
+    pub cycle_count: usize,
 }
 
 impl Default for Cpu {
@@ -61,6 +64,7 @@ impl Cpu {
             flags: 0x00, // 0,0,0,0,0
             disassemble: false,
             nop: false,
+            cycle_count: 0x00,
         }
     }
 
@@ -150,17 +154,23 @@ impl Cpu {
 
     // Gathers a word from memory based on program counter location,
     // then passes it along to the run_opcode() function
-    pub fn tick(&mut self, cycle_count: usize) -> Result<(), String> {
+    pub fn tick(&mut self) -> Result<(), String> {
         let opcode = self.read_opcode();
 
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.disassemble {
-            if cycle_count % 25 == 0 {
+            if self.cycle_count % 25 == 0 {
                 disassembler::print_header();
             }
-            disassembler::disassemble(opcode, self.get_registers(), self.get_flags(), cycle_count);
+            disassembler::disassemble(
+                opcode,
+                self.get_registers(),
+                self.get_flags(),
+                self.cycle_count,
+            );
         }
 
+        self.cycle_count += 1;
         self.run_opcode(opcode)
     }
 

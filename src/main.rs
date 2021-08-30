@@ -1,3 +1,6 @@
-fn main() {
-    lib::go();
+use ggez::*;
+
+fn main() -> GameResult {
+    lib::go()?;
+    Ok(())
 }
