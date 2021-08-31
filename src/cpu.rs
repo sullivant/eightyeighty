@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -40,6 +41,7 @@ pub struct Cpu {
 
     pub cycle_count: usize,        // Cycle count
     pub last_opcode: (u8, u8, u8), // Just a record of the last opcode.
+    pub disassembler_text: VecDeque<String>,
 }
 
 impl Default for Cpu {
@@ -66,6 +68,7 @@ impl Cpu {
             nop: false,
             cycle_count: 0x00,
             last_opcode: (0, 0, 0),
+            disassembler_text: VecDeque::with_capacity(10),
         }
     }
 
@@ -164,16 +167,17 @@ impl Cpu {
             if self.cycle_count % 25 == 0 {
                 disassembler::print_header();
             }
-            disassembler::disassemble(
-                opcode,
-                self.get_registers(),
-                self.get_flags(),
-                self.cycle_count,
-            );
+            let dt = disassembler::disassemble(&self);
+            self.disassembler_text.insert(0, dt.clone());
+            println!("{}", dt);
         }
 
         self.cycle_count += 1;
         self.run_opcode(opcode)
+    }
+
+    pub fn get_disassembler_text(&mut self) -> &String {
+        self.disassembler_text.get(0).unwrap()
     }
 
     // Reads an instruction at ProgramCounter

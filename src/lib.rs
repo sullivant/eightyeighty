@@ -104,8 +104,8 @@ impl App {
 
     fn update_text_area(&mut self) {
         self.texts.insert(
-            "2_opcode",
-            Text::new(format!("OP:{:#04X}", self.cpu.last_opcode.0)),
+            "2_disassemble",
+            Text::new(format!("{}", self.cpu.get_disassembler_text())),
         );
     }
 }

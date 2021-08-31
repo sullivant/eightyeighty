@@ -1,3 +1,5 @@
+pub use super::cpu::Cpu;
+
 struct Instr {
     code: String,         // The string defining what this this instr is actually doing
     size: ProgramCounter, // The size of the program counter "move" after this instr
@@ -11,25 +13,15 @@ enum ProgramCounter {
 }
 
 pub fn print_header() {
-    println!("CYCLE:PC\tIns  S\t[l,h,sp]\t\tSZ0A0P1C\tData(lo,hi)\tB\tCommand");
+    println!("CYCLE :PC       Ins  S  l    h    sp      SZ0A0P1C  (lo,hi)    B     Command");
 }
 
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
-pub fn disassemble(
-    opcode: (u8, u8, u8),
-    regs: (usize, u16, u8, u8, u8),
-    flags: u8,
-    cycle_count: usize,
-) {
-    let pc = regs.0;
-    let sp = regs.1;
-    let h = regs.2;
-    let l = regs.3;
-    let b = regs.4;
-    let dl = opcode.1;
-    let dh = opcode.2;
-    let i = match opcode.0 {
+pub fn disassemble(cpu: &Cpu) -> String {
+    let dl = cpu.last_opcode.1;
+    let dh = cpu.last_opcode.2;
+    let i = match cpu.last_opcode.0 {
         0x00 => op_00(),       // NOP
         0x03 => op_03(),       // INX BC
         0x05 => op_05(),       // DCR B
@@ -56,15 +48,15 @@ pub fn disassemble(
 
     match i.size {
         ProgramCounter::Jump(j) => {
-            println!(
-                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:08b}\t{:#04X},{:#04X}\t{:#04X}\t{}->JMP ${:#06X}",
-                cycle_count, pc, opcode.0, l, h, sp, flags, dl, dh,b, i.code, j
+            format!(
+                "{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}->JMP ${:#06X}",
+                cpu.cycle_count, cpu.pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh,cpu.b, i.code, j
             )
         }
         _ => {
-            println!(
-                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:08b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
-                cycle_count, pc, opcode.0, l, h, sp, flags, dl, dh, b, i.code
+            format!(
+                "{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}",
+                cpu.cycle_count, cpu.pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code
             )
         }
     }
