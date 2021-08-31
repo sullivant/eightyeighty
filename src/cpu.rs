@@ -38,8 +38,8 @@ pub struct Cpu {
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
     pub nop: bool,
 
-    // Cycle count
-    pub cycle_count: usize,
+    pub cycle_count: usize,        // Cycle count
+    pub last_opcode: (u8, u8, u8), // Just a record of the last opcode.
 }
 
 impl Default for Cpu {
@@ -61,10 +61,11 @@ impl Cpu {
             e: 0x00,
             h: 0x00,
             l: 0x00,
-            flags: 0x00, // 0,0,0,0,0
+            flags: 0x02, // 00000010 is the default starting point
             disassemble: false,
             nop: false,
             cycle_count: 0x00,
+            last_opcode: (0, 0, 0),
         }
     }
 
@@ -156,6 +157,7 @@ impl Cpu {
     // then passes it along to the run_opcode() function
     pub fn tick(&mut self) -> Result<(), String> {
         let opcode = self.read_opcode();
+        self.last_opcode = opcode;
 
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.disassemble {

@@ -11,7 +11,7 @@ enum ProgramCounter {
 }
 
 pub fn print_header() {
-    println!("CYCLE:PC\tIns  S\t[l,h,sp]\t\tczspa\tData(lo,hi)\tB\tCommand");
+    println!("CYCLE:PC\tIns  S\t[l,h,sp]\t\tSZ0A0P1C\tData(lo,hi)\tB\tCommand");
 }
 
 // Really this just prints stuff to the standard output so we can view details on what is
@@ -57,13 +57,13 @@ pub fn disassemble(
     match i.size {
         ProgramCounter::Jump(j) => {
             println!(
-                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}->JMP ${:#06X}",
+                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:08b}\t{:#04X},{:#04X}\t{:#04X}\t{}->JMP ${:#06X}",
                 cycle_count, pc, opcode.0, l, h, sp, flags, dl, dh,b, i.code, j
             )
         }
         _ => {
             println!(
-                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:05b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
+                "{:#06X}:{:#06X}\t{:#04X} 3\t{:#04X},{:#04X},{:#06X}\t{:08b}\t{:#04X},{:#04X}\t{:#04X}\t{}",
                 cycle_count, pc, opcode.0, l, h, sp, flags, dl, dh, b, i.code
             )
         }

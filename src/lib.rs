@@ -85,10 +85,6 @@ impl App {
             );
         }
 
-        if cpu.disassemble {
-            println!("CYCLE:PC\tIns  S\t[l,h]\t\tczspa\tData(lo,hi)\tB\tCommand");
-        }
-
         // Setup a "cell"/pixel for the engine to use
         let cell = graphics::Mesh::new_rectangle(
             ctx,
@@ -105,6 +101,13 @@ impl App {
             texts,
         })
     }
+
+    fn update_text_area(&mut self) {
+        self.texts.insert(
+            "2_opcode",
+            Text::new(format!("OP:{:#04X}", self.cpu.last_opcode.0)),
+        );
+    }
 }
 
 impl ggez::event::EventHandler for App {
@@ -119,6 +122,8 @@ impl ggez::event::EventHandler for App {
                 }
             }
         }
+
+        self.update_text_area();
 
         // Let our family know we are ok
         Ok(())
