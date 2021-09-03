@@ -1,5 +1,5 @@
 [window_mode]
-width = 640.0
+width = 800.0
 height = 600.0
 maximized = false
 fullscreen_type = "Windowed"
@@ -8,7 +8,7 @@ min_width = 0.0
 min_height = 0.0
 max_width = 0.0
 max_height = 0.0
-resizable = false
+resizable = true 
 
 [window_setup]
 title = "8080"

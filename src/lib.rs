@@ -1,5 +1,6 @@
 mod cpu;
 mod disassembler;
+extern crate queues;
 
 use ggez::event::{self, EventHandler, KeyCode, KeyMods};
 use ggez::graphics::{self, Color, DrawParam, Text};
@@ -7,6 +8,7 @@ use ggez::*;
 use glam::Vec2;
 use nalgebra as na;
 use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::env;
 use std::path;
 use structopt::StructOpt;
@@ -31,8 +33,9 @@ pub const FLAG_CARRY: u8 = 0b0000_0001;
 // Window and display concerns
 pub const DISP_SCALE: f32 = 10.0;
 pub const DISP_WIDTH: f32 = 640.0;
-pub const DISP_HEIGHT: f32 = 320.0;
+pub const DISP_HEIGHT: f32 = 480.0;
 pub const DISP_HEIGHT_INFO_AREA: f32 = 200.0; // The added bottom info area for text
+pub const MAX_MESSAGES_COUNT: usize = 4; // Max number of messages to add into the info area
 
 #[derive(StructOpt)]
 struct Cli {
@@ -45,9 +48,15 @@ pub struct App {
     cpu: Cpu,
     cell: graphics::Mesh,
     texts: BTreeMap<&'static str, Text>,
+    last_msg: String,
 }
 
 impl App {
+    fn update_text_area(&mut self) {
+        self.texts
+            .insert("msg", Text::new(format!("last: {}", self.last_msg)));
+    }
+
     fn new(ctx: &mut Context) -> GameResult<App> {
         let dt = std::time::Duration::new(0, 0);
         let black = graphics::Color::new(0.0, 0.0, 0.0, 1.0);
@@ -99,21 +108,15 @@ impl App {
             cpu,
             cell,
             texts,
+            last_msg: "N/A".to_string(),
         })
-    }
-
-    fn update_text_area(&mut self) {
-        self.texts.insert(
-            "2_disassemble",
-            Text::new(format!("{}", self.cpu.get_disassembler_text())),
-        );
     }
 }
 
 impl ggez::event::EventHandler for App {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx); // Frame count timer
-        while timer::check_update_time(ctx, 60) {
+        while timer::check_update_time(ctx, 80) {
             // Tick the cpu
             match self.cpu.tick() {
                 Ok(_) => {}
@@ -121,9 +124,18 @@ impl ggez::event::EventHandler for App {
                     panic!("Unable to tick: {}", e);
                 }
             }
+            // If needed/wanted, call off to the disassembler to print some pretty details
+            if self.cpu.disassemble {
+                if self.cpu.cycle_count % 25 == 0 {
+                    disassembler::print_header();
+                }
+                // Get our disassembler message text
+                let dt = disassembler::disassemble(&self.cpu);
+                println!("{}", dt);
+                self.last_msg = dt;
+            }
+            self.update_text_area();
         }
-
-        self.update_text_area();
 
         // Let our family know we are ok
         Ok(())
