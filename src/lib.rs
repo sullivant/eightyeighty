@@ -1,6 +1,5 @@
 mod cpu;
 mod disassembler;
-extern crate queues;
 
 use ggez::event::{self, EventHandler, KeyCode, KeyMods};
 use ggez::graphics::{self, Color, DrawParam, Text};
@@ -8,7 +7,6 @@ use ggez::*;
 use glam::Vec2;
 use nalgebra as na;
 use std::collections::BTreeMap;
-use std::collections::VecDeque;
 use std::env;
 use std::path;
 use structopt::StructOpt;
@@ -49,6 +47,8 @@ pub struct App {
     cell: graphics::Mesh,
     texts: BTreeMap<&'static str, Text>,
     last_msg: String,
+    pause_on_tick: bool,
+    single_tick: bool,
 }
 
 impl App {
@@ -109,6 +109,8 @@ impl App {
             cell,
             texts,
             last_msg: "N/A".to_string(),
+            pause_on_tick: false,
+            single_tick: false,
         })
     }
 }
@@ -116,16 +118,38 @@ impl App {
 impl ggez::event::EventHandler for App {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx); // Frame count timer
+
         while timer::check_update_time(ctx, 80) {
-            // Tick the cpu
-            match self.cpu.tick() {
-                Ok(_) => {}
-                Err(e) => {
-                    panic!("Unable to tick: {}", e);
+            let mut tick_happened: bool = false;
+            // If we are not in pause_on_tick mode, tick away
+            if !self.pause_on_tick {
+                // Tick the cpu
+                match self.cpu.tick() {
+                    Ok(_) => {
+                        tick_happened = true;
+                    }
+                    Err(e) => {
+                        panic!("Unable to tick: {}", e);
+                    }
+                }
+            } else {
+                // We want to tick only when tick_once is true (Space key sets this)
+                if self.single_tick {
+                    // Tick the cpu
+                    match self.cpu.tick() {
+                        Ok(_) => {
+                            tick_happened = true;
+                        }
+                        Err(e) => {
+                            panic!("Unable to tick: {}", e);
+                        }
+                    }
+                    self.single_tick = false;
                 }
             }
+
             // If needed/wanted, call off to the disassembler to print some pretty details
-            if self.cpu.disassemble {
+            if self.cpu.disassemble && tick_happened {
                 if self.cpu.cycle_count % 25 == 0 {
                     disassembler::print_header();
                 }
@@ -139,6 +163,22 @@ impl ggez::event::EventHandler for App {
 
         // Let our family know we are ok
         Ok(())
+    }
+
+    fn key_down_event(&mut self, ctx: &mut Context, key: KeyCode, mods: KeyMods, _: bool) {
+        // Process our application control keys
+        match key {
+            // Quit if Shift+Ctrl+Q is pressed.
+            KeyCode::Escape => {
+                println!("Terminating!");
+                event::quit(ctx);
+            }
+            KeyCode::F1 => self.pause_on_tick = !self.pause_on_tick,
+            KeyCode::Space => {
+                self.single_tick = true;
+            }
+            _ => (),
+        }
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {

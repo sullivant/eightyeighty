@@ -1,8 +1,5 @@
-use std::collections::VecDeque;
 use std::fs::File;
 use std::io::prelude::*;
-
-use super::disassembler;
 
 pub const RAM_SIZE: usize = 0xFFFF;
 pub const RAM_WORK_START: usize = 0x2000;
