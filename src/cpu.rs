@@ -153,12 +153,18 @@ impl Cpu {
 
     // Gathers a word from memory based on program counter location,
     // then passes it along to the run_opcode() function
-    pub fn tick(&mut self) -> Result<(), String> {
+    // On successful tick, returns the NEXT opcode it expects to run, for debugging
+    // purposes.
+    // On unsuccessful tick, returns an error
+    pub fn tick(&mut self) -> Result<(u8, u8, u8), String> {
         let opcode = self.read_opcode();
         self.last_opcode = opcode;
 
         self.cycle_count += 1;
-        self.run_opcode(opcode)
+        match self.run_opcode(opcode) {
+            Ok(_) => Ok(self.read_opcode()),
+            Err(e) => Err(e),
+        }
     }
 
     // Reads an instruction at ProgramCounter

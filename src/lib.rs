@@ -46,7 +46,9 @@ pub struct App {
     cpu: Cpu,
     cell: graphics::Mesh,
     texts: BTreeMap<&'static str, Text>,
-    last_msg: String,
+    last_msg: String, // Contains last disassembler message
+    next_msg: String, // Contains next disassembler command to be run
+    next_opcode: (u8, u8, u8),
     pause_on_tick: bool,
     single_tick: bool,
 }
@@ -55,6 +57,8 @@ impl App {
     fn update_text_area(&mut self) {
         self.texts
             .insert("msg", Text::new(format!("last: {}", self.last_msg)));
+        self.texts
+            .insert("nextmsg", Text::new(format!("next: {}", self.next_msg)));
     }
 
     fn new(ctx: &mut Context) -> GameResult<App> {
@@ -109,7 +113,9 @@ impl App {
             cell,
             texts,
             last_msg: "N/A".to_string(),
-            pause_on_tick: false,
+            next_msg: "N/A".to_string(),
+            next_opcode: (0, 0, 0),
+            pause_on_tick: true,
             single_tick: false,
         })
     }
@@ -125,8 +131,9 @@ impl ggez::event::EventHandler for App {
             if !self.pause_on_tick {
                 // Tick the cpu
                 match self.cpu.tick() {
-                    Ok(_) => {
+                    Ok(n) => {
                         tick_happened = true;
+                        self.next_opcode = n;
                     }
                     Err(e) => {
                         panic!("Unable to tick: {}", e);
@@ -137,8 +144,9 @@ impl ggez::event::EventHandler for App {
                 if self.single_tick {
                     // Tick the cpu
                     match self.cpu.tick() {
-                        Ok(_) => {
+                        Ok(n) => {
                             tick_happened = true;
+                            self.next_opcode = n;
                         }
                         Err(e) => {
                             panic!("Unable to tick: {}", e);
@@ -156,7 +164,13 @@ impl ggez::event::EventHandler for App {
                 // Get our disassembler message text
                 let dt = disassembler::disassemble(&self.cpu);
                 println!("{}", dt);
+                let ndt = disassembler::get_opcode_text(self.next_opcode);
+                println!("Next:{}", ndt);
                 self.last_msg = dt;
+                self.next_msg = format!(
+                    "{} (dl:{:#04X},dh:{:#04X})",
+                    ndt, self.next_opcode.1, self.next_opcode.2
+                ); // We only really care about the text
             }
             self.update_text_area();
         }

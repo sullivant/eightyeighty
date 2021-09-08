@@ -1,8 +1,15 @@
 pub use super::cpu::Cpu;
+use std::fmt;
 
-struct Instr {
+pub struct Instr {
     code: String,         // The string defining what this this instr is actually doing
     size: ProgramCounter, // The size of the program counter "move" after this instr
+}
+
+impl fmt::Display for Instr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.code)
+    }
 }
 
 enum ProgramCounter {
@@ -18,10 +25,10 @@ pub fn print_header() {
 
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
-pub fn disassemble(cpu: &Cpu) -> String {
-    let dl = cpu.last_opcode.1;
-    let dh = cpu.last_opcode.2;
-    let i = match cpu.last_opcode.0 {
+pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
+    let dl = op.1;
+    let dh = op.2;
+    match op.0 {
         0x00 => op_00(),       // NOP
         0x03 => op_03(),       // INX BC
         0x05 => op_05(),       // DCR B
@@ -44,7 +51,13 @@ pub fn disassemble(cpu: &Cpu) -> String {
         0xF4 => op_f4(dl, dh), // CALL if Plus
         0xF5 => op_f5(),       // PUSH PSW
         _ => op_unk(),         // UNK
-    };
+    }
+}
+
+pub fn disassemble(cpu: &Cpu) -> String {
+    let i = get_opcode_text(cpu.last_opcode);
+    let dl = cpu.last_opcode.1;
+    let dh = cpu.last_opcode.2;
 
     match i.size {
         ProgramCounter::Jump(j) => {
