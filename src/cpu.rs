@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -43,6 +44,16 @@ pub struct Cpu {
 impl Default for Cpu {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl fmt::Display for Cpu {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X} A:{:#04X}\nB:{:#04X} C:{:#04X}\nD:{:#04X} E:{:#04X}\nH:{:#04X} L:{:#04X}",
+            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l
+        )
     }
 }
 
@@ -203,7 +214,7 @@ impl Cpu {
             0x00 => self.op_00(),     // NOP
             0x03 => self.op_03(),     // INX B
             0x05 => self.op_05(),     // DCR B
-            0x06 => self.op_06(x),    // MVI B, D8
+            0x06 => self.op_06(y),    // MVI B, D8
             0x11 => self.op_11(x, y), // LXI D,D16
             0x13 => self.op_13(),     // INX D
             0x1A => self.op_1a(),     // LDAX D

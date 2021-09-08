@@ -145,6 +145,15 @@ fn test_op_05() {
 }
 
 #[test]
+fn test_op_06() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.run_opcode((0x06, 0x01, 0x02)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
+    assert_eq!(cpu.b, 0x02);
+}
+
+#[test]
 fn test_op_11() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;

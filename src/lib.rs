@@ -161,11 +161,10 @@ impl ggez::event::EventHandler for App {
                 if self.cpu.cycle_count % 25 == 0 {
                     disassembler::print_header();
                 }
-                // Get our disassembler message text
+                // Get our disassembler message text as well as our "next" opcode description
                 let dt = disassembler::disassemble(&self.cpu);
-                println!("{}", dt);
                 let ndt = disassembler::get_opcode_text(self.next_opcode);
-                println!("Next:{}", ndt);
+                println!("{}", dt);
                 self.last_msg = dt;
                 self.next_msg = format!(
                     "{} (dl:{:#04X},dh:{:#04X})",
@@ -201,25 +200,35 @@ impl ggez::event::EventHandler for App {
 
         // Draw text objects/details
         // Create a little FPS text and display it in the info area
-        let mut height = DISP_HEIGHT; // Start at the top of the info area
 
-        // Draw a border line above info area
+        // Draw a border line around the game area
+        // we can use the leftover space to show debugger info
         let mut line = graphics::Mesh::new_line(
             ctx,
             &[na::Point2::new(0.0, 0.0), na::Point2::new(DISP_WIDTH, 0.0)],
             2.0,
             graphics::BLACK,
         )?;
-        graphics::draw(ctx, &line, ([0.0, height],))?;
+        graphics::draw(ctx, &line, ([0.0, DISP_HEIGHT],))?;
         line = graphics::Mesh::new_line(
             ctx,
-            &[na::Point2::new(0.0, 0.0), na::Point2::new(0.0, height)],
+            &[na::Point2::new(0.0, 0.0), na::Point2::new(0.0, DISP_HEIGHT)],
             2.0,
             graphics::BLACK,
         )?;
         graphics::draw(ctx, &line, ([DISP_WIDTH, 0.0],))?;
 
+        // Right side info panel
+        let mut height: f32 = 0.0;
+        let cpu_info = Text::new(format!("{}", self.cpu));
+        graphics::draw(ctx, &cpu_info, (Vec2::new(DISP_WIDTH, height), black))?;
+        let flag_info = Text::new(format!("SZ0A0P1C\n{:08b}", self.cpu.get_flags()));
+        height += 2.0 + flag_info.height(ctx) as f32 * 2.0;
+        graphics::draw(ctx, &flag_info, (Vec2::new(DISP_WIDTH, height), black))?;
+
+        // Bottom info panel
         // A FPS timer (not a mapped obj because it changes rapidly)
+        height = DISP_HEIGHT; // Start at the top of the info area
         height += 2.0;
         let fps = timer::fps(ctx);
         let fps_display = Text::new(format!("FPS: {}", fps));
