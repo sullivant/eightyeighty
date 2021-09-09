@@ -167,8 +167,8 @@ impl ggez::event::EventHandler for App {
                 println!("{}", dt);
                 self.last_msg = dt;
                 self.next_msg = format!(
-                    "{} (dl:{:#04X},dh:{:#04X})",
-                    ndt, self.next_opcode.1, self.next_opcode.2
+                    "{} (op:{:#04X},dl:{:#04X},dh:{:#04X})",
+                    ndt, self.next_opcode.0, self.next_opcode.1, self.next_opcode.2
                 ); // We only really care about the text
             }
             self.update_text_area();

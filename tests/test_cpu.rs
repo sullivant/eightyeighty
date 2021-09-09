@@ -91,7 +91,7 @@ fn test_update_flags() {
 }
 
 #[test]
-fn test_nop() {
+fn test_op_00() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
     cpu.run_opcode((0x00, 0x00, 0x00)).unwrap();
