@@ -150,7 +150,7 @@ fn test_op_06() {
     let op = cpu.pc;
     cpu.run_opcode((0x06, 0x01, 0x02)).unwrap();
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
-    assert_eq!(cpu.b, 0x02);
+    assert_eq!(cpu.b, 0x01);
 }
 
 #[test]
@@ -183,7 +183,7 @@ fn test_op_13() {
 }
 
 #[test]
-// A gets memory value at memory[DE]
+// Register A gets memory value at location DE
 fn test_op_1a() {
     let mut cpu = Cpu::new();
     cpu.memory[0x1122] = 0x56;
@@ -192,6 +192,18 @@ fn test_op_1a() {
     cpu.a = 0x00;
     cpu.run_opcode((0x1A, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.a, 0x56);
+}
+
+#[test]
+// Memory at location HL gets register value A
+fn test_op_77() {
+    let mut cpu = Cpu::new();
+    cpu.h = 0x20; // H and L registers specify target location
+    cpu.l = 0x01; // in memory to load the value of register A
+    cpu.a = 0x45;
+    cpu.memory[0x2001] = 0; // Reset it.
+    cpu.run_opcode((0x77, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[0x2001], 0x45);
 }
 
 #[test]
@@ -214,6 +226,12 @@ fn test_op_23() {
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
     assert_eq!(cpu.h, 0x19);
     assert_eq!(cpu.l, 0x00);
+
+    cpu.h = 0x18;
+    cpu.l = 0x0F;
+    cpu.run_opcode((0x23, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.h, 0x18);
+    assert_eq!(cpu.l, 0x10);
 
     // try again with the overflow protection
     cpu.h = 0xff;
@@ -246,17 +264,6 @@ fn test_op_33() {
     cpu.sp = 0xffff;
     cpu.run_opcode((0x33, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.sp, 0x0000);
-}
-
-#[test]
-fn test_op_77() {
-    let mut cpu = Cpu::new();
-    cpu.h = 0x20; // H and L registers specify target location
-    cpu.l = 0x01; // in memory to load the value of register A
-    cpu.a = 0x45;
-    cpu.memory[0x2001] = 0; // Reset it.
-    cpu.run_opcode((0x77, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.memory[0x2001], 0x45);
 }
 
 #[test]

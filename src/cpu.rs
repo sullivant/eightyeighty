@@ -51,7 +51,7 @@ impl fmt::Display for Cpu {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X} A:{:#04X}\nB:{:#04X} C:{:#04X}\nD:{:#04X} E:{:#04X}\nH:{:#04X} L:{:#04X}",
+            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X}\nA:{:#06X}\nB:{:#04X} C:{:#04X}\nD:{:#04X} E:{:#04X}\nH:{:#04X} L:{:#04X}",
             self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l
         )
     }
@@ -205,30 +205,30 @@ impl Cpu {
     //
     // It will also return ERROR if the opcode was not recognized
     pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
-        let x = opcode.1; // Potential data points for usage by an instruction
-        let y = opcode.2; // Potential data points for usage by an instruction
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
 
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
-            0x00 => self.op_00(),     // NOP
-            0x03 => self.op_03(),     // INX B
-            0x05 => self.op_05(),     // DCR B
-            0x06 => self.op_06(y),    // MVI B, D8
-            0x11 => self.op_11(x, y), // LXI D,D16
-            0x13 => self.op_13(),     // INX D
-            0x1A => self.op_1a(),     // LDAX D
-            0x21 => self.op_21(x, y), // LXI D,D16
-            0x23 => self.op_23(),     // INX H
-            0x31 => self.op_31(x, y), // LXI SP, D16
-            0x33 => self.op_33(),     // INX SP
-            0x77 => self.op_77(),     // MOV M,A
-            0xC2 => self.op_c2(x, y), // JNZ
-            0xC3 => self.op_c3(x, y), // JMP
-            0xC5 => self.op_c5(),     // PUSH B
-            0xC9 => self.op_c9(),     // RET
-            0xCD => self.op_cd(x, y), // CALL Addr
-            0xF4 => self.op_f4(x, y), // CP If Plus
+            0x00 => self.op_00(),       // NOP
+            0x03 => self.op_03(),       // INX B
+            0x05 => self.op_05(),       // DCR B
+            0x06 => self.op_06(dl),     // MVI B, D8
+            0x11 => self.op_11(dl, dh), // LXI D,D16
+            0x13 => self.op_13(),       // INX D
+            0x1A => self.op_1a(),       // LDAX D
+            0x21 => self.op_21(dl, dh), // LXI D,D16
+            0x23 => self.op_23(),       // INX H
+            0x31 => self.op_31(dl, dh), // LXI SP, D16
+            0x33 => self.op_33(),       // INX SP
+            0x77 => self.op_77(),       // MOV M,A
+            0xC2 => self.op_c2(dl, dh), // JNZ
+            0xC3 => self.op_c3(dl, dh), // JMP
+            0xC5 => self.op_c5(),       // PUSH B
+            0xC9 => self.op_c9(),       // RET
+            0xCD => self.op_cd(dl, dh), // CALL Addr
+            0xF4 => self.op_f4(dl, dh), // CP If Plus
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -295,12 +295,12 @@ impl Cpu {
         let mut c: u16 = u16::from(self.d) << 8 | u16::from(self.e);
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
         self.d = (c >> 8) as u8;
-        self.e = (c & 0x0F) as u8;
+        self.e = (c & 0xFF) as u8;
 
         ProgramCounter::Next
     }
 
-    // LDAX DE
+    // LDAX DE (A <- DE)
     pub fn op_1a(&mut self) -> ProgramCounter {
         let loc: u16 = u16::from(self.d) << 8 | u16::from(self.e);
 
@@ -324,7 +324,7 @@ impl Cpu {
         let mut c: u16 = u16::from(self.h) << 8 | u16::from(self.l);
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
         self.h = (c >> 8) as u8;
-        self.l = (c & 0x0F) as u8;
+        self.l = (c & 0xFF) as u8;
 
         ProgramCounter::Next
     }

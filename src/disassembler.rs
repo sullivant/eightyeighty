@@ -124,7 +124,7 @@ fn op_13() -> Instr {
 // LDAX DE (A <- $DE)
 fn op_1a() -> Instr {
     Instr {
-        code: "LDAX D, A".to_string(),
+        code: "LDAX DE".to_string(),
         size: ProgramCounter::Next,
     }
 }

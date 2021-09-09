@@ -62,6 +62,7 @@ impl App {
     }
 
     fn new(ctx: &mut Context) -> GameResult<App> {
+        println!("Creating new App Object");
         let dt = std::time::Duration::new(0, 0);
         let black = graphics::Color::new(0.0, 0.0, 0.0, 1.0);
         let mut texts = BTreeMap::new(); // Setup some texts for update later
@@ -125,7 +126,7 @@ impl ggez::event::EventHandler for App {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx); // Frame count timer
 
-        while timer::check_update_time(ctx, 80) {
+        while timer::check_update_time(ctx, 40) {
             let mut tick_happened: bool = false;
             // If we are not in pause_on_tick mode, tick away
             if !self.pause_on_tick {
@@ -167,8 +168,12 @@ impl ggez::event::EventHandler for App {
                 println!("{}", dt);
                 self.last_msg = dt;
                 self.next_msg = format!(
-                    "{} (op:{:#04X},dl:{:#04X},dh:{:#04X})",
-                    ndt, self.next_opcode.0, self.next_opcode.1, self.next_opcode.2
+                    "{} (op:{:#04X}/{:08b},dl:{:#04X},dh:{:#04X})",
+                    ndt,
+                    self.next_opcode.0,
+                    self.next_opcode.0,
+                    self.next_opcode.1,
+                    self.next_opcode.2
                 ); // We only really care about the text
             }
             self.update_text_area();
@@ -220,10 +225,10 @@ impl ggez::event::EventHandler for App {
 
         // Right side info panel
         let mut height: f32 = 0.0;
-        let cpu_info = Text::new(format!("{}", self.cpu));
+        let cpu_info = Text::new(format!("{}", &self.cpu));
         graphics::draw(ctx, &cpu_info, (Vec2::new(DISP_WIDTH, height), black))?;
         let flag_info = Text::new(format!("SZ0A0P1C\n{:08b}", self.cpu.get_flags()));
-        height += 2.0 + flag_info.height(ctx) as f32 * 2.0;
+        height += 2.0 + flag_info.height(ctx) as f32 * 3.0;
         graphics::draw(ctx, &flag_info, (Vec2::new(DISP_WIDTH, height), black))?;
 
         // Bottom info panel
