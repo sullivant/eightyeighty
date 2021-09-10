@@ -54,7 +54,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     }
 }
 
-pub fn disassemble(cpu: &Cpu) -> String {
+pub fn disassemble(cpu: &Cpu, last_pc: usize) -> String {
     let i = get_opcode_text(cpu.last_opcode);
     let dl = cpu.last_opcode.1;
     let dh = cpu.last_opcode.2;
@@ -63,13 +63,13 @@ pub fn disassemble(cpu: &Cpu) -> String {
         ProgramCounter::Jump(j) => {
             format!(
                 "{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}->JMP ${:#06X}",
-                cpu.cycle_count, cpu.pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh,cpu.b, i.code, j
+                cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh,cpu.b, i.code, j
             )
         }
         _ => {
             format!(
                 "{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}",
-                cpu.cycle_count, cpu.pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code
+                cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code
             )
         }
     }

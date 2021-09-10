@@ -48,7 +48,7 @@ pub struct App {
     texts: BTreeMap<&'static str, Text>,
     last_msg: String, // Contains last disassembler message
     next_msg: String, // Contains next disassembler command to be run
-    next_opcode: (u8, u8, u8),
+    last_pc: usize,
     pause_on_tick: bool,
     single_tick: bool,
 }
@@ -115,7 +115,7 @@ impl App {
             texts,
             last_msg: "N/A".to_string(),
             next_msg: "N/A".to_string(),
-            next_opcode: (0, 0, 0),
+            last_pc: 0,
             pause_on_tick: true,
             single_tick: false,
         })
@@ -134,7 +134,7 @@ impl ggez::event::EventHandler for App {
                 match self.cpu.tick() {
                     Ok(n) => {
                         tick_happened = true;
-                        self.next_opcode = n;
+                        self.last_pc = n;
                     }
                     Err(e) => {
                         panic!("Unable to tick: {}", e);
@@ -147,7 +147,7 @@ impl ggez::event::EventHandler for App {
                     match self.cpu.tick() {
                         Ok(n) => {
                             tick_happened = true;
-                            self.next_opcode = n;
+                            self.last_pc = n;
                         }
                         Err(e) => {
                             panic!("Unable to tick: {}", e);
@@ -163,17 +163,17 @@ impl ggez::event::EventHandler for App {
                     disassembler::print_header();
                 }
                 // Get our disassembler message text as well as our "next" opcode description
-                let dt = disassembler::disassemble(&self.cpu);
-                let ndt = disassembler::get_opcode_text(self.next_opcode);
+                let dt = disassembler::disassemble(&self.cpu, self.last_pc);
+                let ndt = disassembler::get_opcode_text(self.cpu.next_opcode);
                 println!("{}", dt);
                 self.last_msg = dt;
                 self.next_msg = format!(
                     "{} (op:{:#04X}/{:08b},dl:{:#04X},dh:{:#04X})",
                     ndt,
-                    self.next_opcode.0,
-                    self.next_opcode.0,
-                    self.next_opcode.1,
-                    self.next_opcode.2
+                    self.cpu.next_opcode.0,
+                    self.cpu.next_opcode.0,
+                    self.cpu.next_opcode.1,
+                    self.cpu.next_opcode.2
                 ); // We only really care about the text
             }
             self.update_text_area();

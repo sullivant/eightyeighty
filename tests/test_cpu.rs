@@ -333,7 +333,7 @@ fn test_op_cd() {
     cpu.pc = 0x12;
     cpu.sp = 0x2400;
 
-    // Pretend we are going to CALL addr of 0x53
+    // Pretend we are going to CALL addr of 0x0503
     cpu.run_opcode((0xCD, 0x03, 0x05)).unwrap();
 
     // memory should be set now
@@ -341,7 +341,7 @@ fn test_op_cd() {
     assert_eq!(cpu.memory[0x23FE], 0x12 & 0x0F);
 
     // Check stack pointer
-    assert_eq!(cpu.sp, 0x2402);
+    assert_eq!(cpu.sp, 0x23FE);
 
     // Check program counter
     assert_eq!(cpu.pc, (0x0503));

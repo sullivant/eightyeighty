@@ -39,6 +39,7 @@ pub struct Cpu {
 
     pub cycle_count: usize,        // Cycle count
     pub last_opcode: (u8, u8, u8), // Just a record of the last opcode.
+    pub next_opcode: (u8, u8, u8), // Next opcode we are running.
 }
 
 impl Default for Cpu {
@@ -51,8 +52,8 @@ impl fmt::Display for Cpu {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X}\nA:{:#06X}\nB:{:#04X} C:{:#04X}\nD:{:#04X} E:{:#04X}\nH:{:#04X} L:{:#04X}",
-            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l
+            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X}\nA:{:#06X}\nB:{:#04X} C:{:#04X}\nD:{:#04X} E:{:#04X}\nH:{:#04X} L:{:#04X}\nsp $[{:#06X}]={:#04X} sp+1 $[{:06X}]={:#04X}",
+            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l,self.sp,self.memory[usize::from(self.sp)],self.sp+1,self.memory[usize::from(self.sp+1)]
         )
     }
 }
@@ -75,6 +76,7 @@ impl Cpu {
             nop: false,
             cycle_count: 0x00,
             last_opcode: (0, 0, 0),
+            next_opcode: (0, 0, 0),
         }
     }
 
@@ -164,16 +166,19 @@ impl Cpu {
 
     // Gathers a word from memory based on program counter location,
     // then passes it along to the run_opcode() function
-    // On successful tick, returns the NEXT opcode it expects to run, for debugging
-    // purposes.
+    // On successful tick, returns the program counter value that was run
     // On unsuccessful tick, returns an error
-    pub fn tick(&mut self) -> Result<(u8, u8, u8), String> {
+    pub fn tick(&mut self) -> Result<usize, String> {
         let opcode = self.read_opcode();
         self.last_opcode = opcode;
+        let this_pc = self.pc;
 
         self.cycle_count += 1;
         match self.run_opcode(opcode) {
-            Ok(_) => Ok(self.read_opcode()),
+            Ok(_) => {
+                self.next_opcode = self.read_opcode();
+                Ok(this_pc)
+            }
             Err(e) => Err(e),
         }
     }
@@ -394,14 +399,14 @@ impl Cpu {
         ProgramCounter::Jump(dest.into())
     }
 
-    // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP+2;PC=adr
+    // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP-2;PC=adr
     pub fn op_cd(&mut self, x: u8, y: u8) -> ProgramCounter {
         // Save away the current PC hi/lo into the stack
         let pc_hi = self.pc >> 4;
         let pc_lo = self.pc & 0x0F;
         self.memory[usize::from(self.sp - 1)] = pc_hi as u8;
         self.memory[usize::from(self.sp - 2)] = pc_lo as u8;
-        self.sp += 2;
+        self.sp -= 2;
 
         // Tell the program counter where we want to go next
         let ys: u16 = u16::from(y) << 8;
