@@ -330,15 +330,15 @@ fn test_op_c9() {
 fn test_op_cd() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
-    cpu.pc = 0x12;
+    cpu.pc = 0x18D9;
     cpu.sp = 0x2400;
 
     // Pretend we are going to CALL addr of 0x0503
     cpu.run_opcode((0xCD, 0x03, 0x05)).unwrap();
 
     // memory should be set now
-    assert_eq!(cpu.memory[0x23FF], 0x12 >> 4);
-    assert_eq!(cpu.memory[0x23FE], 0x12 & 0x0F);
+    assert_eq!(cpu.memory[0x23FF], 0x18 as u8);
+    assert_eq!(cpu.memory[0x23FE], 0xD9 as u8);
 
     // Check stack pointer
     assert_eq!(cpu.sp, 0x23FE);

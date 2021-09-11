@@ -393,17 +393,18 @@ impl Cpu {
             None => 0,
         };
         let dest: u16 = u16::from(pc_hi) << 8 | u16::from(pc_lo);
-
+        self.pc = dest as usize; // Set our PC back to where we were
         self.sp += 2;
 
-        ProgramCounter::Jump(dest.into())
+        //ProgramCounter::Jump(dest.into())
+        ProgramCounter::Next // And go to the next op
     }
 
     // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP-2;PC=adr
     pub fn op_cd(&mut self, x: u8, y: u8) -> ProgramCounter {
         // Save away the current PC hi/lo into the stack
-        let pc_hi = self.pc >> 4;
-        let pc_lo = self.pc & 0x0F;
+        let pc_hi = self.pc >> 8;
+        let pc_lo = self.pc & 0xFF;
         self.memory[usize::from(self.sp - 1)] = pc_hi as u8;
         self.memory[usize::from(self.sp - 2)] = pc_lo as u8;
         self.sp -= 2;
