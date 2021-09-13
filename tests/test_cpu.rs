@@ -322,7 +322,7 @@ fn test_op_c9() {
     cpu.memory[usize::from(cpu.sp + 1)] = 0x10; // HI
 
     cpu.run_opcode((0xC9, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, 0x1032);
+    assert_eq!(cpu.pc, 0x1032 + lib::OPCODE_SIZE * 3);
     assert_eq!(cpu.sp, 0x2402);
 }
 

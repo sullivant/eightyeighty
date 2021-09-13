@@ -40,6 +40,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x23 => op_23(),       // INX HL
         0x31 => op_31(),       // LXI SP, D16
         0x33 => op_33(),       // INX SP
+        0x36 => op_36(),       // MVI (H), D8
         0x77 => op_77(),       // MOV M,A
         0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
@@ -157,6 +158,14 @@ fn op_33() -> Instr {
     Instr {
         code: "INX SP".to_string(),
         size: ProgramCounter::Next,
+    }
+}
+
+// MVI M, D8
+fn op_36() -> Instr {
+    Instr {
+        code: "MVI M(HL), D8".to_string(),
+        size: ProgramCounter::Two,
     }
 }
 

@@ -397,7 +397,7 @@ impl Cpu {
         self.sp += 2;
 
         //ProgramCounter::Jump(dest.into())
-        ProgramCounter::Next // And go to the next op
+        ProgramCounter::Three // And go to the next op
     }
 
     // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP-2;PC=adr
