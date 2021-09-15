@@ -264,7 +264,7 @@ fn add_display_text(
     let texture_creator = canvas.texture_creator();
     let ttf_context = sdl2::ttf::init().unwrap();
     let font = ttf_context
-        .load_font("./resources/fonts/OpenSans-Regular.ttf", 10)
+        .load_font("./resources/fonts/xkcd-Regular.otf", 10)
         .unwrap();
 
     let surface = font.render(to_display).solid(BLACK).unwrap();
