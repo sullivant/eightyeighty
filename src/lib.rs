@@ -34,6 +34,7 @@ pub const DISP_HEIGHT: u16 = 480;
 pub const EMU_WIDTH: u16 = 224; // Emulator display area width/height
 pub const EMU_HEIGHT: u16 = 256;
 pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
+const LINE_SPACE: u16 = 20; // Space between lines of text
 const WHITE: Color = Color::RGB(255, 255, 255);
 const BLACK: Color = Color::RGB(0, 0, 0);
 const RED: Color = Color::RGB(255, 0, 0);
@@ -218,12 +219,27 @@ pub fn go() -> Result<(), String> {
         // Clear the screen
         canvas.clear();
 
-        // Update an info area
+        // Update an info area (TODO: Break this into a function)
         add_display_text(
             &mut canvas,
             &format!("Cycle:{:#06X}", app.cpu.cycle_count),
-            Rect::new(0, (EMU_HEIGHT * CELL_SIZE).into(), 200, 40),
+            0,
+            (EMU_HEIGHT * CELL_SIZE).into(),
         );
+        add_display_text(
+            &mut canvas,
+            &format!("SZ0A0P1C"),
+            0,
+            ((EMU_HEIGHT * CELL_SIZE) + LINE_SPACE) as i32,
+        );
+        add_display_text(
+            &mut canvas,
+            &format!("{:08b}", app.cpu.get_flags()),
+            0,
+            ((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 2)) as i32,
+        );
+
+        // let flag_info = Text::new(format!("SZ0A0P1C\n{:08b}", self.cpu.get_flags()));
 
         // Draw the graphics portion of memory (TODO)
         canvas.set_draw_color(BLACK);
@@ -256,15 +272,12 @@ pub fn go() -> Result<(), String> {
     Ok(())
 }
 
-fn add_display_text(
-    canvas: &mut sdl2::render::WindowCanvas,
-    to_display: &str,
-    loc: sdl2::rect::Rect,
-) {
+// Does what it says on the tin.
+fn add_display_text(canvas: &mut sdl2::render::WindowCanvas, to_display: &str, x: i32, y: i32) {
     let texture_creator = canvas.texture_creator();
     let ttf_context = sdl2::ttf::init().unwrap();
     let font = ttf_context
-        .load_font("./resources/fonts/xkcd-Regular.otf", 10)
+        .load_font("./resources/fonts/xkcd-Regular.otf", 16)
         .unwrap();
 
     let surface = font.render(to_display).solid(BLACK).unwrap();
@@ -272,5 +285,11 @@ fn add_display_text(
         .create_texture_from_surface(&surface)
         .unwrap();
 
-    canvas.copy(&texture, None, Some(loc)).unwrap();
+    canvas
+        .copy(
+            &texture,
+            None,
+            Some(Rect::new(x, y, surface.width(), surface.height())),
+        )
+        .unwrap();
 }
