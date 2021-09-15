@@ -29,11 +29,11 @@ pub const FLAG_PARITY: u8 = 0b0000_0100;
 pub const FLAG_CARRY: u8 = 0b0000_0001;
 
 // Window and display concerns
-pub const DISP_WIDTH: f32 = 640.0; // Overall width/height
-pub const DISP_HEIGHT: f32 = 480.0;
+pub const DISP_WIDTH: u16 = 640; // Overall width/height
+pub const DISP_HEIGHT: u16 = 480;
 pub const EMU_WIDTH: u16 = 224; // Emulator display area width/height
 pub const EMU_HEIGHT: u16 = 256;
-pub const CELL_SIZE: u32 = 2; // The size of a "cell" or pixel
+pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
 const WHITE: Color = Color::RGB(255, 255, 255);
 const BLACK: Color = Color::RGB(0, 0, 0);
 const RED: Color = Color::RGB(255, 0, 0);
@@ -198,8 +198,8 @@ pub fn go() -> Result<(), String> {
     let window = video_subsystem
         .window(
             "8080",
-            DISP_WIDTH as u32 * CELL_SIZE,
-            DISP_HEIGHT as u32 * CELL_SIZE,
+            (DISP_WIDTH * CELL_SIZE).into(),
+            (DISP_HEIGHT * CELL_SIZE).into(),
         )
         .position_centered()
         .resizable()
@@ -239,10 +239,22 @@ pub fn go() -> Result<(), String> {
 
         // Draw the graphics portion (TODO)
         canvas.set_draw_color(BLACK);
-        canvas.draw_line(Point::new(100, 100), Point::new(200, 200))?;
-        // canvas
-        //     .fill_rect(Rect::new(100, 100, 2 as u32, 2 as u32))
-        //     .unwrap();
+        // Bottom border of EMU display area
+        canvas.draw_line(
+            Point::new(0, (EMU_HEIGHT * CELL_SIZE).into()),
+            Point::new(
+                (EMU_WIDTH * CELL_SIZE).into(),
+                (EMU_HEIGHT * CELL_SIZE).into(),
+            ),
+        )?;
+        // Right border of EMU display area
+        canvas.draw_line(
+            Point::new((EMU_WIDTH * CELL_SIZE).into(), 0),
+            Point::new(
+                (EMU_WIDTH * CELL_SIZE).into(),
+                (EMU_HEIGHT * CELL_SIZE).into(),
+            ),
+        )?;
 
         // Present the updated screen
         canvas.set_draw_color(WHITE);
