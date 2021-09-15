@@ -1,6 +1,4 @@
-use ggez::*;
-
-fn main() -> GameResult {
+fn main() -> Result<(), String> {
     lib::go()?;
     Ok(())
 }
