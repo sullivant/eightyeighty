@@ -167,31 +167,12 @@ impl App {
     //                 self.single_tick = false;
     //             }
     //         }
-
-    //         // If needed/wanted, call off to the disassembler to print some pretty details
-    //         if self.cpu.disassemble && tick_happened {
-    //             if self.cpu.cycle_count % 25 == 0 {
-    //                 disassembler::print_header();
-    //             }
-    //             // Get our disassembler message text as well as our "next" opcode description
-    //             let dt = disassembler::disassemble(&self.cpu, self.last_pc);
-    //             let ndt = disassembler::get_opcode_text(self.cpu.next_opcode);
-    //             println!("{}", dt);
-    //             self.last_msg = dt;
-    //             self.next_msg = format!(
-    //                 "{} (op:{:#04X}/{:08b},dl:{:#04X},dh:{:#04X})",
-    //                 ndt,
-    //                 self.cpu.next_opcode.0,
-    //                 self.cpu.next_opcode.0,
-    //                 self.cpu.next_opcode.1,
-    //                 self.cpu.next_opcode.2
-    //             ); // We only really care about the text
-    //         }
-    //     }
-    // }
 }
 
 pub fn go() -> Result<(), String> {
+    // Build our application
+    let mut app = App::new()?;
+
     // Create a window.
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -206,13 +187,13 @@ pub fn go() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
+    // Canvas stuff
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
     let mut event_pump = sdl_context.event_pump()?;
 
+    // Reset to start
     canvas.clear();
     canvas.present();
-    // Build our application
-    let mut app = App::new()?;
 
     // Main loop
     'running: loop {
@@ -237,7 +218,14 @@ pub fn go() -> Result<(), String> {
         // Clear the screen
         canvas.clear();
 
-        // Draw the graphics portion (TODO)
+        // Update an info area
+        add_display_text(
+            &mut canvas,
+            &format!("Cycle:{:#06X}", app.cpu.cycle_count),
+            Rect::new(0, (EMU_HEIGHT * CELL_SIZE).into(), 200, 40),
+        );
+
+        // Draw the graphics portion of memory (TODO)
         canvas.set_draw_color(BLACK);
         // Bottom border of EMU display area
         canvas.draw_line(
@@ -266,4 +254,23 @@ pub fn go() -> Result<(), String> {
 
     println!("Shutting down. Final CPU state:\n{}", app.cpu);
     Ok(())
+}
+
+fn add_display_text(
+    canvas: &mut sdl2::render::WindowCanvas,
+    to_display: &str,
+    loc: sdl2::rect::Rect,
+) {
+    let texture_creator = canvas.texture_creator();
+    let ttf_context = sdl2::ttf::init().unwrap();
+    let font = ttf_context
+        .load_font("./resources/fonts/OpenSans-Regular.ttf", 10)
+        .unwrap();
+
+    let surface = font.render(to_display).solid(BLACK).unwrap();
+    let texture = texture_creator
+        .create_texture_from_surface(&surface)
+        .unwrap();
+
+    canvas.copy(&texture, None, Some(loc)).unwrap();
 }
