@@ -106,13 +106,33 @@ impl App {
 
     fn update(&mut self) {
         let mut tick_happened: bool = false;
-        match self.cpu.tick() {
-            Ok(n) => {
-                tick_happened = true;
-                self.last_pc = n;
+
+        // If we are not in pause_on_tick mode, tick away
+        if !self.pause_on_tick {
+            // Tick the cpu
+            match self.cpu.tick() {
+                Ok(n) => {
+                    tick_happened = true;
+                    self.last_pc = n;
+                }
+                Err(e) => {
+                    panic!("Unable to tick: {}", e);
+                }
             }
-            Err(e) => {
-                panic!("Unable to tick: {}", e);
+        } else {
+            // We want to tick only when tick_once is true (Space key sets this)
+            if self.single_tick {
+                // Tick the cpu
+                match self.cpu.tick() {
+                    Ok(n) => {
+                        tick_happened = true;
+                        self.last_pc = n;
+                    }
+                    Err(e) => {
+                        panic!("Unable to tick: {}", e);
+                    }
+                }
+                self.single_tick = false;
             }
         }
 
@@ -140,34 +160,6 @@ impl App {
     // fn update(&mut self) {
     //     while timer::check_update_time(ctx, 40) {
     //         let mut tick_happened: bool = false;
-    //         // If we are not in pause_on_tick mode, tick away
-    //         if !self.pause_on_tick {
-    //             // Tick the cpu
-    //             match self.cpu.tick() {
-    //                 Ok(n) => {
-    //                     tick_happened = true;
-    //                     self.last_pc = n;
-    //                 }
-    //                 Err(e) => {
-    //                     panic!("Unable to tick: {}", e);
-    //                 }
-    //             }
-    //         } else {
-    //             // We want to tick only when tick_once is true (Space key sets this)
-    //             if self.single_tick {
-    //                 // Tick the cpu
-    //                 match self.cpu.tick() {
-    //                     Ok(n) => {
-    //                         tick_happened = true;
-    //                         self.last_pc = n;
-    //                     }
-    //                     Err(e) => {
-    //                         panic!("Unable to tick: {}", e);
-    //                     }
-    //                 }
-    //                 self.single_tick = false;
-    //             }
-    //         }
 }
 
 pub fn go() -> Result<(), String> {
@@ -207,6 +199,14 @@ pub fn go() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::F1),
+                    ..
+                } => app.pause_on_tick = !app.pause_on_tick,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => app.single_tick = true,
                 _ => {}
             }
         }
@@ -228,7 +228,7 @@ pub fn go() -> Result<(), String> {
         );
         add_display_text(
             &mut canvas,
-            &format!("SZ0A0P1C"),
+            &"SZ0A0P1C".to_string(),
             0,
             ((EMU_HEIGHT * CELL_SIZE) + LINE_SPACE) as i32,
         );
