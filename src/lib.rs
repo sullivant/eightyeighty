@@ -5,7 +5,6 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use std::collections::BTreeMap;
 use std::env;
 use std::path;
 use std::time::Duration;
@@ -104,6 +103,60 @@ impl App {
         })
     }
 
+    // For the debugger and such will go through needed items and prep them for display
+    // on the output window located in the canvas reference
+    fn create_display_texts(&mut self, canvas: &mut sdl2::render::WindowCanvas) {
+        // Cycle count
+        add_display_text(
+            canvas,
+            &format!("Cycle:{:#06X}", self.cpu.cycle_count),
+            0,
+            (EMU_HEIGHT * CELL_SIZE).into(),
+        );
+
+        // Command issued
+        add_display_text(
+            canvas,
+            disassembler::HEADER,
+            0,
+            ((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 3)) as i32,
+        );
+        add_display_text(
+            canvas,
+            &self.last_msg.to_string(),
+            0,
+            ((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 4)) as i32,
+        );
+
+        // Flags
+        add_display_text(
+            canvas,
+            &"SZ0A0P1C".to_string(),
+            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+            0,
+        );
+        add_display_text(
+            canvas,
+            &format!("{:08b}", self.cpu.get_flags()),
+            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+            (LINE_SPACE) as i32,
+        );
+
+        // Stack
+        for i in 0..3 {
+            add_display_text(
+                canvas,
+                &format!(
+                    "$[{:04X}] = {:02X}",
+                    self.cpu.sp + i,
+                    self.cpu.memory[(self.cpu.sp + i) as usize]
+                ),
+                ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+                (LINE_SPACE * (i + 2)) as i32,
+            );
+        }
+    }
+
     fn update(&mut self) {
         let mut tick_happened: bool = false;
 
@@ -139,7 +192,7 @@ impl App {
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.cpu.disassemble && tick_happened {
             if self.cpu.cycle_count % 25 == 0 {
-                disassembler::print_header();
+                println!("{}", disassembler::HEADER);
             }
             // Get our disassembler message text as well as our "next" opcode description
             let dt = disassembler::disassemble(&self.cpu, self.last_pc);
@@ -219,25 +272,7 @@ pub fn go() -> Result<(), String> {
         // Clear the screen
         canvas.clear();
 
-        // Update an info area (TODO: Break this into a function)
-        add_display_text(
-            &mut canvas,
-            &format!("Cycle:{:#06X}", app.cpu.cycle_count),
-            0,
-            (EMU_HEIGHT * CELL_SIZE).into(),
-        );
-        add_display_text(
-            &mut canvas,
-            &"SZ0A0P1C".to_string(),
-            0,
-            ((EMU_HEIGHT * CELL_SIZE) + LINE_SPACE) as i32,
-        );
-        add_display_text(
-            &mut canvas,
-            &format!("{:08b}", app.cpu.get_flags()),
-            0,
-            ((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 2)) as i32,
-        );
+        app.create_display_texts(&mut canvas);
 
         // let flag_info = Text::new(format!("SZ0A0P1C\n{:08b}", self.cpu.get_flags()));
 
@@ -277,7 +312,7 @@ fn add_display_text(canvas: &mut sdl2::render::WindowCanvas, to_display: &str, x
     let texture_creator = canvas.texture_creator();
     let ttf_context = sdl2::ttf::init().unwrap();
     let font = ttf_context
-        .load_font("./resources/fonts/xkcd-Regular.otf", 16)
+        .load_font("./resources/fonts/OpenSans-Regular.ttf", 16)
         .unwrap();
 
     let surface = font.render(to_display).solid(BLACK).unwrap();

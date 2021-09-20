@@ -1,6 +1,8 @@
 pub use super::cpu::Cpu;
 use std::fmt;
 
+pub const HEADER: &str = "CYCLE:PC Ins S l h sp SZ0A0P1C (lo,hi) B Command";
+
 pub struct Instr {
     code: String,         // The string defining what this this instr is actually doing
     size: ProgramCounter, // The size of the program counter "move" after this instr
@@ -17,10 +19,6 @@ enum ProgramCounter {
     Two,         // The operation uses only 1 byte of data
     Three,       // The operation uses the full 2 bytes of data
     Jump(usize), // The operation jumps to a point in memory
-}
-
-pub fn print_header() {
-    println!("CYCLE :PC       Ins  S  l    h    sp      SZ0A0P1C  (lo,hi)    B     Command");
 }
 
 // Really this just prints stuff to the standard output so we can view details on what is
