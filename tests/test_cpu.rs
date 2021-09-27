@@ -267,6 +267,19 @@ fn test_op_33() {
 }
 
 #[test]
+fn test_op_36() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.h = 0x20;
+    cpu.l = 0x1F;
+    cpu.run_opcode((0x36, 0x1A, 0x00)).unwrap();
+
+    assert_eq!(cpu.memory[0x201F], 0x1A);
+
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE + 1);
+}
+
+#[test]
 fn test_op_c2() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;

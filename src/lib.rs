@@ -50,7 +50,6 @@ pub struct App {
     dt: std::time::Duration,
     cpu: Cpu,
     last_msg: String, // Contains last disassembler message
-    next_msg: String, // Contains next disassembler command to be run
     last_pc: usize,
     pause_on_tick: bool,
     single_tick: bool,
@@ -96,7 +95,6 @@ impl App {
             dt,
             cpu,
             last_msg: "N/A".to_string(),
-            next_msg: "N/A".to_string(),
             last_pc: 0,
             pause_on_tick: true,
             single_tick: false,
@@ -155,6 +153,26 @@ impl App {
                 (LINE_SPACE * (i + 2)) as i32,
             );
         }
+
+        // Registers
+        for (i, r) in ["A", "B", "C", "D", "E", "H", "L"].iter().enumerate() {
+            let val = match *r {
+                "A" => self.cpu.a,
+                "B" => self.cpu.b,
+                "C" => self.cpu.c,
+                "D" => self.cpu.d,
+                "E" => self.cpu.e,
+                "H" => self.cpu.h,
+                "L" => self.cpu.l,
+                _ => 0,
+            };
+            add_display_text(
+                canvas,
+                &format!("{} = {:04X}", r, val),
+                ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+                (LINE_SPACE * (i as u16 + 5)) as i32,
+            );
+        }
     }
 
     fn update(&mut self) {
@@ -196,17 +214,8 @@ impl App {
             }
             // Get our disassembler message text as well as our "next" opcode description
             let dt = disassembler::disassemble(&self.cpu, self.last_pc);
-            let ndt = disassembler::get_opcode_text(self.cpu.next_opcode);
             println!("{}", dt);
             self.last_msg = dt;
-            self.next_msg = format!(
-                "{} (op:{:#04X}/{:08b},dl:{:#04X},dh:{:#04X})",
-                ndt,
-                self.cpu.next_opcode.0,
-                self.cpu.next_opcode.0,
-                self.cpu.next_opcode.1,
-                self.cpu.next_opcode.2
-            ); // We only really care about the text
         }
     }
 

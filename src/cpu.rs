@@ -227,6 +227,7 @@ impl Cpu {
             0x23 => self.op_23(),       // INX H
             0x31 => self.op_31(dl, dh), // LXI SP, D16
             0x33 => self.op_33(),       // INX SP
+            0x36 => self.op_36(dl),     // MVI (HL)<-D8
             0x77 => self.op_77(),       // MOV M,A
             0xC2 => self.op_c2(dl, dh), // JNZ
             0xC3 => self.op_c3(dl, dh), // JMP
@@ -346,6 +347,15 @@ impl Cpu {
         self.sp = self.sp.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
 
         ProgramCounter::Next
+    }
+
+    // MVI (HL) <- D8
+    // Memory location HL gets value D8
+    pub fn op_36(&mut self, x: u8) -> ProgramCounter {
+        let loc: u16 = u16::from(self.h) << 8 | u16::from(self.l);
+        self.memory[usize::from(loc)] = x;
+
+        ProgramCounter::Two
     }
 
     // MOV M,A
