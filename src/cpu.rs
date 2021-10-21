@@ -14,6 +14,7 @@ pub enum ProgramCounter {
     Jump(usize), // The operation jumps to a point in memory
 }
 
+#[derive(Clone)]
 pub struct Cpu {
     // Memory
     pub memory: [u8; RAM_SIZE],

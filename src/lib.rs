@@ -7,6 +7,8 @@ use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use std::env;
 use std::path;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 use structopt::StructOpt;
 
@@ -46,6 +48,7 @@ struct Cli {
     rom: String,
 }
 
+#[derive(Clone)]
 pub struct App {
     dt: std::time::Duration,
     cpu: Cpu,
@@ -99,6 +102,14 @@ impl App {
             pause_on_tick: true,
             single_tick: false,
         })
+    }
+
+    fn set_single_tick(&mut self, n: bool) {
+        self.single_tick = n;
+    }
+
+    fn toggle_pause_on_tick(&mut self) {
+        self.pause_on_tick = !self.pause_on_tick;
     }
 
     // For the debugger and such will go through needed items and prep them for display
@@ -175,7 +186,7 @@ impl App {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self) -> Result<(), String> {
         let mut tick_happened: bool = false;
 
         // If we are not in pause_on_tick mode, tick away
@@ -187,7 +198,7 @@ impl App {
                     self.last_pc = n;
                 }
                 Err(e) => {
-                    panic!("Unable to tick: {}", e);
+                    panic!("Unable to tick {}", e);
                 }
             }
         } else {
@@ -200,7 +211,7 @@ impl App {
                         self.last_pc = n;
                     }
                     Err(e) => {
-                        panic!("Unable to tick: {}", e);
+                        panic!("Unable to tick {}", e);
                     }
                 }
                 self.single_tick = false;
@@ -217,17 +228,11 @@ impl App {
             println!("{}", dt);
             self.last_msg = dt;
         }
+        Ok(())
     }
-
-    // fn update(&mut self) {
-    //     while timer::check_update_time(ctx, 40) {
-    //         let mut tick_happened: bool = false;
 }
 
 pub fn go() -> Result<(), String> {
-    // Build our application
-    let mut app = App::new()?;
-
     // Create a window.
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -250,8 +255,37 @@ pub fn go() -> Result<(), String> {
     canvas.clear();
     canvas.present();
 
+    let cpu_alive = Arc::new(Mutex::new(true));
+    let cpu_alive_clone = Arc::clone(&cpu_alive);
+
+    // Build our application
+    //let mut app = App::new()?;
+    let app = Arc::new(Mutex::new(App::new()?));
+    let app_clone = Arc::clone(&app);
+
+    // Create a thread that will be our running cpu
+    // It's just gonna tick like a boss, until it's told not to.
+    let handle = thread::spawn(move || {
+        while *cpu_alive_clone.lock().unwrap() {
+            match app_clone.lock().unwrap().update() {
+                Ok(_) => (),
+                Err(e) => {
+                    println!("Unable to tick: {}", e);
+                }
+            }
+        }
+
+        println!(
+            "Shutting down. Final CPU state:\n{}",
+            app_clone.lock().unwrap().cpu
+        );
+    });
+
     // Main loop
     'running: loop {
+        let app_clone = Arc::clone(&app);
+        let cpu_alive_clone = Arc::clone(&cpu_alive);
+
         // Hit up the event pump
         for event in event_pump.poll_iter() {
             // Read the keyboard
@@ -262,57 +296,58 @@ pub fn go() -> Result<(), String> {
                     ..
                 } => break 'running,
                 Event::KeyDown {
+                    keycode: Some(Keycode::F2),
+                    ..
+                } => {
+                    *cpu_alive_clone.lock().unwrap() = false;
+                }
+                Event::KeyDown {
                     keycode: Some(Keycode::F1),
                     ..
-                } => app.pause_on_tick = !app.pause_on_tick,
+                } => app_clone.lock().unwrap().toggle_pause_on_tick(),
                 Event::KeyDown {
                     keycode: Some(Keycode::Space),
                     ..
-                } => app.single_tick = true,
-                _ => {}
-            }
+                } => app_clone.lock().unwrap().set_single_tick(true),
+                _ => (),
+            };
         }
-
-        // Tick the CPU
-        // TODO - Might want this in its own thread, like as seen elsewhere and started earlier in
-        // the go() fn before this loop
-        app.update();
 
         // Clear the screen
         canvas.clear();
 
-        app.create_display_texts(&mut canvas);
-
-        // let flag_info = Text::new(format!("SZ0A0P1C\n{:08b}", self.cpu.get_flags()));
+        //app.create_display_texts(&mut canvas);
 
         // Draw the graphics portion of memory (TODO)
-        canvas.set_draw_color(BLACK);
+        //canvas.set_draw_color(BLACK);
         // Bottom border of EMU display area
-        canvas.draw_line(
-            Point::new(0, (EMU_HEIGHT * CELL_SIZE).into()),
-            Point::new(
-                (EMU_WIDTH * CELL_SIZE).into(),
-                (EMU_HEIGHT * CELL_SIZE).into(),
-            ),
-        )?;
+        //canvas.draw_line(
+        //    Point::new(0, (EMU_HEIGHT * CELL_SIZE).into()),
+        //    Point::new(
+        //        (EMU_WIDTH * CELL_SIZE).into(),
+        //        (EMU_HEIGHT * CELL_SIZE).into(),
+        //    ),
+        //)?;
         // Right border of EMU display area
-        canvas.draw_line(
-            Point::new((EMU_WIDTH * CELL_SIZE).into(), 0),
-            Point::new(
-                (EMU_WIDTH * CELL_SIZE).into(),
-                (EMU_HEIGHT * CELL_SIZE).into(),
-            ),
-        )?;
+        //canvas.draw_line(
+        //    Point::new((EMU_WIDTH * CELL_SIZE).into(), 0),
+        //    Point::new(
+        //        (EMU_WIDTH * CELL_SIZE).into(),
+        //        (EMU_HEIGHT * CELL_SIZE).into(),
+        //    ),
+        //)?;
 
         // Present the updated screen
         canvas.set_draw_color(WHITE);
         canvas.present();
 
         // Sleep a bit
-        //        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        thread::sleep(Duration::from_millis(1));
+        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
-    println!("Shutting down. Final CPU state:\n{}", app.cpu);
+    handle.join().unwrap();
+
     Ok(())
 }
 
