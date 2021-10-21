@@ -296,12 +296,6 @@ pub fn go() -> Result<(), String> {
                     ..
                 } => break 'running,
                 Event::KeyDown {
-                    keycode: Some(Keycode::F2),
-                    ..
-                } => {
-                    *cpu_alive_clone.lock().unwrap() = false;
-                }
-                Event::KeyDown {
                     keycode: Some(Keycode::F1),
                     ..
                 } => app_clone.lock().unwrap().toggle_pause_on_tick(),
@@ -316,34 +310,34 @@ pub fn go() -> Result<(), String> {
         // Clear the screen
         canvas.clear();
 
-        //app.create_display_texts(&mut canvas);
+        app_clone.lock().unwrap().create_display_texts(&mut canvas);
 
         // Draw the graphics portion of memory (TODO)
-        //canvas.set_draw_color(BLACK);
+        canvas.set_draw_color(BLACK);
         // Bottom border of EMU display area
-        //canvas.draw_line(
-        //    Point::new(0, (EMU_HEIGHT * CELL_SIZE).into()),
-        //    Point::new(
-        //        (EMU_WIDTH * CELL_SIZE).into(),
-        //        (EMU_HEIGHT * CELL_SIZE).into(),
-        //    ),
-        //)?;
+        canvas.draw_line(
+            Point::new(0, (EMU_HEIGHT * CELL_SIZE).into()),
+            Point::new(
+                (EMU_WIDTH * CELL_SIZE).into(),
+                (EMU_HEIGHT * CELL_SIZE).into(),
+            ),
+        )?;
         // Right border of EMU display area
-        //canvas.draw_line(
-        //    Point::new((EMU_WIDTH * CELL_SIZE).into(), 0),
-        //    Point::new(
-        //        (EMU_WIDTH * CELL_SIZE).into(),
-        //        (EMU_HEIGHT * CELL_SIZE).into(),
-        //    ),
-        //)?;
+        canvas.draw_line(
+            Point::new((EMU_WIDTH * CELL_SIZE).into(), 0),
+            Point::new(
+                (EMU_WIDTH * CELL_SIZE).into(),
+                (EMU_HEIGHT * CELL_SIZE).into(),
+            ),
+        )?;
 
         // Present the updated screen
         canvas.set_draw_color(WHITE);
         canvas.present();
 
         // Sleep a bit
-        thread::sleep(Duration::from_millis(1));
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        //thread::sleep(Duration::from_millis(1));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
     handle.join().unwrap();
