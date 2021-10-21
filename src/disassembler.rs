@@ -40,6 +40,14 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x33 => op_33(),       // INX SP
         0x36 => op_36(),       // MVI (HL), D8
         0x77 => op_77(),       // MOV M,A
+        0x78 => op_78(),       // MOV A,B
+        0x79 => op_79(),       // MOV A,C
+        0x7A => op_7a(),       // MOV A,D
+        0x7B => op_7b(),       // MOV A,E
+        0x7C => op_7c(),       // MOV A,H
+        0x7D => op_7d(),       // MOV A,L
+        0x7E => op_7e(),       // MOV A,M (HL)
+        0x7F => op_7f(),       // MOV A,A
         0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
         0xC5 => op_c5(),       // PUSH B
@@ -173,6 +181,63 @@ fn op_36() -> Instr {
 fn op_77() -> Instr {
     Instr {
         code: "MOV M,A".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_78() -> Instr {
+    Instr {
+        code: "MOV A,B".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_79() -> Instr {
+    Instr {
+        code: "MOV A,C".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_7a() -> Instr {
+    Instr {
+        code: "MOV A,D".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_7b() -> Instr {
+    Instr {
+        code: "MOV A,E".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+// A <- H
+fn op_7c() -> Instr {
+    Instr {
+        code: "MOV A,H".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_7d() -> Instr {
+    Instr {
+        code: "MOV A,L".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_7e() -> Instr {
+    Instr {
+        code: "MOV A,M (HL)".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_7f() -> Instr {
+    Instr {
+        code: "MOV A,A".to_string(),
         size: ProgramCounter::Next,
     }
 }

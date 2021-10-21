@@ -229,6 +229,7 @@ impl Cpu {
             0x33 => self.op_33(),       // INX SP
             0x36 => self.op_36(dl),     // MVI (HL)<-D8
             0x77 => self.op_77(),       // MOV M,A
+            0x7C => self.op_7c(),       // MOV A,H
             0xC2 => self.op_c2(dl, dh), // JNZ
             0xC3 => self.op_c3(dl, dh), // JMP
             0xC5 => self.op_c5(),       // PUSH B
@@ -364,6 +365,12 @@ impl Cpu {
     fn op_77(&mut self) -> ProgramCounter {
         let loc: u16 = u16::from(self.h) << 8 | u16::from(self.l);
         self.memory[usize::from(loc)] = self.a;
+        ProgramCounter::Next
+    }
+
+    // MOV A,H
+    fn op_7c(&mut self) -> ProgramCounter {
+        self.a = self.h;
         ProgramCounter::Next
     }
 

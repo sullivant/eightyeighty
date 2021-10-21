@@ -309,7 +309,7 @@ pub fn go() -> Result<(), String> {
         canvas.present();
 
         // Sleep a bit
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        //        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
     println!("Shutting down. Final CPU state:\n{}", app.cpu);

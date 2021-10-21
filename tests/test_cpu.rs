@@ -207,6 +207,19 @@ fn test_op_77() {
 }
 
 #[test]
+fn test_op_7c() {
+    let mut cpu = Cpu::new();
+    cpu.a = 0x00;
+    cpu.h = 0x45;
+    let op = cpu.pc;
+
+    cpu.run_opcode((0x7c, 0x01, 0x02)).unwrap();
+
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+    assert_eq!(cpu.a, 0x45);
+}
+
+#[test]
 fn test_op_21() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
