@@ -21,43 +21,61 @@ enum ProgramCounter {
     Jump(usize), // The operation jumps to a point in memory
 }
 
+enum Registers {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HL, // Used to ref memory locations
+}
+
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
 pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     let dl = op.1;
     let dh = op.2;
     match op.0 {
-        0x00 => op_00(),       // NOP
-        0x03 => op_03(),       // INX BC
-        0x05 => op_05(),       // DCR B
-        0x06 => op_06(),       // MVI B, D8
-        0x11 => op_11(),       // LXI D,D16
-        0x13 => op_13(),       // INX DE
-        0x1A => op_1a(),       // LDAX D
-        0x21 => op_21(),       //	LXI H,D16
-        0x23 => op_23(),       // INX HL
-        0x31 => op_31(),       // LXI SP, D16
-        0x33 => op_33(),       // INX SP
-        0x36 => op_36(),       // MVI (HL), D8
-        0x77 => op_77(),       // MOV M,A
-        0x78 => op_78(),       // MOV A,B
-        0x79 => op_79(),       // MOV A,C
-        0x7A => op_7a(),       // MOV A,D
-        0x7B => op_7b(),       // MOV A,E
-        0x7C => op_7c(),       // MOV A,H
-        0x7D => op_7d(),       // MOV A,L
-        0x7E => op_7e(),       // MOV A,M (HL)
-        0x7F => op_7f(),       // MOV A,A
-        0xC2 => op_c2(dl, dh), // JNZ Addr
-        0xC3 => op_c3(dl, dh), // JMP
-        0xC5 => op_c5(),       // PUSH B
-        0xC9 => op_c9(),       // RET
-        0xCD => op_cd(dl, dh), // CALL Addr
-        0xD5 => op_d5(),       // PUSH D
-        0xE5 => op_e5(),       // PUSH H
-        0xF4 => op_f4(dl, dh), // CALL if Plus
-        0xF5 => op_f5(),       // PUSH PSW
-        _ => op_unk(),         // UNK
+        0x00 => op_00(),              // NOP
+        0x03 => op_03(),              // INX BC
+        0x05 => op_05(),              // DCR B
+        0x06 => op_06(),              // MVI B, D8
+        0x11 => op_11(),              // LXI D,D16
+        0x13 => op_13(),              // INX DE
+        0x1A => op_1a(),              // LDAX D
+        0x21 => op_21(),              //	LXI H,D16
+        0x23 => op_23(),              // INX HL
+        0x31 => op_31(),              // LXI SP, D16
+        0x33 => op_33(),              // INX SP
+        0x36 => op_36(),              // MVI (HL), D8
+        0x70 => op_7m(Registers::B),  // MOV M,B
+        0x71 => op_7m(Registers::B),  // MOV M,C
+        0x72 => op_7m(Registers::B),  // MOV M,D
+        0x73 => op_7m(Registers::B),  // MOV M,E
+        0x74 => op_7m(Registers::B),  // MOV M,H
+        0x75 => op_7m(Registers::B),  // MOV M,L
+        0x76 => op_76(),              // HLT 1 (special)
+        0x77 => op_7m(Registers::A),  // MOV M,A
+        0x78 => op_7a(Registers::B),  // MOV A,B
+        0x79 => op_7a(Registers::C),  // MOV A,C
+        0x7A => op_7a(Registers::D),  // MOV A,D
+        0x7B => op_7a(Registers::E),  // MOV A,E
+        0x7C => op_7a(Registers::H),  // MOV A,H
+        0x7D => op_7a(Registers::L),  // MOV A,L
+        0x7E => op_7a(Registers::HL), // MOV A,M (HL)
+        0x7F => op_7a(Registers::A),  // MOV A,A
+        0xC2 => op_c2(dl, dh),        // JNZ Addr
+        0xC3 => op_c3(dl, dh),        // JMP
+        0xC5 => op_c5(),              // PUSH B
+        0xC9 => op_c9(),              // RET
+        0xCD => op_cd(dl, dh),        // CALL Addr
+        0xD5 => op_d5(),              // PUSH D
+        0xE5 => op_e5(),              // PUSH H
+        0xF4 => op_f4(dl, dh),        // CALL if Plus
+        0xF5 => op_f5(),              // PUSH PSW
+        _ => op_unk(),                // UNK
     }
 }
 
@@ -175,69 +193,49 @@ fn op_36() -> Instr {
     }
 }
 
+fn op_76() -> Instr {
+    Instr {
+        code: "HALT 1".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+// MOV M, Registers::...
+fn op_7m(reg: Registers) -> Instr {
+    let c: String = match reg {
+        Registers::A => "MOV M,A".to_string(),
+        Registers::B => "MOV M,B".to_string(),
+        Registers::C => "MOV M,C".to_string(),
+        Registers::D => "MOV M,D".to_string(),
+        Registers::E => "MOV M,E".to_string(),
+        Registers::H => "MOV M,H".to_string(),
+        Registers::L => "MOV M,L".to_string(),
+        _ => "MOV M,M".to_string(),
+    };
+
+    Instr {
+        code: c,
+        size: ProgramCounter::Next,
+    }
+}
+
 // MOV M,A
 // Address specified by H and L registers.
 // Load the value of A into this address in memory.
-fn op_77() -> Instr {
-    Instr {
-        code: "MOV M,A".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
+fn op_7a(reg: Registers) -> Instr {
+    let c: String = match reg {
+        Registers::A => "MOV A,A".to_string(),
+        Registers::B => "MOV A,B".to_string(),
+        Registers::C => "MOV A,C".to_string(),
+        Registers::D => "MOV A,D".to_string(),
+        Registers::E => "MOV A,E".to_string(),
+        Registers::H => "MOV A,H".to_string(),
+        Registers::L => "MOV A,L".to_string(),
+        Registers::HL => "MOV A,(HL)".to_string(),
+    };
 
-fn op_78() -> Instr {
     Instr {
-        code: "MOV A,B".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_79() -> Instr {
-    Instr {
-        code: "MOV A,C".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_7a() -> Instr {
-    Instr {
-        code: "MOV A,D".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_7b() -> Instr {
-    Instr {
-        code: "MOV A,E".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-// A <- H
-fn op_7c() -> Instr {
-    Instr {
-        code: "MOV A,H".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_7d() -> Instr {
-    Instr {
-        code: "MOV A,L".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_7e() -> Instr {
-    Instr {
-        code: "MOV A,M (HL)".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_7f() -> Instr {
-    Instr {
-        code: "MOV A,A".to_string(),
+        code: c,
         size: ProgramCounter::Next,
     }
 }

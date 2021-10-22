@@ -230,27 +230,34 @@ impl Cpu {
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
-            0x00 => self.op_00(),              // NOP
-            0x03 => self.op_03(),              // INX B
-            0x05 => self.op_05(),              // DCR B
-            0x06 => self.op_06(dl),            // MVI B, D8
-            0x11 => self.op_11(dl, dh),        // LXI D,D16
-            0x13 => self.op_13(),              // INX D
-            0x1A => self.op_1a(),              // LDAX D
-            0x21 => self.op_21(dl, dh),        // LXI D,D16
-            0x23 => self.op_23(),              // INX H
-            0x31 => self.op_31(dl, dh),        // LXI SP, D16
-            0x33 => self.op_33(),              // INX SP
-            0x36 => self.op_36(dl),            // MVI (HL)<-D8
-            0x77 => self.op_77(),              // MOV M,A
-            0x78 => self.op_7x(Registers::B),  // MOV A,B
-            0x79 => self.op_7x(Registers::C),  // MOV A,C
-            0x7A => self.op_7x(Registers::D),  // MOV A,D
-            0x7B => self.op_7x(Registers::E),  // MOV A,E
-            0x7C => self.op_7x(Registers::H),  // MOV A,H
-            0x7D => self.op_7x(Registers::L),  // MOV A,L
-            0x7E => self.op_7x(Registers::HL), // MOV A, (HL)
-            0x7F => self.op_7x(Registers::A),  // MOV A,A
+            0x00 => self.op_00(),             // NOP
+            0x03 => self.op_03(),             // INX B
+            0x05 => self.op_05(),             // DCR B
+            0x06 => self.op_06(dl),           // MVI B, D8
+            0x11 => self.op_11(dl, dh),       // LXI D,D16
+            0x13 => self.op_13(),             // INX D
+            0x1A => self.op_1a(),             // LDAX D
+            0x21 => self.op_21(dl, dh),       // LXI D,D16
+            0x23 => self.op_23(),             // INX H
+            0x31 => self.op_31(dl, dh),       // LXI SP, D16
+            0x33 => self.op_33(),             // INX SP
+            0x36 => self.op_36(dl),           // MVI (HL)<-D8
+            0x70 => self.op_7m(Registers::B), // MOV M,B	1		(HL) <- B
+            0x71 => self.op_7m(Registers::C), // MOV M,C	1		(HL) <- C
+            0x72 => self.op_7m(Registers::D), // MOV M,D	1		(HL) <- D
+            0x73 => self.op_7m(Registers::E), // MOV M,E	1		(HL) <- E
+            0x74 => self.op_7m(Registers::H), // MOV M,H	1		(HL) <- H
+            0x75 => self.op_7m(Registers::L), // MOV M,L	1		(HL) <- L
+            //0x76 => self.op_76(),              // HLT 1 (special)
+            0x77 => self.op_7m(Registers::A),  // MOV M,A
+            0x78 => self.op_7a(Registers::B),  // MOV A,B
+            0x79 => self.op_7a(Registers::C),  // MOV A,C
+            0x7A => self.op_7a(Registers::D),  // MOV A,D
+            0x7B => self.op_7a(Registers::E),  // MOV A,E
+            0x7C => self.op_7a(Registers::H),  // MOV A,H
+            0x7D => self.op_7a(Registers::L),  // MOV A,L
+            0x7E => self.op_7a(Registers::HL), // MOV A,(HL)
+            0x7F => self.op_7a(Registers::A),  // MOV A,A
             0xC2 => self.op_c2(dl, dh),        // JNZ
             0xC3 => self.op_c3(dl, dh),        // JMP
             0xC5 => self.op_c5(),              // PUSH B
@@ -383,15 +390,24 @@ impl Cpu {
     // MOV M,A
     // Address specified by H and L registers.
     // Load the value of A into this address in memory.
-    fn op_77(&mut self) -> ProgramCounter {
-        let loc: u16 = u16::from(self.h) << 8 | u16::from(self.l);
-        self.memory[usize::from(loc)] = self.a;
+    fn op_7m(&mut self, reg: Registers) -> ProgramCounter {
+        let loc = self.get_addr_pointer();
+        self.memory[loc] = match reg {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::L => self.l,
+            Registers::H => self.h,
+            Registers::A => self.a,
+            _ => self.memory[loc], // Do nothing
+        };
         ProgramCounter::Next
     }
 
     // MOV A,Registers::X
     // Moves into A the value in register specified by the enum Registers
-    fn op_7x(&mut self, reg: Registers) -> ProgramCounter {
+    fn op_7a(&mut self, reg: Registers) -> ProgramCounter {
         self.a = match reg {
             Registers::B => self.b,
             Registers::C => self.c,

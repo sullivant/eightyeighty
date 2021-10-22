@@ -218,7 +218,53 @@ fn test_op_77() {
 }
 
 #[test]
-fn test_op_7x() {
+fn test_op_7m() {
+    let mut cpu = Cpu::new();
+    cpu.a = 0x01;
+    cpu.b = 0x45;
+    cpu.c = 0x46;
+    cpu.d = 0x47;
+    cpu.e = 0x48;
+    cpu.h = 0x10;
+    cpu.l = 0x01;
+
+    let l = 0x1001;
+    cpu.memory[l] = 0xFF;
+    let mut op = cpu.pc;
+
+    cpu.run_opcode((0x70, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.memory[l], cpu.b);
+
+    cpu.run_opcode((0x71, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.memory[l], cpu.c);
+
+    cpu.run_opcode((0x72, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.memory[l], cpu.d);
+
+    cpu.run_opcode((0x73, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.memory[l], cpu.e);
+
+    cpu.run_opcode((0x74, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.memory[l], cpu.h);
+
+    cpu.run_opcode((0x75, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.memory[l], cpu.l);
+}
+
+#[test]
+fn test_op_7a() {
     let mut cpu = Cpu::new();
     cpu.a = 0x01;
     cpu.b = 0x45;
