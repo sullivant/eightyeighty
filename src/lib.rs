@@ -5,8 +5,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use std::env;
-use std::path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -38,8 +37,8 @@ pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
 const LINE_SPACE: u16 = 20; // Space between lines of text
 const WHITE: Color = Color::RGB(255, 255, 255);
 const BLACK: Color = Color::RGB(0, 0, 0);
-const RED: Color = Color::RGB(255, 0, 0);
-const GREEN: Color = Color::RGB(0, 255, 0);
+//const RED: Color = Color::RGB(255, 0, 0);
+//const GREEN: Color = Color::RGB(0, 255, 0);
 
 #[derive(StructOpt)]
 struct Cli {
@@ -255,7 +254,7 @@ pub fn go() -> Result<(), String> {
     canvas.clear();
     canvas.present();
 
-    let cpu_alive = Arc::new(Mutex::new(true));
+    let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let cpu_alive_clone = Arc::clone(&cpu_alive);
 
     // Build our application
@@ -266,7 +265,7 @@ pub fn go() -> Result<(), String> {
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
     let handle = thread::spawn(move || {
-        while *cpu_alive_clone.lock().unwrap() {
+        while cpu_alive_clone.load(Ordering::Relaxed) {
             match app_clone.lock().unwrap().update() {
                 Ok(_) => (),
                 Err(e) => {
@@ -286,6 +285,12 @@ pub fn go() -> Result<(), String> {
         let app_clone = Arc::clone(&app);
         let cpu_alive_clone = Arc::clone(&cpu_alive);
 
+        // If the cpu is not alive, we should just bail as well.
+        if !cpu_alive_clone.load(Ordering::Relaxed) {
+            println!("CPU is not alive.  Shutting application down.");
+            break 'running;
+        }
+
         // Hit up the event pump
         for event in event_pump.poll_iter() {
             // Read the keyboard
@@ -299,6 +304,10 @@ pub fn go() -> Result<(), String> {
                     keycode: Some(Keycode::F1),
                     ..
                 } => app_clone.lock().unwrap().toggle_pause_on_tick(),
+                Event::KeyDown {
+                    keycode: Some(Keycode::F2),
+                    ..
+                } => cpu_alive.store(false, Ordering::Relaxed),
                 Event::KeyDown {
                     keycode: Some(Keycode::Space),
                     ..

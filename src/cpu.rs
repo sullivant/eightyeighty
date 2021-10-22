@@ -3,15 +3,23 @@ use std::fs::File;
 use std::io::prelude::*;
 
 pub const RAM_SIZE: usize = 0xFFFF;
-pub const RAM_WORK_START: usize = 0x2000;
-pub const RAM_VIDEO_START: usize = 0x2400;
-pub const RAM_MIRROR_START: usize = 0x4000;
 
 pub enum ProgramCounter {
     Next,        // The operation does not use any data
     Two,         // The operation uses only 1 byte of data
     Three,       // The operation uses the full 2 bytes of data
     Jump(usize), // The operation jumps to a point in memory
+}
+
+pub enum Registers {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HL, // Used to reference memory locations
 }
 
 #[derive(Clone)]
@@ -79,6 +87,11 @@ impl Cpu {
             last_opcode: (0, 0, 0),
             next_opcode: (0, 0, 0),
         }
+    }
+
+    // Returns a usize location in memory designed by the H and L registers
+    pub fn get_addr_pointer(&mut self) -> usize {
+        usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
 
     pub fn get_registers(&self) -> (usize, u16, u8, u8, u8) {
@@ -217,26 +230,33 @@ impl Cpu {
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
-            0x00 => self.op_00(),       // NOP
-            0x03 => self.op_03(),       // INX B
-            0x05 => self.op_05(),       // DCR B
-            0x06 => self.op_06(dl),     // MVI B, D8
-            0x11 => self.op_11(dl, dh), // LXI D,D16
-            0x13 => self.op_13(),       // INX D
-            0x1A => self.op_1a(),       // LDAX D
-            0x21 => self.op_21(dl, dh), // LXI D,D16
-            0x23 => self.op_23(),       // INX H
-            0x31 => self.op_31(dl, dh), // LXI SP, D16
-            0x33 => self.op_33(),       // INX SP
-            0x36 => self.op_36(dl),     // MVI (HL)<-D8
-            0x77 => self.op_77(),       // MOV M,A
-            0x7C => self.op_7c(),       // MOV A,H
-            0xC2 => self.op_c2(dl, dh), // JNZ
-            0xC3 => self.op_c3(dl, dh), // JMP
-            0xC5 => self.op_c5(),       // PUSH B
-            0xC9 => self.op_c9(),       // RET
-            0xCD => self.op_cd(dl, dh), // CALL Addr
-            0xF4 => self.op_f4(dl, dh), // CP If Plus
+            0x00 => self.op_00(),              // NOP
+            0x03 => self.op_03(),              // INX B
+            0x05 => self.op_05(),              // DCR B
+            0x06 => self.op_06(dl),            // MVI B, D8
+            0x11 => self.op_11(dl, dh),        // LXI D,D16
+            0x13 => self.op_13(),              // INX D
+            0x1A => self.op_1a(),              // LDAX D
+            0x21 => self.op_21(dl, dh),        // LXI D,D16
+            0x23 => self.op_23(),              // INX H
+            0x31 => self.op_31(dl, dh),        // LXI SP, D16
+            0x33 => self.op_33(),              // INX SP
+            0x36 => self.op_36(dl),            // MVI (HL)<-D8
+            0x77 => self.op_77(),              // MOV M,A
+            0x78 => self.op_7x(Registers::B),  // MOV A,B
+            0x79 => self.op_7x(Registers::C),  // MOV A,C
+            0x7A => self.op_7x(Registers::D),  // MOV A,D
+            0x7B => self.op_7x(Registers::E),  // MOV A,E
+            0x7C => self.op_7x(Registers::H),  // MOV A,H
+            0x7D => self.op_7x(Registers::L),  // MOV A,L
+            0x7E => self.op_7x(Registers::HL), // MOV A, (HL)
+            0x7F => self.op_7x(Registers::A),  // MOV A,A
+            0xC2 => self.op_c2(dl, dh),        // JNZ
+            0xC3 => self.op_c3(dl, dh),        // JMP
+            0xC5 => self.op_c5(),              // PUSH B
+            0xC9 => self.op_c9(),              // RET
+            0xCD => self.op_cd(dl, dh),        // CALL Addr
+            0xF4 => self.op_f4(dl, dh),        // CP If Plus
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -369,9 +389,19 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // MOV A,H
-    fn op_7c(&mut self) -> ProgramCounter {
-        self.a = self.h;
+    // MOV A,Registers::X
+    // Moves into A the value in register specified by the enum Registers
+    fn op_7x(&mut self, reg: Registers) -> ProgramCounter {
+        self.a = match reg {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::L => self.l,
+            Registers::H => self.h,
+            Registers::HL => self.memory[self.get_addr_pointer()],
+            Registers::A => self.a,
+        };
         ProgramCounter::Next
     }
 

@@ -57,6 +57,17 @@ fn test_get_parity() {
 }
 
 #[test]
+fn test_get_addr_pointer() {
+    let mut cpu = Cpu::new();
+    cpu.h = 0x10;
+    cpu.l = 0x01;
+
+    let loc = usize::from(u16::from(0x10 as u8) << 8 | u16::from(0x01 as u8));
+
+    assert_eq!(cpu.get_addr_pointer(), loc);
+}
+
+#[test]
 fn test_get_sign() {
     let mut cpu = Cpu::new();
     assert_eq!(cpu.get_sign(0b11110000), true);
@@ -207,16 +218,59 @@ fn test_op_77() {
 }
 
 #[test]
-fn test_op_7c() {
+fn test_op_7x() {
     let mut cpu = Cpu::new();
-    cpu.a = 0x00;
-    cpu.h = 0x45;
-    let op = cpu.pc;
+    cpu.a = 0x01;
+    cpu.b = 0x45;
+    cpu.c = 0x46;
+    cpu.d = 0x47;
+    cpu.e = 0x48;
+    cpu.h = 0x10;
+    cpu.l = 0x01;
 
-    cpu.run_opcode((0x7c, 0x01, 0x02)).unwrap();
+    cpu.memory[0x1001] = 0xFF;
+    let mut op = cpu.pc;
 
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-    assert_eq!(cpu.a, 0x45);
+    cpu.run_opcode((0x78, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.b);
+
+    cpu.run_opcode((0x79, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.c);
+
+    cpu.run_opcode((0x7A, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.d);
+
+    cpu.run_opcode((0x7B, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.e);
+
+    cpu.run_opcode((0x7C, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.h);
+
+    cpu.run_opcode((0x7D, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.l);
+
+    // Sets A = memory at loc (HL)
+    cpu.run_opcode((0x7E, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, 0xFF);
+
+    cpu.run_opcode((0x7F, 0x01, 0x02)).unwrap();
+    op += lib::OPCODE_SIZE;
+    assert_eq!(cpu.pc, op);
+    assert_eq!(cpu.a, cpu.a);
 }
 
 #[test]
