@@ -494,3 +494,14 @@ fn test_op_f4() {
     // PC should be the new address.
     assert_eq!(cpu.pc, 0x1005);
 }
+
+#[test]
+fn test_op_fe() {
+    let mut cpu = Cpu::new();
+    // Setup a current PC value and stack pointer
+    cpu.pc = 0x12;
+    cpu.a = 0x05;
+    let op = cpu.pc;
+
+    cpu.run_opcode((0xFE, 0x05, 0x10)).unwrap();
+}

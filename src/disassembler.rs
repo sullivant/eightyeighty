@@ -75,6 +75,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xE5 => op_e5(),              // PUSH H
         0xF4 => op_f4(dl, dh),        // CALL if Plus
         0xF5 => op_f5(),              // PUSH PSW
+        0xFE => op_fe(),              // CPI
         _ => op_unk(),                // UNK
     }
 }
@@ -312,6 +313,13 @@ fn op_f5() -> Instr {
     Instr {
         code: "PUSH PSW".to_string(),
         size: ProgramCounter::Next,
+    }
+}
+
+fn op_fe() -> Instr {
+    Instr {
+        code: format!("CPI"),
+        size: ProgramCounter::Two,
     }
 }
 

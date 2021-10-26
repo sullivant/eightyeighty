@@ -264,6 +264,7 @@ impl Cpu {
             0xC9 => self.op_c9(),              // RET
             0xCD => self.op_cd(dl, dh),        // CALL Addr
             0xF4 => self.op_f4(dl, dh),        // CP If Plus
+            0xFE => self.op_fe(dl),            // CPI
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -491,5 +492,13 @@ impl Cpu {
             true => ProgramCounter::Three,
             false => ProgramCounter::Jump(dest.into()),
         }
+    }
+
+    // CPI - Compare D16 to Accum, set flags accordingly
+    pub fn op_fe(&mut self, data: u8) -> ProgramCounter {
+        println!("Accum:{:#04X}", self.a);
+        println!("Data:{:#04X}", data);
+
+        ProgramCounter::Two
     }
 }
