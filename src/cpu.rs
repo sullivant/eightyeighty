@@ -94,8 +94,8 @@ impl Cpu {
         usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
 
-    pub fn get_registers(&self) -> (usize, u16, u8, u8, u8) {
-        (self.pc, self.sp, self.h, self.l, self.b)
+    pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
+        (&self.pc, &self.sp, &self.h, &self.l, &self.b)
     }
 
     // Returns the current flag values
@@ -123,9 +123,8 @@ impl Cpu {
     }
 
     // Computes and sets the mask of flags for a supplied value
-    // sets flags: Zero, Sign, Parity
-    // Carry and Auxillary Carry are computed ad-hoc
-    pub fn update_flags(&mut self, val: u8) {
+    // sets flags: Zero, Sign, Parity, Carry, and Auxiliary Carry
+    pub fn update_flags(&mut self, val: u8, overflow: bool, aux_carry: bool) {
         match val == 0 {
             true => self.set_flag(super::FLAG_ZERO),
             false => self.reset_flag(super::FLAG_ZERO),
@@ -140,6 +139,14 @@ impl Cpu {
             true => self.set_flag(super::FLAG_PARITY),
             false => self.reset_flag(super::FLAG_PARITY),
         };
+
+        if overflow {
+            self.set_flag(super::FLAG_CARRY);
+        }
+
+        if aux_carry {
+            self.set_flag(super::FLAG_AUXCARRY);
+        }
     }
 
     // If number of ones in a number's binary representation is even,
@@ -188,6 +195,7 @@ impl Cpu {
         let this_pc = self.pc;
 
         self.cycle_count += 1;
+
         match self.run_opcode(opcode) {
             Ok(_) => {
                 self.next_opcode = self.read_opcode();
@@ -300,15 +308,12 @@ impl Cpu {
     // DCR B
     // Flags affected: Z,S,P,AC
     pub fn op_05(&mut self) -> ProgramCounter {
-        let new_val = self.b.wrapping_sub(1);
+        //let new_val = self.b.wrapping_sub(1);
+        let (res, of) = self.b.overflowing_sub(1);
+        let ac = (1 & 0x0F) > (self.b & 0x0F);
 
-        if (1 & 0x0F) > (self.b & 0x0F) {
-            self.set_flag(super::FLAG_AUXCARRY);
-        }
-
-        self.update_flags(new_val);
-
-        self.b = new_val;
+        self.update_flags(res, of, ac);
+        self.b = res;
 
         ProgramCounter::Next
     }
@@ -496,8 +501,11 @@ impl Cpu {
 
     // CPI - Compare D16 to Accum, set flags accordingly
     pub fn op_fe(&mut self, data: u8) -> ProgramCounter {
-        println!("Accum:{:#04X}", self.a);
-        println!("Data:{:#04X}", data);
+        // Subtract the data from register A and set flags on the result
+        let (res, overflow) = self.a.overflowing_sub(data);
+        let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
+
+        self.update_flags(res, overflow, aux_carry);
 
         ProgramCounter::Two
     }

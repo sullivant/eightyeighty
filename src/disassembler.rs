@@ -318,7 +318,7 @@ fn op_f5() -> Instr {
 
 fn op_fe() -> Instr {
     Instr {
-        code: format!("CPI"),
+        code: "CPI".to_string(),
         size: ProgramCounter::Two,
     }
 }

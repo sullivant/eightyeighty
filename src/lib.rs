@@ -188,6 +188,10 @@ impl App {
     fn update(&mut self) -> Result<(), String> {
         let mut tick_happened: bool = false;
 
+        if self.cpu.cycle_count == 0x920E {
+            self.pause_on_tick = true;
+        }
+
         // If we are not in pause_on_tick mode, tick away
         if !self.pause_on_tick {
             // Tick the cpu

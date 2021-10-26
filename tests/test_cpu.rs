@@ -89,16 +89,19 @@ fn test_test_flag() {
 fn test_update_flags() {
     let mut cpu = Cpu::new();
     // Should update: PARITY (TRUE) SIGN(FALSE) ZERO (TRUE)
-    cpu.update_flags(0b0000);
+    cpu.update_flags(0b0000, false, false);
     assert_eq!(cpu.test_flag(lib::FLAG_SIGN), false);
 
     cpu.flags = 0;
 
     // Should update: PARITY (TRUE) SIGN(TRUE) and ZERO (FALSE)
-    cpu.update_flags(0b10001000);
+    // And CARRY (TRUE) AUX CARRY(TRUE)
+    cpu.update_flags(0b10001000, true, true);
     assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
     assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
     assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
 }
 
 #[test]
@@ -500,8 +503,12 @@ fn test_op_fe() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
-    cpu.a = 0x05;
+    cpu.a = 0x04;
     let op = cpu.pc;
 
     cpu.run_opcode((0xFE, 0x05, 0x10)).unwrap();
+
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 2));
 }
