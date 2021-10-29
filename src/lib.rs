@@ -6,6 +6,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
+use std::i64;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -48,6 +49,7 @@ pub struct Emu {
     last_pc: usize,
     pause_on_tick: bool,
     single_tick: bool,
+    pause_on_count: usize,
 }
 
 impl Emu {
@@ -88,6 +90,7 @@ impl Emu {
             last_pc: 0,
             pause_on_tick: false,
             single_tick: false,
+            pause_on_count: 0,
         })
     }
 
@@ -101,6 +104,10 @@ impl Emu {
 
     fn toggle_pause_on_tick(&mut self) {
         self.pause_on_tick = !self.pause_on_tick;
+    }
+
+    fn set_pause_on_count(&mut self, v: usize) {
+        self.pause_on_count = v;
     }
 
     // For the debugger and such will go through needed items and prep them for display
@@ -180,6 +187,10 @@ impl Emu {
     fn update(&mut self) -> Result<(), String> {
         let mut tick_happened: bool = false;
 
+        if self.cpu.cycle_count == self.pause_on_count {
+            self.pause_on_tick = true;
+        }
+
         // If we are not in pause_on_tick mode, tick away
         if !self.pause_on_tick {
             // Tick the cpu
@@ -232,6 +243,9 @@ pub fn go() -> Result<(), String> {
         .arg(Arg::from_usage(
             "-p, --pause... 'initiates single step (pause on tick) mode'",
         ))
+        .arg(Arg::from_usage(
+            "-c, --count=[COUNT] 'pauses and initiates single step mode on program count <count>'",
+        ))
         .args_from_usage("<rom> 'The rom file to load and execute'")
         .get_matches();
 
@@ -260,8 +274,7 @@ pub fn go() -> Result<(), String> {
     let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let cpu_alive_clone = Arc::clone(&cpu_alive);
 
-    // Build our application
-    //let mut app = Emu::new()?;
+    // Build our application and include the CLI options if necessary
 
     // Gather from the command the rom to use; Clap won't let us skip this but we
     // load INVADERS by default just in case
@@ -277,6 +290,16 @@ pub fn go() -> Result<(), String> {
     if matches.is_present("pause") {
         println!("Setting pause on tick mode; <SPACEBAR> to step; <F1> to toggle;");
         app_clone.lock().unwrap().set_pause_on_tick(true);
+    }
+
+    if let Some(c) = matches.value_of("count") {
+        match i64::from_str_radix(c, 16) {
+            Ok(r) => {
+                println!("Count pause: {:#06X}", r);
+                app_clone.lock().unwrap().set_pause_on_count(r as usize);
+            }
+            Err(_) => println!("NO COUNT PAUSE"),
+        }
     }
 
     // Create a thread that will be our running cpu
@@ -316,7 +339,11 @@ pub fn go() -> Result<(), String> {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => break 'running,
+                } => {
+                    // Tell the CPU to stop
+                    cpu_alive.store(false, Ordering::Relaxed);
+                    break 'running;
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::F1),
                     ..
