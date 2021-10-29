@@ -45,12 +45,18 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x0E => op_0e(),              // MVI C, D8
         0x11 => op_11(),              // LXI D,D16
         0x13 => op_13(),              // INX DE
+        0x16 => op_16(),              // MVI D
         0x1A => op_1a(),              // LDAX D
+        0x1E => op_1e(),              // MVI E
         0x21 => op_21(),              //	LXI H,D16
         0x23 => op_23(),              // INX HL
+        0x26 => op_26(),              // MVI H, D8
+        0x2E => op_2e(),              // MVI L, D8
         0x31 => op_31(),              // LXI SP, D16
         0x33 => op_33(),              // INX SP
         0x36 => op_36(),              // MVI (HL), D8
+        0x3E => op_3e(),              // MVI A, D8
+        0x6F => op_6f(),              // MOV L, A
         0x70 => op_7m(Registers::B),  // MOV M,B
         0x71 => op_7m(Registers::B),  // MOV M,C
         0x72 => op_7m(Registers::B),  // MOV M,D
@@ -180,6 +186,38 @@ fn op_23() -> Instr {
     }
 }
 
+// MVI H
+fn op_26() -> Instr {
+    Instr {
+        code: "MVI H".to_string(),
+        size: ProgramCounter::Two,
+    }
+}
+
+// MVI L
+fn op_2e() -> Instr {
+    Instr {
+        code: "MVI L".to_string(),
+        size: ProgramCounter::Two,
+    }
+}
+
+// MVI D
+fn op_16() -> Instr {
+    Instr {
+        code: "MVI D".to_string(),
+        size: ProgramCounter::Two,
+    }
+}
+
+// MVI E
+fn op_1e() -> Instr {
+    Instr {
+        code: "MVI E".to_string(),
+        size: ProgramCounter::Two,
+    }
+}
+
 fn op_31() -> Instr {
     Instr {
         code: "LXI SP, D16".to_string(),
@@ -200,6 +238,22 @@ fn op_36() -> Instr {
     Instr {
         code: "MVI M(HL), D8".to_string(),
         size: ProgramCounter::Two,
+    }
+}
+
+// MVI A, D8
+fn op_3e() -> Instr {
+    Instr {
+        code: "MVI A, D8".to_string(),
+        size: ProgramCounter::Two,
+    }
+}
+
+// MOV L,A
+fn op_6f() -> Instr {
+    Instr {
+        code: "MOV L, A".to_string(),
+        size: ProgramCounter::Next,
     }
 }
 
