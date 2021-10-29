@@ -624,3 +624,35 @@ fn test_op_fe() {
 
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 2));
 }
+
+#[test]
+fn test_op_29() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.h = 0x1;
+    cpu.l = 0x1;
+
+    cpu.run_opcode((0x29, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.h, 0x2);
+    assert_eq!(cpu.l, 0x2);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+}
+
+#[test]
+fn test_op_09() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.b = 0x33;
+    cpu.c = 0x9F;
+    cpu.h = 0xA1;
+    cpu.l = 0x7B;
+
+    cpu.run_opcode((0x09, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.h, 0xD5);
+    assert_eq!(cpu.l, 0x1A);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+}

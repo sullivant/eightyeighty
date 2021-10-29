@@ -242,6 +242,7 @@ impl Cpu {
             0x03 => self.op_03(),                             // INX B
             0x05 => self.op_05(),                             // DCR B
             0x06 => self.op_mvi(Registers::B, dl),            // MVI B, D8
+            0x09 => self.op_dad(Registers::B),                // DAD BC
             0x0E => self.op_mvi(Registers::C, dl),            // MVI C, D8
             0x11 => self.op_11(dl, dh),                       // LXI D,D16
             0x13 => self.op_13(),                             // INX D
@@ -251,6 +252,7 @@ impl Cpu {
             0x21 => self.op_21(dl, dh),                       // LXI X,D16
             0x23 => self.op_23(),                             // INX H
             0x26 => self.op_mvi(Registers::H, dl),            // MVI H, D8
+            0x29 => self.op_dad(Registers::H),                // DAD HL
             0x2E => self.op_mvi(Registers::L, dl),            // MVI L
             0x31 => self.op_31(dl, dh),                       // LXI SP, D16
             0x33 => self.op_33(),                             // INX SP
@@ -309,7 +311,7 @@ impl Cpu {
         let mut c: u16 = u16::from(self.b) << 8 | u16::from(self.c);
         c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
         self.b = (c >> 8) as u8;
-        self.c = (c & 0x0F) as u8;
+        self.c = (c & 0xFF) as u8;
 
         ProgramCounter::Next
     }
@@ -365,6 +367,30 @@ impl Cpu {
             Registers::HL => self.memory[self.get_addr_pointer()] = x, // 0x36
         };
         ProgramCounter::Two
+    }
+
+    // Performs the Double Add (DAD) functionality
+    // Sets H to the value according to the supplied register
+    // Basically: HL = HL+<Selected register pair>
+    pub fn op_dad(&mut self, source: Registers) -> ProgramCounter {
+        let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
+
+        let src: usize = match source {
+            Registers::B => usize::from(u16::from(self.b) << 8 | u16::from(self.c)),
+            Registers::H => val,
+            _ => 0,
+        };
+
+        let (new, of) = val.overflowing_add(src);
+
+        self.h = (new >> 8) as u8;
+        self.l = (new & 0xFF) as u8;
+
+        if of {
+            self.set_flag(super::FLAG_CARRY);
+        }
+
+        ProgramCounter::Next
     }
 
     // LXI D, D16

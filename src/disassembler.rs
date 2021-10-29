@@ -42,6 +42,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x03 => op_03(),              // INX BC
         0x05 => op_05(),              // DCR B
         0x06 => op_06(),              // MVI B, D8
+        0x09 => op_09(),              // DAD B (HL = HL + BC)
         0x0E => op_0e(),              // MVI C, D8
         0x11 => op_11(),              // LXI D,D16
         0x13 => op_13(),              // INX DE
@@ -51,6 +52,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x21 => op_21(),              //	LXI H,D16
         0x23 => op_23(),              // INX HL
         0x26 => op_26(),              // MVI H, D8
+        0x29 => op_29(),              // DAD H (HL = HL + HL)
         0x2E => op_2e(),              // MVI L, D8
         0x31 => op_31(),              // LXI SP, D16
         0x33 => op_33(),              // INX SP
@@ -191,6 +193,21 @@ fn op_26() -> Instr {
     Instr {
         code: "MVI H".to_string(),
         size: ProgramCounter::Two,
+    }
+}
+
+// DAD H (HL = HL + HI)
+fn op_29() -> Instr {
+    Instr {
+        code: "DAD H".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_09() -> Instr {
+    Instr {
+        code: "DAD B".to_string(),
+        size: ProgramCounter::Next,
     }
 }
 
