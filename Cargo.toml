@@ -16,7 +16,6 @@ rand = "0.7.0"
 structopt = "0.3.21"
 glam = { version = "0.12", features = ["mint"]}
 clap = "2.33.3"
-hex = "0.4.3"
 
 [dependencies.sdl2]
 version = "0.35.0" 
