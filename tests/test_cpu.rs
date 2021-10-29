@@ -168,6 +168,15 @@ fn test_op_06() {
 }
 
 #[test]
+fn test_op_0e() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.run_opcode((0x0E, 0x01, 0x02)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
+    assert_eq!(cpu.c, 0x01);
+}
+
+#[test]
 fn test_op_11() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
@@ -431,6 +440,30 @@ fn test_op_c5() {
     // Assert memory looks good
     assert_eq!(cpu.memory[usize::from(sp - 2)], cpu.c);
     assert_eq!(cpu.memory[usize::from(sp - 1)], cpu.b);
+
+    // Assert sp has been updated
+    assert_eq!(cpu.sp, (0x2400 - 2));
+
+    // Assert PC is correct
+    assert_eq!(cpu.pc, pc + lib::OPCODE_SIZE);
+}
+
+#[test]
+fn test_op_d5() {
+    let mut cpu = Cpu::new();
+    cpu.e = 0x01;
+    cpu.d = 0x02;
+    assert_eq!(cpu.sp, 0x00); //Starting stack pointer of 0x00
+    cpu.run_opcode((0x31, 0x00, 0x24)).unwrap(); // Set the stack pointer to a reasonable spot
+    assert_eq!(cpu.sp, 0x2400);
+    let sp = cpu.sp;
+
+    let pc = cpu.pc; // For to check after this opcode runs
+    cpu.run_opcode((0xd5, 0x00, 0x00)).unwrap();
+
+    // Assert memory looks good
+    assert_eq!(cpu.memory[usize::from(sp - 2)], cpu.e);
+    assert_eq!(cpu.memory[usize::from(sp - 1)], cpu.d);
 
     // Assert sp has been updated
     assert_eq!(cpu.sp, (0x2400 - 2));

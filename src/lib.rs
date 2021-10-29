@@ -187,7 +187,7 @@ impl Emu {
     fn update(&mut self) -> Result<(), String> {
         let mut tick_happened: bool = false;
 
-        if self.cpu.cycle_count == self.pause_on_count {
+        if self.cpu.cycle_count > 0 && self.cpu.cycle_count == self.pause_on_count {
             self.pause_on_tick = true;
         }
 
@@ -298,7 +298,7 @@ pub fn go() -> Result<(), String> {
                 println!("Count pause: {:#06X}", r);
                 app_clone.lock().unwrap().set_pause_on_count(r as usize);
             }
-            Err(_) => println!("NO COUNT PAUSE"),
+            Err(_) => (),
         }
     }
 

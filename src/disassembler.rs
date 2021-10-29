@@ -42,6 +42,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x03 => op_03(),              // INX BC
         0x05 => op_05(),              // DCR B
         0x06 => op_06(),              // MVI B, D8
+        0x0E => op_0e(),              // MVI C, D8
         0x11 => op_11(),              // LXI D,D16
         0x13 => op_13(),              // INX DE
         0x1A => op_1a(),              // LDAX D
@@ -127,6 +128,14 @@ fn op_05() -> Instr {
 fn op_06() -> Instr {
     Instr {
         code: "MVI B, D8".to_string(),
+        size: ProgramCounter::Two,
+    }
+}
+
+// MVI C, D8
+fn op_0e() -> Instr {
+    Instr {
+        code: "MVI C, D8".to_string(),
         size: ProgramCounter::Two,
     }
 }
