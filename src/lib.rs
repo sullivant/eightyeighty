@@ -1,6 +1,7 @@
 mod cpu;
 mod disassembler;
 
+use clap::{App, Arg};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -9,7 +10,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use structopt::StructOpt;
 
 pub use cpu::Cpu;
 pub const OPCODE_SIZE: usize = 1;
@@ -40,15 +40,8 @@ const BLACK: Color = Color::RGB(0, 0, 0);
 //const RED: Color = Color::RGB(255, 0, 0);
 //const GREEN: Color = Color::RGB(0, 255, 0);
 
-#[derive(StructOpt)]
-struct Cli {
-    //TODO: Implement this for a CLI option
-    /// The input rom to look for
-    rom: String,
-}
-
 #[derive(Clone)]
-pub struct App {
+pub struct Emu {
     dt: std::time::Duration,
     cpu: Cpu,
     last_msg: String, // Contains last disassembler message
@@ -57,9 +50,9 @@ pub struct App {
     single_tick: bool,
 }
 
-impl App {
-    fn new() -> Result<App, String> {
-        println!("Creating new App Object");
+impl Emu {
+    fn new(rom_file: String) -> Result<Emu, String> {
+        println!("Creating new Emu Object");
         let dt = std::time::Duration::new(0, 0);
 
         // Generate our CPU
@@ -68,43 +61,42 @@ impl App {
         cpu.set_nop(true);
 
         // The list of rom files to load for this particular collection/game
-        let rom_files: [String; 1] = [
-            //String::from("./resources/roms/TST8080.COM"),
-            String::from("./resources/roms/INVADERS.COM"),
-        ];
+        let file_to_load = format!("./resources/roms/{}.COM", rom_file);
         let mut dims: (usize, usize) = (0, 0);
 
-        for f in rom_files {
-            match cpu.load_rom(f.clone(), dims.1) {
-                Ok(i) => {
-                    dims = i;
-                }
-                Err(err) => {
-                    panic!("Unable to load rom file {}: {}", f, err);
-                }
+        match cpu.load_rom(file_to_load.clone(), dims.1) {
+            Ok(i) => {
+                dims = i;
             }
-
-            println!(
-                "Loaded rom file: {} start at: {:#06X} end at: {:#06X}",
-                f,
-                dims.0,
-                dims.1 - 1
-            );
+            Err(err) => {
+                panic!("Unable to load rom file {}: {}", file_to_load, err);
+            }
         }
 
+        println!(
+            "Loaded rom file: {} start at: {:#06X} end at: {:#06X}",
+            file_to_load,
+            dims.0,
+            dims.1 - 1
+        );
+
         // Return a good version of the app object
-        Ok(App {
+        Ok(Emu {
             dt,
             cpu,
             last_msg: "N/A".to_string(),
             last_pc: 0,
-            pause_on_tick: true,
+            pause_on_tick: false,
             single_tick: false,
         })
     }
 
     fn set_single_tick(&mut self, n: bool) {
         self.single_tick = n;
+    }
+
+    fn set_pause_on_tick(&mut self, v: bool) {
+        self.pause_on_tick = v;
     }
 
     fn toggle_pause_on_tick(&mut self) {
@@ -188,10 +180,6 @@ impl App {
     fn update(&mut self) -> Result<(), String> {
         let mut tick_happened: bool = false;
 
-        if self.cpu.cycle_count == 0x920E {
-            self.pause_on_tick = true;
-        }
-
         // If we are not in pause_on_tick mode, tick away
         if !self.pause_on_tick {
             // Tick the cpu
@@ -236,6 +224,17 @@ impl App {
 }
 
 pub fn go() -> Result<(), String> {
+    // Get some cli options from CLAP
+    let matches = App::new("EightyEighty")
+        .version("1.0")
+        .author("Thomas Sullivan <sullivan.t@gmail.com>")
+        .about("An 8080 emulator")
+        .arg(Arg::from_usage(
+            "-p, --pause... 'initiates single step (pause on tick) mode'",
+        ))
+        .args_from_usage("<rom> 'The rom file to load and execute'")
+        .get_matches();
+
     // Create a window.
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -262,9 +261,23 @@ pub fn go() -> Result<(), String> {
     let cpu_alive_clone = Arc::clone(&cpu_alive);
 
     // Build our application
-    //let mut app = App::new()?;
-    let app = Arc::new(Mutex::new(App::new()?));
+    //let mut app = Emu::new()?;
+
+    // Gather from the command the rom to use; Clap won't let us skip this but we
+    // load INVADERS by default just in case
+    let mut rom_file: String = String::from("INVADERS");
+    if let Some(f) = matches.value_of("rom") {
+        rom_file = String::from(f);
+    }
+
+    let app = Arc::new(Mutex::new(Emu::new(rom_file)?));
     let app_clone = Arc::clone(&app);
+
+    // If we are in debug mode, set that now
+    if matches.is_present("pause") {
+        println!("Setting pause on tick mode; <SPACEBAR> to step; <F1> to toggle;");
+        app_clone.lock().unwrap().set_pause_on_tick(true);
+    }
 
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
