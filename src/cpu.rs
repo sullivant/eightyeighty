@@ -21,6 +21,7 @@ pub enum Registers {
     H,
     L,
     BC, // A register pair
+    DE, // A register pair
     HL, // A register pair, used to reference memory locations
 }
 
@@ -35,6 +36,7 @@ impl fmt::Display for Registers {
             Registers::H => write!(f, "H"),
             Registers::L => write!(f, "L"),
             Registers::BC => write!(f, "BC"),
+            Registers::DE => write!(f, "DE"),
             Registers::HL => write!(f, "HL"),
         }
     }
@@ -122,6 +124,7 @@ impl Cpu {
     pub fn get_register_pair(&self, register: Registers) -> u16 {
         match register {
             Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
+            Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
             Registers::HL => u16::from(self.h) << 8 | u16::from(self.l),
             _ => 0 as u16,
         }
@@ -337,10 +340,10 @@ impl Cpu {
 
     // INX B
     pub fn op_03(&mut self) -> ProgramCounter {
-        let mut c: u16 = u16::from(self.b) << 8 | u16::from(self.c);
-        c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
-        self.b = (c >> 8) as u8;
-        self.c = (c & 0xFF) as u8;
+        let mut bc_pair: u16 = self.get_register_pair(Registers::BC);
+        bc_pair = bc_pair.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
+        self.b = (bc_pair >> 8) as u8;
+        self.c = (bc_pair & 0xFF) as u8;
 
         ProgramCounter::Next
     }
@@ -403,10 +406,11 @@ impl Cpu {
     // Sets H to the value according to the supplied register
     // Basically: HL = HL+<Selected register pair>
     pub fn op_dad(&mut self, source: Registers) -> ProgramCounter {
-        let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
+        //let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
+        let val = usize::from(self.get_register_pair(Registers::HL));
 
         let src: usize = match source {
-            Registers::B => usize::from(u16::from(self.b) << 8 | u16::from(self.c)),
+            Registers::B => usize::from(self.get_register_pair(Registers::BC)),
             Registers::H => val,
             _ => 0,
         };

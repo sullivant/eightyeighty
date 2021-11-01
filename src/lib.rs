@@ -198,7 +198,10 @@ impl Emu {
         }
 
         // Register Pairs
-        for (i, r) in [cpu::Registers::BC, cpu::Registers::HL].iter().enumerate() {
+        for (i, r) in [cpu::Registers::BC, cpu::Registers::DE, cpu::Registers::HL]
+            .iter()
+            .enumerate()
+        {
             let val = self.cpu.get_register_pair(*r);
             add_display_text(
                 canvas,
