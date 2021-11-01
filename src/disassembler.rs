@@ -47,6 +47,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x11 => op_11(),              // LXI D,D16
         0x13 => op_13(),              // INX DE
         0x16 => op_16(),              // MVI D
+        0x19 => op_19(),              // DAD D (HL = HL + DE)
         0x1A => op_1a(),              // LDAX D
         0x1E => op_1e(),              // MVI E
         0x21 => op_21(),              //	LXI H,D16
@@ -75,17 +76,37 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x7D => op_7a(Registers::L),  // MOV A,L
         0x7E => op_7a(Registers::HL), // MOV A,M (HL)
         0x7F => op_7a(Registers::A),  // MOV A,A
-        0xC2 => op_c2(dl, dh),        // JNZ Addr
-        0xC3 => op_c3(dl, dh),        // JMP
-        0xC5 => op_c5(),              // PUSH B
-        0xC9 => op_c9(),              // RET
-        0xCD => op_cd(dl, dh),        // CALL Addr
-        0xD5 => op_d5(),              // PUSH D
-        0xE5 => op_e5(),              // PUSH H
-        0xF4 => op_f4(dl, dh),        // CALL if Plus
-        0xF5 => op_f5(),              // PUSH PSW
-        0xFE => op_fe(),              // CPI
-        _ => op_unk(),                // UNK
+        0xC1 => Instr {
+            code: "POP B".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xC2 => op_c2(dl, dh), // JNZ Addr
+        0xC3 => op_c3(dl, dh), // JMP
+        0xC5 => op_c5(),       // PUSH B
+        0xC9 => op_c9(),       // RET
+        0xCD => op_cd(dl, dh), // CALL Addr
+        0xD1 => Instr {
+            code: "POP D".to_string(),
+            size: ProgramCounter::Next,
+        },
+
+        0xD5 => op_d5(), // PUSH D
+        0xE5 => Instr {
+            code: "PUSH H".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xEB => Instr {
+            code: "XCHG".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xF4 => op_f4(dl, dh), // CALL if Plus
+        0xF5 => op_f5(),       // PUSH PSW
+        0xE1 => Instr {
+            code: "POP H".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xFE => op_fe(), // CPI
+        _ => op_unk(),   // UNK
     }
 }
 
@@ -207,6 +228,13 @@ fn op_29() -> Instr {
 fn op_09() -> Instr {
     Instr {
         code: "DAD B".to_string(),
+        size: ProgramCounter::Next,
+    }
+}
+
+fn op_19() -> Instr {
+    Instr {
+        code: "DAD D".to_string(),
         size: ProgramCounter::Next,
     }
 }
@@ -368,13 +396,6 @@ fn op_cd(x: u8, y: u8) -> Instr {
 fn op_d5() -> Instr {
     Instr {
         code: "PUSH D".to_string(),
-        size: ProgramCounter::Next,
-    }
-}
-
-fn op_e5() -> Instr {
-    Instr {
-        code: "PUSH H".to_string(),
         size: ProgramCounter::Next,
     }
 }

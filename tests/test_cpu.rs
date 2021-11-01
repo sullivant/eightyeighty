@@ -503,6 +503,43 @@ fn test_op_c5() {
     assert_eq!(cpu.pc, pc + lib::OPCODE_SIZE);
 }
 
+// POP from the stack to regiser pair HL
+// 	L <- (sp); H <- (sp+1); sp <- sp+2
+#[test]
+fn test_op_e1() {
+    let mut cpu = Cpu::new();
+    cpu.l = 0x01;
+    cpu.h = 0x02;
+    assert_eq!(cpu.sp, 0x00); //Starting stack pointer of 0x00
+    cpu.run_opcode((0x31, 0x00, 0x24)).unwrap(); // Set the stack pointer to a reasonable spot
+    assert_eq!(cpu.sp, 0x2400);
+    let sp = cpu.sp;
+
+    let pc = cpu.pc; // For to check after this opcode runs
+    cpu.run_opcode((0xE5, 0x00, 0x00)).unwrap();
+
+    // Assert memory looks good
+    assert_eq!(cpu.memory[usize::from(sp - 2)], cpu.l);
+    assert_eq!(cpu.memory[usize::from(sp - 1)], cpu.h);
+
+    // Assert sp has been updated
+    assert_eq!(cpu.sp, (0x2400 - 2));
+
+    // Assert PC is correct
+    assert_eq!(cpu.pc, pc + lib::OPCODE_SIZE);
+    // Update PC to do the POP portion
+    let pc = cpu.pc; // For to check after this opcode runs
+
+    // Reset things
+    cpu.l = 0x00;
+    cpu.h = 0x00;
+
+    cpu.run_opcode((0xE1, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.l, 0x01);
+    assert_eq!(cpu.h, 0x02);
+    assert_eq!(cpu.pc, pc + lib::OPCODE_SIZE);
+}
+
 #[test]
 fn test_op_d5() {
     let mut cpu = Cpu::new();
@@ -637,6 +674,42 @@ fn test_op_29() {
     assert_eq!(cpu.h, 0x2);
     assert_eq!(cpu.l, 0x2);
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+}
+
+#[test]
+fn test_op_19() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.d = 0x33;
+    cpu.e = 0x9F;
+    cpu.h = 0xA1;
+    cpu.l = 0x7B;
+
+    cpu.run_opcode((0x19, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.h, 0xD5);
+    assert_eq!(cpu.l, 0x1A);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+}
+
+#[test]
+fn test_op_eb() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.d = 0x33;
+    cpu.e = 0x55;
+    cpu.h = 0x00;
+    cpu.l = 0xFF;
+
+    cpu.run_opcode((0xEB, 0x00, 0x00)).unwrap();
+
+    assert_eq!(cpu.d, 0x00);
+    assert_eq!(cpu.e, 0xFF);
+    assert_eq!(cpu.h, 0x33);
+    assert_eq!(cpu.l, 0x55);
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
 }
 

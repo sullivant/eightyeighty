@@ -228,7 +228,8 @@ impl Emu {
                     self.last_pc = n;
                 }
                 Err(e) => {
-                    panic!("Unable to tick {}", e);
+                    println!("Shutting down. Final CPU state:\n{}", self.cpu);
+                    panic!("{}", e);
                 }
             }
         } else {

@@ -279,6 +279,7 @@ impl Cpu {
             0x11 => self.op_11(dl, dh),                       // LXI D,D16
             0x13 => self.op_13(),                             // INX D
             0x16 => self.op_mvi(Registers::D, dl),            // MVI D
+            0x19 => self.op_dad(Registers::D),                // DAD D
             0x1A => self.op_1a(),                             // LDAX D
             0x1E => self.op_mvi(Registers::E, dl),            // MVI E
             0x21 => self.op_21(dl, dh),                       // LXI X,D16
@@ -307,15 +308,19 @@ impl Cpu {
             0x7D => self.op_mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.op_mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.op_mov(Registers::A, Registers::A),  // MOV A,A
+            0xC1 => self.op_push(Registers::B),               // POP B
             0xC2 => self.op_c2(dl, dh),                       // JNZ
             0xC3 => self.op_c3(dl, dh),                       // JMP
             0xC5 => self.op_push(Registers::B),               // PUSH B
             0xC9 => self.op_c9(),                             // RET
+            0xD1 => self.op_pop(Registers::D),                // POP D
             0xCD => self.op_cd(dl, dh),                       // CALL Addr
             0xD5 => self.op_push(Registers::D),               // PUSH D
             0xF4 => self.op_f4(dl, dh),                       // CP If Plus
             0xFE => self.op_fe(dl),                           // CPI
+            0xE1 => self.op_pop(Registers::H),                // POP H
             0xE5 => self.op_push(Registers::H),               // PUSH H
+            0xEB => self.op_xchg(),                           // XCHG
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -361,6 +366,19 @@ impl Cpu {
         ProgramCounter::Next
     }
 
+    // Exchanges registers DE with HL
+    pub fn op_xchg(&mut self) -> ProgramCounter {
+        let d = self.d;
+        let e = self.e;
+
+        self.d = self.h;
+        self.e = self.l;
+        self.h = d;
+        self.l = e;
+
+        ProgramCounter::Next
+    }
+
     // Pushes onto stack according to the register pair requested
     // (sp-2)<-P2; (sp-1)<-P1; sp <- sp - 2
     pub fn op_push(&mut self, reg: Registers) -> ProgramCounter {
@@ -383,6 +401,32 @@ impl Cpu {
             _ => (),
         };
         self.sp -= 2;
+        ProgramCounter::Next
+    }
+
+    // Pops from the stack according to the register pair requested
+    // 	L <- (sp); H <- (sp+1); sp <- sp+2
+    pub fn op_pop(&mut self, reg: Registers) -> ProgramCounter {
+        match reg {
+            Registers::B => {
+                // BC Pair 0xC1
+                self.c = self.memory[usize::from(self.sp)];
+                self.b = self.memory[usize::from(self.sp + 1)];
+            }
+            Registers::D => {
+                // DE Pair 0xD1
+                self.e = self.memory[usize::from(self.sp)];
+                self.d = self.memory[usize::from(self.sp + 1)];
+            }
+            Registers::H => {
+                // HL Pair 0xE1
+                self.l = self.memory[usize::from(self.sp)];
+                self.h = self.memory[usize::from(self.sp + 1)];
+            }
+            _ => (),
+        };
+        self.sp += 2;
+
         ProgramCounter::Next
     }
 
@@ -410,8 +454,9 @@ impl Cpu {
         let val = usize::from(self.get_register_pair(Registers::HL));
 
         let src: usize = match source {
-            Registers::B => usize::from(self.get_register_pair(Registers::BC)),
-            Registers::H => val,
+            Registers::B | Registers::BC => usize::from(self.get_register_pair(Registers::BC)),
+            Registers::D | Registers::DE => usize::from(self.get_register_pair(Registers::DE)),
+            Registers::H | Registers::HL => val,
             _ => 0,
         };
 
