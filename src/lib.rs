@@ -150,6 +150,13 @@ impl Emu {
         );
 
         // Stack
+        add_display_text(
+            canvas,
+            &"---Stack---".to_string(),
+            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+            (LINE_SPACE * 2) as i32,
+        );
+
         for i in 0..3 {
             add_display_text(
                 canvas,
@@ -159,11 +166,18 @@ impl Emu {
                     self.cpu.memory[(self.cpu.sp + i) as usize]
                 ),
                 ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-                (LINE_SPACE * (i + 2)) as i32,
+                (LINE_SPACE * (i + 3)) as i32,
             );
         }
 
         // Registers
+        add_display_text(
+            canvas,
+            &"---Registers---".to_string(),
+            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+            (LINE_SPACE * 6) as i32,
+        );
+
         for (i, r) in ["A", "B", "C", "D", "E", "H", "L"].iter().enumerate() {
             let val = match *r {
                 "A" => self.cpu.a,
@@ -179,7 +193,18 @@ impl Emu {
                 canvas,
                 &format!("{} = {:04X}", r, val),
                 ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-                (LINE_SPACE * (i as u16 + 5)) as i32,
+                (LINE_SPACE * (i as u16 + 7)) as i32,
+            );
+        }
+
+        // Register Pairs
+        for (i, r) in [cpu::Registers::BC, cpu::Registers::HL].iter().enumerate() {
+            let val = self.cpu.get_register_pair(*r);
+            add_display_text(
+                canvas,
+                &format!("Pair: {} {:04X}", r, val),
+                ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE * 50) as i32,
+                (LINE_SPACE * (i as u16 + 7)) as i32,
             );
         }
     }
@@ -295,7 +320,7 @@ pub fn go() -> Result<(), String> {
     if let Some(c) = matches.value_of("count") {
         match i64::from_str_radix(c, 16) {
             Ok(r) => {
-                println!("Count pause: {:#06X}", r);
+                println!("Pause will happen at cycle count: {:#06X}", r);
                 app_clone.lock().unwrap().set_pause_on_count(r as usize);
             }
             Err(_) => (),

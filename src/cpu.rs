@@ -11,6 +11,7 @@ pub enum ProgramCounter {
     Jump(usize), // The operation jumps to a point in memory
 }
 
+#[derive(Clone, Copy)]
 pub enum Registers {
     A,
     B,
@@ -19,7 +20,24 @@ pub enum Registers {
     E,
     H,
     L,
-    HL, // Used to reference memory locations
+    BC, // A register pair
+    HL, // A register pair, used to reference memory locations
+}
+
+impl fmt::Display for Registers {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Registers::A => write!(f, "A"),
+            Registers::B => write!(f, "B"),
+            Registers::C => write!(f, "C"),
+            Registers::D => write!(f, "D"),
+            Registers::E => write!(f, "E"),
+            Registers::H => write!(f, "H"),
+            Registers::L => write!(f, "L"),
+            Registers::BC => write!(f, "BC"),
+            Registers::HL => write!(f, "HL"),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -96,6 +114,17 @@ impl Cpu {
 
     pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
         (&self.pc, &self.sp, &self.h, &self.l, &self.b)
+    }
+
+    // Returns a paired register such as HL or BC.
+    // Pass to the function the beginning register for the pair
+    // Returned value will be a u16 value
+    pub fn get_register_pair(&self, register: Registers) -> u16 {
+        match register {
+            Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
+            Registers::HL => u16::from(self.h) << 8 | u16::from(self.l),
+            _ => 0 as u16,
+        }
     }
 
     // Returns the current flag values
@@ -365,6 +394,7 @@ impl Cpu {
             Registers::H => self.h = x,                                // 0x26
             Registers::L => self.l = x,                                // 0x2E
             Registers::HL => self.memory[self.get_addr_pointer()] = x, // 0x36
+            _ => (),                                                   // Do nothing
         };
         ProgramCounter::Two
     }
@@ -453,8 +483,8 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // MOV L, Registers::X
-    // Moves into L the value in register specified by the enum Registers
+    // MOV T(arget), Registers::X
+    // Moves into T(arget) the value in register specified by the enum Registers
     fn op_mov(&mut self, target: Registers, source: Registers) -> ProgramCounter {
         let val = match source {
             Registers::A => self.a,
@@ -465,6 +495,7 @@ impl Cpu {
             Registers::L => self.l,
             Registers::H => self.h,
             Registers::HL => self.memory[self.get_addr_pointer()],
+            _ => self.l, // Ignored
         };
 
         match target {
@@ -476,6 +507,7 @@ impl Cpu {
             Registers::L => self.l = val,
             Registers::H => self.l = val,
             Registers::HL => self.memory[self.get_addr_pointer()] = val,
+            _ => (), // Do nothing
         };
 
         ProgramCounter::Next
