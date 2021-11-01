@@ -126,7 +126,7 @@ impl Cpu {
             Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
             Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
             Registers::HL => u16::from(self.h) << 8 | u16::from(self.l),
-            _ => 0 as u16,
+            _ => 0_u16,
         }
     }
 

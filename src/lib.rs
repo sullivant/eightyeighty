@@ -321,12 +321,9 @@ pub fn go() -> Result<(), String> {
     }
 
     if let Some(c) = matches.value_of("count") {
-        match i64::from_str_radix(c, 16) {
-            Ok(r) => {
-                println!("Pause will happen at cycle count: {:#06X}", r);
-                app_clone.lock().unwrap().set_pause_on_count(r as usize);
-            }
-            Err(_) => (),
+        if let Ok(r) = i64::from_str_radix(c, 16) {
+            println!("Pause will happen at cycle count: {:#06X}", r);
+            app_clone.lock().unwrap().set_pause_on_count(r as usize);
         }
     }
 
