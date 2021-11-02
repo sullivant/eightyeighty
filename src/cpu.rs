@@ -20,9 +20,10 @@ pub enum Registers {
     E,
     H,
     L,
-    BC, // A register pair
-    DE, // A register pair
-    HL, // A register pair, used to reference memory locations
+    BC,  // A register pair
+    DE,  // A register pair
+    HL,  // A register pair, used to reference memory locations
+    PSW, // Program Status Word
 }
 
 impl fmt::Display for Registers {
@@ -38,6 +39,7 @@ impl fmt::Display for Registers {
             Registers::BC => write!(f, "BC"),
             Registers::DE => write!(f, "DE"),
             Registers::HL => write!(f, "HL"),
+            Registers::PSW => write!(f, "PSW"),
         }
     }
 }
@@ -271,24 +273,29 @@ impl Cpu {
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
             0x00 => self.op_00(),                             // NOP
+            0x01 => self.op_lxi(Registers::BC, dl, dh),       // LXI B,D16
             0x03 => self.op_03(),                             // INX B
-            0x05 => self.op_05(),                             // DCR B
+            0x05 => self.op_dcr(Registers::B),                // DCR B
             0x06 => self.op_mvi(Registers::B, dl),            // MVI B, D8
             0x09 => self.op_dad(Registers::B),                // DAD BC
             0x0E => self.op_mvi(Registers::C, dl),            // MVI C, D8
-            0x11 => self.op_11(dl, dh),                       // LXI D,D16
+            0x11 => self.op_lxi(Registers::DE, dl, dh),       // LXI D,D16
             0x13 => self.op_13(),                             // INX D
+            0x15 => self.op_dcr(Registers::D),                // DCR D
             0x16 => self.op_mvi(Registers::D, dl),            // MVI D
             0x19 => self.op_dad(Registers::D),                // DAD D
             0x1A => self.op_1a(),                             // LDAX D
+            0x1C => self.op_inr(Registers::E),                // INR E
             0x1E => self.op_mvi(Registers::E, dl),            // MVI E
-            0x21 => self.op_21(dl, dh),                       // LXI X,D16
+            0x21 => self.op_lxi(Registers::HL, dl, dh),       // LXI X,D16
             0x23 => self.op_23(),                             // INX H
+            0x25 => self.op_dcr(Registers::H),                // DCR H
             0x26 => self.op_mvi(Registers::H, dl),            // MVI H, D8
             0x29 => self.op_dad(Registers::H),                // DAD HL
             0x2E => self.op_mvi(Registers::L, dl),            // MVI L
             0x31 => self.op_31(dl, dh),                       // LXI SP, D16
             0x33 => self.op_33(),                             // INX SP
+            0x35 => self.op_dcr(Registers::HL),               // DCR (HL)
             0x36 => self.op_mvi(Registers::HL, dl),           // MVI (HL)<-D8
             0x3E => self.op_mvi(Registers::A, dl),            // MVI A
             0x6F => self.op_mov(Registers::L, Registers::A),  // MOV L <- A
@@ -314,9 +321,12 @@ impl Cpu {
             0xC5 => self.op_push(Registers::B),               // PUSH B
             0xC9 => self.op_c9(),                             // RET
             0xD1 => self.op_pop(Registers::D),                // POP D
+            0xD3 => self.op_out(dl),                          // OUT
             0xCD => self.op_cd(dl, dh),                       // CALL Addr
             0xD5 => self.op_push(Registers::D),               // PUSH D
+            0xF1 => self.op_pop(Registers::PSW),              // POP PSW
             0xF4 => self.op_f4(dl, dh),                       // CP If Plus
+            0xF5 => self.op_push(Registers::PSW),             // Push PSW
             0xFE => self.op_fe(dl),                           // CPI
             0xE1 => self.op_pop(Registers::H),                // POP H
             0xE5 => self.op_push(Registers::H),               // PUSH H
@@ -339,6 +349,13 @@ impl Cpu {
         Ok(())
     }
 
+    // OUT D8
+    // Would send the contents of accumulator to the device sent
+    // as the data portion of this command
+    pub fn op_out(&self, _data: u8) -> ProgramCounter {
+        ProgramCounter::Two
+    }
+
     pub fn op_00(&self) -> ProgramCounter {
         ProgramCounter::Next
     }
@@ -353,15 +370,87 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // DCR B
+    // INR Reg
     // Flags affected: Z,S,P,AC
-    pub fn op_05(&mut self) -> ProgramCounter {
-        //let new_val = self.b.wrapping_sub(1);
-        let (res, of) = self.b.overflowing_sub(1);
-        let ac = (1 & 0x0F) > (self.b & 0x0F);
+    pub fn op_inr(&mut self, reg: Registers) -> ProgramCounter {
+        match reg {
+            Registers::B => {
+                let (res, of) = self.b.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.b & 0x0F));
+                self.b = res;
+            }
+            Registers::C => {
+                let (res, of) = self.c.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.c & 0x0F));
+                self.c = res;
+            }
+            Registers::D => {
+                let (res, of) = self.d.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.d & 0x0F));
+                self.d = res;
+            }
+            Registers::E => {
+                let (res, of) = self.e.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.e & 0x0F));
+                self.e = res;
+            }
+            Registers::H => {
+                let (res, of) = self.h.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.h & 0x0F));
+                self.h = res;
+            }
+            Registers::L => {
+                let (res, of) = self.l.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.l & 0x0F));
+                self.l = res;
+            }
+            Registers::HL => {
+                let val = self.memory[self.get_addr_pointer()];
+                let (res, of) = val.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (val & 0x0F));
+                self.memory[self.get_addr_pointer()] = res;
+            }
+            Registers::A => {
+                let (res, of) = self.a.overflowing_add(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
+                self.a = res;
+            }
+            _ => (),
+        }
 
-        self.update_flags(res, of, ac);
-        self.b = res;
+        ProgramCounter::Next
+    }
+
+    // DCR Reg
+    // Flags affected: Z,S,P,AC
+    pub fn op_dcr(&mut self, reg: Registers) -> ProgramCounter {
+        //let new_val = self.b.wrapping_sub(1);
+
+        match reg {
+            Registers::B => {
+                let (res, of) = self.b.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.b & 0x0F));
+                self.b = res;
+            }
+            Registers::D => {
+                let (res, of) = self.d.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.d & 0x0F));
+                self.d = res;
+            }
+            Registers::H => {
+                let (res, of) = self.h.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.h & 0x0F));
+                self.h = res;
+            }
+            Registers::HL => {
+                let mem = self.memory[self.get_addr_pointer()];
+                let (res, of) = mem.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (mem & 0x0F));
+                self.memory[self.get_addr_pointer()] = res;
+            }
+
+            _ => (),
+        }
 
         ProgramCounter::Next
     }
@@ -398,6 +487,11 @@ impl Cpu {
                 self.memory[usize::from(self.sp - 2)] = self.l;
                 self.memory[usize::from(self.sp - 1)] = self.h;
             }
+            Registers::PSW => {
+                // PSW 0xF5
+                self.memory[usize::from(self.sp - 2)] = self.flags;
+                self.memory[usize::from(self.sp - 1)] = self.a;
+            }
             _ => (),
         };
         self.sp -= 2;
@@ -422,6 +516,11 @@ impl Cpu {
                 // HL Pair 0xE1
                 self.l = self.memory[usize::from(self.sp)];
                 self.h = self.memory[usize::from(self.sp + 1)];
+            }
+            Registers::PSW => {
+                // PSW 0xF1
+                self.flags = self.memory[usize::from(self.sp)];
+                self.a = self.memory[usize::from(self.sp + 1)];
             }
             _ => (),
         };
@@ -472,10 +571,23 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // LXI D, D16
-    pub fn op_11(&mut self, x: u8, y: u8) -> ProgramCounter {
-        self.d = y;
-        self.e = x;
+    // LXI (target pair), D16
+    pub fn op_lxi(&mut self, target: Registers, x: u8, y: u8) -> ProgramCounter {
+        match target {
+            Registers::BC => {
+                self.b = y;
+                self.e = x;
+            }
+            Registers::DE => {
+                self.d = y;
+                self.e = x;
+            }
+            Registers::HL => {
+                self.h = y;
+                self.l = x;
+            }
+            _ => (),
+        }
         ProgramCounter::Three
     }
 
@@ -499,13 +611,6 @@ impl Cpu {
         };
 
         ProgramCounter::Next
-    }
-
-    // LXI H,D16
-    pub fn op_21(&mut self, x: u8, y: u8) -> ProgramCounter {
-        self.h = y;
-        self.l = x;
-        ProgramCounter::Three
     }
 
     // INX H

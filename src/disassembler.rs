@@ -38,26 +38,80 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     let dl = op.1;
     let dh = op.2;
     match op.0 {
-        0x00 => op_00(),              // NOP
-        0x03 => op_03(),              // INX BC
-        0x05 => op_05(),              // DCR B
-        0x06 => op_06(),              // MVI B, D8
-        0x09 => op_09(),              // DAD B (HL = HL + BC)
-        0x0E => op_0e(),              // MVI C, D8
-        0x11 => op_11(),              // LXI D,D16
-        0x13 => op_13(),              // INX DE
-        0x16 => op_16(),              // MVI D
-        0x19 => op_19(),              // DAD D (HL = HL + DE)
-        0x1A => op_1a(),              // LDAX D
-        0x1E => op_1e(),              // MVI E
-        0x21 => op_21(),              //	LXI H,D16
-        0x23 => op_23(),              // INX HL
-        0x26 => op_26(),              // MVI H, D8
-        0x29 => op_29(),              // DAD H (HL = HL + HL)
-        0x2E => op_2e(),              // MVI L, D8
-        0x31 => op_31(),              // LXI SP, D16
-        0x33 => op_33(),              // INX SP
-        0x36 => op_36(),              // MVI (HL), D8
+        0x00 => op_00(), // NOP
+        0x01 => Instr {
+            code: "LXI B".to_string(),
+            size: ProgramCounter::Three,
+        },
+        0x03 => op_03(), // INX BC
+        0x04 => Instr {
+            code: "INR B".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x05 => op_05(), // DCR B
+        0x06 => op_06(), // MVI B, D8
+        0x09 => op_09(), // DAD B (HL = HL + BC)
+        0x0C => Instr {
+            code: "INR C".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x0E => op_0e(), // MVI C, D8
+        0x11 => Instr {
+            code: "LXI D".to_string(),
+            size: ProgramCounter::Three,
+        },
+        0x13 => op_13(), // INX DE
+        0x14 => Instr {
+            code: "INR D".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x15 => Instr {
+            code: "DCR D".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x16 => op_16(), // MVI D
+        0x19 => op_19(), // DAD D (HL = HL + DE)
+        0x1A => op_1a(), // LDAX D
+        0x1C => Instr {
+            code: "INR E".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x1E => op_1e(), // MVI E
+        0x21 => Instr {
+            code: "LXI H".to_string(),
+            size: ProgramCounter::Three,
+        },
+        0x23 => op_23(), // INX HL
+        0x24 => Instr {
+            code: "INR H".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x25 => Instr {
+            code: "DCR H".to_string(),
+            size: ProgramCounter::Three,
+        },
+        0x26 => op_26(), // MVI H, D8
+        0x29 => op_29(), // DAD H (HL = HL + HL)
+        0x2C => Instr {
+            code: "INR L".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x2E => op_2e(), // MVI L, D8
+        0x31 => op_31(), // LXI SP, D16
+        0x33 => op_33(), // INX SP
+        0x34 => Instr {
+            code: "INR (HL)".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x35 => Instr {
+            code: "DCR (HL)".to_string(),
+            size: ProgramCounter::Three,
+        },
+        0x36 => op_36(), // MVI (HL), D8
+        0x3C => Instr {
+            code: "INR A".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x3E => op_3e(),              // MVI A, D8
         0x6F => op_6f(),              // MOV L, A
         0x70 => op_7m(Registers::B),  // MOV M,B
@@ -89,7 +143,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "POP D".to_string(),
             size: ProgramCounter::Next,
         },
-
+        0xD3 => Instr {
+            code: "OUT D".to_string(),
+            size: ProgramCounter::Two,
+        },
         0xD5 => op_d5(), // PUSH D
         0xE5 => Instr {
             code: "PUSH H".to_string(),
@@ -100,7 +157,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Next,
         },
         0xF4 => op_f4(dl, dh), // CALL if Plus
-        0xF5 => op_f5(),       // PUSH PSW
+        0xF5 => Instr {
+            code: "PUSH PSW".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xE1 => Instr {
             code: "POP H".to_string(),
             size: ProgramCounter::Next,
@@ -169,14 +229,6 @@ fn op_0e() -> Instr {
     }
 }
 
-// D <- byte 3, E <- byte 2
-fn op_11() -> Instr {
-    Instr {
-        code: "LXI D, D16".to_string(),
-        size: ProgramCounter::Three,
-    }
-}
-
 // INX DE
 fn op_13() -> Instr {
     Instr {
@@ -190,14 +242,6 @@ fn op_1a() -> Instr {
     Instr {
         code: "LDAX DE".to_string(),
         size: ProgramCounter::Next,
-    }
-}
-
-// LXI H,D16
-fn op_21() -> Instr {
-    Instr {
-        code: "LXI H, D16".to_string(),
-        size: ProgramCounter::Three,
     }
 }
 
@@ -407,13 +451,6 @@ fn op_f4(x: u8, y: u8) -> Instr {
     Instr {
         code: format!("CP {:#06X}", adr),
         size: ProgramCounter::Three,
-    }
-}
-
-fn op_f5() -> Instr {
-    Instr {
-        code: "PUSH PSW".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 

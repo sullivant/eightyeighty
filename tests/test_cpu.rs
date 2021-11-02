@@ -159,6 +159,46 @@ fn test_op_05() {
 }
 
 #[test]
+fn test_op_inr() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.e = 0x99;
+    cpu.run_opcode((0x1C, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.e, 0x9A);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+}
+
+#[test]
+fn test_op_35() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.h = 0x20;
+    cpu.l = 0x00;
+
+    // A simple decrement
+    cpu.memory[cpu.get_addr_pointer()] = 0x02;
+    cpu.run_opcode((0x35, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[cpu.get_addr_pointer()], 0x01);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
+    cpu.run_opcode((0x35, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[cpu.get_addr_pointer()], 0x00);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
+
+    // A wrapping decrement
+    cpu.run_opcode((0x35, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[cpu.get_addr_pointer()], 0xFF);
+    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
+
+    cpu.memory[cpu.get_addr_pointer()] = 0x04;
+    cpu.run_opcode((0x35, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[cpu.get_addr_pointer()], 0x03);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
+}
+
+#[test]
 fn test_op_06() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
