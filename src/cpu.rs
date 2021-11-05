@@ -331,6 +331,7 @@ impl Cpu {
             0xE1 => self.op_pop(Registers::H),                // POP H
             0xE5 => self.op_push(Registers::H),               // PUSH H
             0xEB => self.op_xchg(),                           // XCHG
+            0xFF => self.op_rst(0x38),                        // RST
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -665,6 +666,19 @@ impl Cpu {
         };
 
         ProgramCounter::Next
+    }
+
+    // The contents of the program counter (16bit)
+    // are pushed onto the stack, providing a return address for
+    // later use by a RETURN instruction.
+    // Program execution continues at memory address:
+    // OOOOOOOOOOEXPOOOB
+    pub fn op_rst(&mut self, loc: u8) -> ProgramCounter {
+        self.memory[usize::from(self.sp - 2)] = (self.pc as u16 >> 8) as u8;
+        self.memory[usize::from(self.sp - 1)] = (self.pc as u16 & 0xFF) as u8;
+        self.sp -= 2;
+
+        ProgramCounter::Jump(loc as usize)
     }
 
     // JNZ (Jump if nonzero)

@@ -769,3 +769,16 @@ fn test_op_09() {
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
 }
+
+#[test]
+fn test_rst() {
+    let mut cpu = Cpu::new();
+    cpu.pc = 0x1234;
+    cpu.sp = 0x2400;
+
+    cpu.run_opcode((0xFF, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.sp, 0x23FE);
+    assert_eq!(cpu.memory[0x23FE], 0x12); // High half
+    assert_eq!(cpu.memory[0x23FF], 0x34); // Low half
+    assert_eq!(cpu.pc, 0x38);
+}

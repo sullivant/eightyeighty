@@ -166,7 +166,11 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Next,
         },
         0xFE => op_fe(), // CPI
-        _ => op_unk(),   // UNK
+        0xFF => Instr {
+            code: "RST".to_string(),
+            size: ProgramCounter::Next,
+        },
+        _ => op_unk(), // UNK
     }
 }
 
