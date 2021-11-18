@@ -1,5 +1,15 @@
 use lib::Cpu;
 
+// Lovely aux carry detection
+// (a & 0xf) + (b & 0xf) & 0x10 == 0x10
+#[test]
+fn test_will_ac() {
+    let mut cpu = Cpu::new();
+    assert_eq!(cpu.will_ac(62, 34), true);
+    assert_eq!(cpu.will_ac(0b1111, 1), true);
+    assert_eq!(cpu.will_ac(2, 4), false);
+}
+
 #[test]
 fn test_cpu_default() {
     let mut cpu = Cpu::new();
@@ -101,6 +111,13 @@ fn test_update_flags() {
     assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
     assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
+
+    // Check our "aux carry" function for addition
+    // (a & 0xf) + (b & 0xf) & 0x10 == 0x10
+
+    cpu.update_flags(0b10001000, true, false);
+    cpu.update_flags(0b10001000, true, (62 & 0xf) + (34 & 0xf) & 0x10 == 0x10);
     assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
 }
 
@@ -781,4 +798,33 @@ fn test_rst() {
     assert_eq!(cpu.memory[0x23FE], 0x12); // High half
     assert_eq!(cpu.memory[0x23FF], 0x34); // Low half
     assert_eq!(cpu.pc, 0x38);
+}
+
+#[test]
+fn test_sta() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.a = 0x12;
+
+    cpu.run_opcode((0x32, 0x14, 0x59)).unwrap();
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
+    assert_eq!(cpu.memory[0x5914], cpu.a);
+}
+
+#[test]
+fn test_sub() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.a = 0x12;
+    cpu.c = 0x02;
+
+    cpu.run_opcode((0x91, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+    assert_eq!(cpu.a, 0x10);
+
+    cpu.a = 0x3E;
+    cpu.run_opcode((0x97, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x00);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
 }

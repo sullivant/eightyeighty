@@ -294,6 +294,7 @@ impl Cpu {
             0x29 => self.op_dad(Registers::H),                // DAD HL
             0x2E => self.op_mvi(Registers::L, dl),            // MVI L
             0x31 => self.op_31(dl, dh),                       // LXI SP, D16
+            0x32 => self.op_sta(dl, dh),                      // STA (adr)<-A
             0x33 => self.op_33(),                             // INX SP
             0x35 => self.op_dcr(Registers::HL),               // DCR (HL)
             0x36 => self.op_mvi(Registers::HL, dl),           // MVI (HL)<-D8
@@ -315,6 +316,8 @@ impl Cpu {
             0x7D => self.op_mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.op_mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.op_mov(Registers::A, Registers::A),  // MOV A,A
+            0x91 => self.op_sub(Registers::C),                // SUB C
+            0x97 => self.op_sub(Registers::A),                // SUB A
             0xC1 => self.op_push(Registers::B),               // POP B
             0xC2 => self.op_c2(dl, dh),                       // JNZ
             0xC3 => self.op_c3(dl, dh),                       // JMP
@@ -371,13 +374,28 @@ impl Cpu {
         ProgramCounter::Next
     }
 
+    // Store accumulator direct to location in memory specified
+    // by address dhdl
+    pub fn op_sta(&mut self, dl: u8, dh: u8) -> ProgramCounter {
+        let addr: u16 = u16::from(dh) << 8 | u16::from(dl);
+        self.memory[addr as usize] = self.a;
+
+        ProgramCounter::Three
+    }
+
+    // Returns true if an addition will case an aux carry
+    pub fn will_ac(&mut self, a: u8, b: u8) -> bool {
+        ((a & 0x0F) + (b & 0x0F)) & 0x10 == 0x10
+    }
+
     // INR Reg
     // Flags affected: Z,S,P,AC
     pub fn op_inr(&mut self, reg: Registers) -> ProgramCounter {
         match reg {
             Registers::B => {
                 let (res, of) = self.b.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.b & 0x0F));
+                let ac = self.will_ac(1, self.b);
+                self.update_flags(res, of, ac);
                 self.b = res;
             }
             Registers::C => {
@@ -418,6 +436,26 @@ impl Cpu {
             }
             _ => (),
         }
+
+        ProgramCounter::Next
+    }
+
+    // SUB A (Subtract register param from A)
+    // Flags affected: Z, S, P, CY, AC
+    pub fn op_sub(&mut self, reg: Registers) -> ProgramCounter {
+        match reg {
+            Registers::A => {
+                let (res, of) = self.a.overflowing_sub(self.a);
+                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
+                self.a = res;
+            }
+            Registers::C => {
+                let (res, of) = self.a.overflowing_sub(self.c);
+                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
+                self.a = res;
+            }
+            _ => (),
+        };
 
         ProgramCounter::Next
     }

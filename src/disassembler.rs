@@ -98,6 +98,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         },
         0x2E => op_2e(), // MVI L, D8
         0x31 => op_31(), // LXI SP, D16
+        0x32 => Instr {
+            code: "STA (adr)<-A".to_string(),
+            size: ProgramCounter::Three,
+        },
         0x33 => op_33(), // INX SP
         0x34 => Instr {
             code: "INR (HL)".to_string(),
@@ -130,6 +134,14 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x7D => op_7a(Registers::L),  // MOV A,L
         0x7E => op_7a(Registers::HL), // MOV A,M (HL)
         0x7F => op_7a(Registers::A),  // MOV A,A
+        0x91 => Instr {
+            code: "SUB C".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x97 => Instr {
+            code: "SUB A".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xC1 => Instr {
             code: "POP B".to_string(),
             size: ProgramCounter::Next,
@@ -165,7 +177,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "POP H".to_string(),
             size: ProgramCounter::Next,
         },
-        0xFE => op_fe(), // CPI
+        0xFE => Instr {
+            code: "CPI".to_string(),
+            size: ProgramCounter::Two,
+        },
         0xFF => Instr {
             code: "RST".to_string(),
             size: ProgramCounter::Next,
@@ -455,13 +470,6 @@ fn op_f4(x: u8, y: u8) -> Instr {
     Instr {
         code: format!("CP {:#06X}", adr),
         size: ProgramCounter::Three,
-    }
-}
-
-fn op_fe() -> Instr {
-    Instr {
-        code: "CPI".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
