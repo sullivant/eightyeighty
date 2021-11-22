@@ -827,4 +827,24 @@ fn test_sub() {
     assert_eq!(cpu.a, 0x00);
     assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
     assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
+
+    cpu.memory[0x2400] = 0x01;
+    cpu.h = 0x24;
+    cpu.l = 0x00;
+    cpu.a = 0x0B;
+    cpu.run_opcode((0x96, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x0A);
+}
+
+#[test]
+fn test_lhld() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.memory[0x25B] = 0xFF;
+    cpu.memory[0x25C] = 0x03;
+    cpu.run_opcode((0x2A, 0x5B, 0x02)).unwrap();
+    assert_eq!(cpu.l, 0xFF);
+    assert_eq!(cpu.h, 0x03);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 }

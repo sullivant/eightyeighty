@@ -279,12 +279,13 @@ impl Cpu {
             0x06 => self.op_mvi(Registers::B, dl),            // MVI B, D8
             0x09 => self.op_dad(Registers::B),                // DAD BC
             0x0E => self.op_mvi(Registers::C, dl),            // MVI C, D8
+            0x0A => self.op_ldax(Registers::BC),              // LDAX BC
             0x11 => self.op_lxi(Registers::DE, dl, dh),       // LXI D,D16
             0x13 => self.op_13(),                             // INX D
             0x15 => self.op_dcr(Registers::D),                // DCR D
             0x16 => self.op_mvi(Registers::D, dl),            // MVI D
             0x19 => self.op_dad(Registers::D),                // DAD D
-            0x1A => self.op_1a(),                             // LDAX D
+            0x1A => self.op_ldax(Registers::DE),              // LDAX DE
             0x1C => self.op_inr(Registers::E),                // INR E
             0x1E => self.op_mvi(Registers::E, dl),            // MVI E
             0x21 => self.op_lxi(Registers::HL, dl, dh),       // LXI X,D16
@@ -293,6 +294,7 @@ impl Cpu {
             0x26 => self.op_mvi(Registers::H, dl),            // MVI H, D8
             0x29 => self.op_dad(Registers::H),                // DAD HL
             0x2E => self.op_mvi(Registers::L, dl),            // MVI L
+            0x2A => self.lhld(dl, dh),                        // LDA DL DH
             0x31 => self.op_31(dl, dh),                       // LXI SP, D16
             0x32 => self.op_sta(dl, dh),                      // STA (adr)<-A
             0x33 => self.op_33(),                             // INX SP
@@ -316,7 +318,13 @@ impl Cpu {
             0x7D => self.op_mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.op_mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.op_mov(Registers::A, Registers::A),  // MOV A,A
+            0x90 => self.op_sub(Registers::B),                // SUB B
             0x91 => self.op_sub(Registers::C),                // SUB C
+            0x92 => self.op_sub(Registers::D),                // SUB D
+            0x93 => self.op_sub(Registers::E),                // SUB E
+            0x94 => self.op_sub(Registers::H),                // SUB H
+            0x95 => self.op_sub(Registers::L),                // SUB L
+            0x96 => self.op_sub(Registers::HL),               // SUB M
             0x97 => self.op_sub(Registers::A),                // SUB A
             0xC1 => self.op_push(Registers::B),               // POP B
             0xC2 => self.op_c2(dl, dh),                       // JNZ
@@ -351,6 +359,22 @@ impl Cpu {
         }
 
         Ok(())
+    }
+
+    // LHLD
+    pub fn lhld(&mut self, dl: u8, dh: u8) -> ProgramCounter {
+        let mut addr: u16 = u16::from(dh) << 8 | u16::from(dl);
+        self.l = match self.memory.get(addr as usize) {
+            Some(&v) => v,
+            None => 0,
+        };
+        addr = addr.overflowing_add(0x01).0;
+        self.h = match self.memory.get(addr as usize) {
+            Some(&v) => v,
+            None => 0,
+        };
+
+        ProgramCounter::Three
     }
 
     // OUT D8
@@ -400,38 +424,45 @@ impl Cpu {
             }
             Registers::C => {
                 let (res, of) = self.c.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.c & 0x0F));
+                let ac = self.will_ac(1, self.c);
+                self.update_flags(res, of, ac);
                 self.c = res;
             }
             Registers::D => {
                 let (res, of) = self.d.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.d & 0x0F));
+                let ac = self.will_ac(1, self.d);
+                self.update_flags(res, of, ac);
                 self.d = res;
             }
             Registers::E => {
                 let (res, of) = self.e.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.e & 0x0F));
+                let ac = self.will_ac(1, self.d);
+                self.update_flags(res, of, ac);
                 self.e = res;
             }
             Registers::H => {
                 let (res, of) = self.h.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.h & 0x0F));
+                let ac = self.will_ac(1, self.h);
+                self.update_flags(res, of, ac);
                 self.h = res;
             }
             Registers::L => {
                 let (res, of) = self.l.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.l & 0x0F));
+                let ac = self.will_ac(1, self.l);
+                self.update_flags(res, of, ac);
                 self.l = res;
             }
             Registers::HL => {
                 let val = self.memory[self.get_addr_pointer()];
+                let ac = self.will_ac(1, val);
                 let (res, of) = val.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (val & 0x0F));
+                self.update_flags(res, of, ac);
                 self.memory[self.get_addr_pointer()] = res;
             }
             Registers::A => {
                 let (res, of) = self.a.overflowing_add(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
+                let ac = self.will_ac(1, self.a);
+                self.update_flags(res, of, ac);
                 self.a = res;
             }
             _ => (),
@@ -443,20 +474,20 @@ impl Cpu {
     // SUB A (Subtract register param from A)
     // Flags affected: Z, S, P, CY, AC
     pub fn op_sub(&mut self, reg: Registers) -> ProgramCounter {
-        match reg {
-            Registers::A => {
-                let (res, of) = self.a.overflowing_sub(self.a);
-                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
-                self.a = res;
-            }
-            Registers::C => {
-                let (res, of) = self.a.overflowing_sub(self.c);
-                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
-                self.a = res;
-            }
-            _ => (),
+        let o: (u8, bool) = match reg {
+            Registers::A => self.a.overflowing_sub(self.a),
+            Registers::B => self.a.overflowing_sub(self.b),
+            Registers::C => self.a.overflowing_sub(self.c),
+            Registers::D => self.a.overflowing_sub(self.d),
+            Registers::E => self.a.overflowing_sub(self.e),
+            Registers::H => self.a.overflowing_sub(self.h),
+            Registers::L => self.a.overflowing_sub(self.l),
+            Registers::HL => self.a.overflowing_sub(self.memory[self.get_addr_pointer()]),
+            _ => (0 as u8, false),
         };
 
+        self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
+        self.a = o.0;
         ProgramCounter::Next
     }
 
@@ -640,9 +671,16 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // LDAX DE (A <- DE)
-    pub fn op_1a(&mut self) -> ProgramCounter {
-        let loc: u16 = u16::from(self.d) << 8 | u16::from(self.e);
+    // LDAX
+    // Loads A with value from memory location specified by register pair
+    pub fn op_ldax(&mut self, reg: Registers) -> ProgramCounter {
+        let loc: u16 = match reg {
+            Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
+            Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
+            _ => {
+                return ProgramCounter::Next;
+            }
+        };
 
         self.a = match self.memory.get(loc as usize) {
             Some(&v) => v,

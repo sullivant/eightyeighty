@@ -38,7 +38,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     let dl = op.1;
     let dh = op.2;
     match op.0 {
-        0x00 => op_00(), // NOP
+        0x00 => Instr {
+            code: "NOP".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x01 => Instr {
             code: "LXI B".to_string(),
             size: ProgramCounter::Three,
@@ -56,6 +59,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Next,
         },
         0x0E => op_0e(), // MVI C, D8
+        0x0A => Instr {
+            code: "LDAX BC".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x11 => Instr {
             code: "LXI D".to_string(),
             size: ProgramCounter::Three,
@@ -97,6 +104,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Next,
         },
         0x2E => op_2e(), // MVI L, D8
+        0x2A => Instr {
+            code: "LHLD".to_string(),
+            size: ProgramCounter::Three,
+        },
         0x31 => op_31(), // LXI SP, D16
         0x32 => Instr {
             code: "STA (adr)<-A".to_string(),
@@ -136,6 +147,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x7F => op_7a(Registers::A),  // MOV A,A
         0x91 => Instr {
             code: "SUB C".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x92 => Instr {
+            code: "SUB D".to_string(),
             size: ProgramCounter::Next,
         },
         0x97 => Instr {
@@ -207,13 +222,6 @@ pub fn disassemble(cpu: &Cpu, last_pc: usize) -> String {
                 cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code
             )
         }
-    }
-}
-
-fn op_00() -> Instr {
-    Instr {
-        code: "NOP".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
