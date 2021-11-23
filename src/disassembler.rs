@@ -54,15 +54,19 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x05 => op_05(), // DCR B
         0x06 => op_06(), // MVI B, D8
         0x09 => op_09(), // DAD B (HL = HL + BC)
+        0x0A => Instr {
+            code: "LDAX BC".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x0B => Instr {
+            code: "DCX BC".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x0C => Instr {
             code: "INR C".to_string(),
             size: ProgramCounter::Next,
         },
         0x0E => op_0e(), // MVI C, D8
-        0x0A => Instr {
-            code: "LDAX BC".to_string(),
-            size: ProgramCounter::Next,
-        },
         0x11 => Instr {
             code: "LXI D".to_string(),
             size: ProgramCounter::Three,
@@ -79,6 +83,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x16 => op_16(), // MVI D
         0x19 => op_19(), // DAD D (HL = HL + DE)
         0x1A => op_1a(), // LDAX D
+        0x1B => Instr {
+            code: "DCX DE".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x1C => Instr {
             code: "INR E".to_string(),
             size: ProgramCounter::Next,
@@ -99,15 +107,19 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         },
         0x26 => op_26(), // MVI H, D8
         0x29 => op_29(), // DAD H (HL = HL + HL)
+        0x2A => Instr {
+            code: "LHLD".to_string(),
+            size: ProgramCounter::Three,
+        },
+        0x2B => Instr {
+            code: "DCX HL".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x2C => Instr {
             code: "INR L".to_string(),
             size: ProgramCounter::Next,
         },
         0x2E => op_2e(), // MVI L, D8
-        0x2A => Instr {
-            code: "LHLD".to_string(),
-            size: ProgramCounter::Three,
-        },
         0x31 => op_31(), // LXI SP, D16
         0x32 => Instr {
             code: "STA (adr)<-A".to_string(),
@@ -123,6 +135,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Three,
         },
         0x36 => op_36(), // MVI (HL), D8
+        0x3B => Instr {
+            code: "DCX SP".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x3C => Instr {
             code: "INR A".to_string(),
             size: ProgramCounter::Next,

@@ -848,3 +848,21 @@ fn test_lhld() {
     assert_eq!(cpu.h, 0x03);
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 }
+
+#[test]
+fn test_dcx() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.d = 0x20;
+    cpu.e = 0x00;
+    cpu.sp = 0x1234;
+
+    cpu.run_opcode((0x1B, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.d, 0x1F);
+    assert_eq!(cpu.e, 0xFF);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+
+    cpu.run_opcode((0x3B, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.sp, 0x1233);
+}

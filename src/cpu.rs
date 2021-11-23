@@ -23,6 +23,7 @@ pub enum Registers {
     BC,  // A register pair
     DE,  // A register pair
     HL,  // A register pair, used to reference memory locations
+    SP,  // Stack pointer
     PSW, // Program Status Word
 }
 
@@ -39,6 +40,7 @@ impl fmt::Display for Registers {
             Registers::BC => write!(f, "BC"),
             Registers::DE => write!(f, "DE"),
             Registers::HL => write!(f, "HL"),
+            Registers::SP => write!(f, "SP"),
             Registers::PSW => write!(f, "PSW"),
         }
     }
@@ -128,8 +130,33 @@ impl Cpu {
             Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
             Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
             Registers::HL => u16::from(self.h) << 8 | u16::from(self.l),
+            Registers::SP => self.sp,
             _ => 0_u16,
         }
+    }
+
+    // Sets a register pair if appropriate
+    pub fn set_register_pair(&mut self, register: Registers, val: u16) {
+        let h: u8 = (val >> 8) as u8;
+        let l: u8 = (val & 0xff) as u8;
+        match register {
+            Registers::BC => {
+                self.b = h;
+                self.c = l;
+            }
+            Registers::DE => {
+                self.d = h;
+                self.e = l;
+            }
+            Registers::HL => {
+                self.h = h;
+                self.l = l;
+            }
+            Registers::SP => {
+                self.sp = val;
+            }
+            _ => (),
+        };
     }
 
     // Returns the current flag values
@@ -278,14 +305,16 @@ impl Cpu {
             0x05 => self.op_dcr(Registers::B),                // DCR B
             0x06 => self.op_mvi(Registers::B, dl),            // MVI B, D8
             0x09 => self.op_dad(Registers::B),                // DAD BC
-            0x0E => self.op_mvi(Registers::C, dl),            // MVI C, D8
             0x0A => self.op_ldax(Registers::BC),              // LDAX BC
+            0x0B => self.op_dcx(Registers::BC),               // DCX BC
+            0x0E => self.op_mvi(Registers::C, dl),            // MVI C, D8
             0x11 => self.op_lxi(Registers::DE, dl, dh),       // LXI D,D16
             0x13 => self.op_13(),                             // INX D
             0x15 => self.op_dcr(Registers::D),                // DCR D
             0x16 => self.op_mvi(Registers::D, dl),            // MVI D
             0x19 => self.op_dad(Registers::D),                // DAD D
             0x1A => self.op_ldax(Registers::DE),              // LDAX DE
+            0x1B => self.op_dcx(Registers::DE),               // DCX DE
             0x1C => self.op_inr(Registers::E),                // INR E
             0x1E => self.op_mvi(Registers::E, dl),            // MVI E
             0x21 => self.op_lxi(Registers::HL, dl, dh),       // LXI X,D16
@@ -295,11 +324,13 @@ impl Cpu {
             0x29 => self.op_dad(Registers::H),                // DAD HL
             0x2E => self.op_mvi(Registers::L, dl),            // MVI L
             0x2A => self.lhld(dl, dh),                        // LDA DL DH
+            0x2B => self.op_dcx(Registers::HL),               // DCX HL
             0x31 => self.op_31(dl, dh),                       // LXI SP, D16
             0x32 => self.op_sta(dl, dh),                      // STA (adr)<-A
             0x33 => self.op_33(),                             // INX SP
             0x35 => self.op_dcr(Registers::HL),               // DCR (HL)
             0x36 => self.op_mvi(Registers::HL, dl),           // MVI (HL)<-D8
+            0x3B => self.op_dcx(Registers::SP),               // DCX SP
             0x3E => self.op_mvi(Registers::A, dl),            // MVI A
             0x6F => self.op_mov(Registers::L, Registers::A),  // MOV L <- A
             0x70 => self.op_mov(Registers::HL, Registers::B), // MOV M,B	1		(HL) <- B
@@ -392,8 +423,8 @@ impl Cpu {
     pub fn op_03(&mut self) -> ProgramCounter {
         let mut bc_pair: u16 = self.get_register_pair(Registers::BC);
         bc_pair = bc_pair.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
-        self.b = (bc_pair >> 8) as u8;
-        self.c = (bc_pair & 0xFF) as u8;
+
+        self.set_register_pair(Registers::BC, bc_pair);
 
         ProgramCounter::Next
     }
@@ -483,7 +514,7 @@ impl Cpu {
             Registers::H => self.a.overflowing_sub(self.h),
             Registers::L => self.a.overflowing_sub(self.l),
             Registers::HL => self.a.overflowing_sub(self.memory[self.get_addr_pointer()]),
-            _ => (0 as u8, false),
+            _ => (0_u8, false),
         };
 
         self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
@@ -686,6 +717,15 @@ impl Cpu {
             Some(&v) => v,
             None => 0,
         };
+
+        ProgramCounter::Next
+    }
+
+    // DCX
+    pub fn op_dcx(&mut self, reg: Registers) -> ProgramCounter {
+        let mut val = self.get_register_pair(reg);
+        val = val.overflowing_sub(1).0;
+        self.set_register_pair(reg, val);
 
         ProgramCounter::Next
     }
