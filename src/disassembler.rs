@@ -143,7 +143,39 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "INR A".to_string(),
             size: ProgramCounter::Next,
         },
-        0x3E => op_3e(),              // MVI A, D8
+        0x3E => op_3e(), // MVI A, D8
+        0x40 => Instr {
+            code: "MOV B,B".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x41 => Instr {
+            code: "MOV B,C".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x42 => Instr {
+            code: "MOV B,D".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x43 => Instr {
+            code: "MOV B,E".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x44 => Instr {
+            code: "MOV B,H".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x45 => Instr {
+            code: "MOV B,L".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x46 => Instr {
+            code: "MOV B,(HL)".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0x47 => Instr {
+            code: "MOV B,A".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x6F => op_6f(),              // MOV L, A
         0x70 => op_7m(Registers::B),  // MOV M,B
         0x71 => op_7m(Registers::B),  // MOV M,C

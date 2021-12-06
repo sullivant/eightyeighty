@@ -332,6 +332,14 @@ impl Cpu {
             0x36 => self.op_mvi(Registers::HL, dl),           // MVI (HL)<-D8
             0x3B => self.op_dcx(Registers::SP),               // DCX SP
             0x3E => self.op_mvi(Registers::A, dl),            // MVI A
+            0x40 => self.op_mov(Registers::B, Registers::B),  // MOV B <- B
+            0x41 => self.op_mov(Registers::B, Registers::C),  // MOV B <- C
+            0x42 => self.op_mov(Registers::B, Registers::D),  // MOV B <- D
+            0x43 => self.op_mov(Registers::B, Registers::E),  // MOV B <- E
+            0x44 => self.op_mov(Registers::B, Registers::H),  // MOV B <- H
+            0x45 => self.op_mov(Registers::B, Registers::L),  // MOV B <- L
+            0x46 => self.op_mov(Registers::B, Registers::HL), // MOV B <- (HL)
+            0x47 => self.op_mov(Registers::B, Registers::A),  // MOV B <- A
             0x6F => self.op_mov(Registers::L, Registers::A),  // MOV L <- A
             0x70 => self.op_mov(Registers::HL, Registers::B), // MOV M,B	1		(HL) <- B
             0x71 => self.op_mov(Registers::HL, Registers::C), // MOV M,C	1		(HL) <- C
