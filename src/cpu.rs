@@ -312,6 +312,7 @@ impl Cpu {
             0x13 => self.op_13(),                             // INX D
             0x15 => self.op_dcr(Registers::D),                // DCR D
             0x16 => self.op_mvi(Registers::D, dl),            // MVI D
+            0x17 => self.op_ral(),                            // RAL
             0x19 => self.op_dad(Registers::D),                // DAD D
             0x1A => self.op_ldax(Registers::DE),              // LDAX DE
             0x1B => self.op_dcx(Registers::DE),               // DCX DE
@@ -878,5 +879,37 @@ impl Cpu {
         self.update_flags(res, overflow, aux_carry);
 
         ProgramCounter::Two
+    }
+
+    // The contents of the accumulator are rotated one bit position to the left.
+    // The high-order bit of the accumulator replaces the
+    // Carry bit, while the Carry bit replaces the high-order bit of
+    // the accumulator.
+    pub fn op_ral(&mut self) -> ProgramCounter {
+        // Store off our current carry bit
+        let carry_bit = self.test_flag(super::FLAG_CARRY);
+
+        // Store off our current high order bit
+        let high_order = self.a >> 7;
+
+        // Shift one position to the left
+        let mut new_accum: u8 = self.a << 1;
+
+        // Update its high order bit with the old carry bit
+        new_accum = match carry_bit {
+            true => (1 << 7) | new_accum,
+            false => 0b0111_1111 & new_accum,
+        };
+
+        self.a = new_accum;
+
+        // Update the carry bit with the old high order bit
+        if high_order > 0 {
+            self.set_flag(super::FLAG_CARRY);
+        } else {
+            self.reset_flag(super::FLAG_CARRY);
+        }
+
+        ProgramCounter::Next
     }
 }

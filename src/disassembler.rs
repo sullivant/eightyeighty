@@ -81,6 +81,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Next,
         },
         0x16 => op_16(), // MVI D
+        0x17 => Instr {
+            code: "RAL".to_string(),
+            size: ProgramCounter::Next,
+        },
         0x19 => op_19(), // DAD D (HL = HL + DE)
         0x1A => op_1a(), // LDAX D
         0x1B => Instr {

@@ -866,3 +866,15 @@ fn test_dcx() {
     cpu.run_opcode((0x3B, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.sp, 0x1233);
 }
+
+#[test]
+fn test_ral() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x0B5;
+    cpu.run_opcode((0x17, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x6A);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+}
