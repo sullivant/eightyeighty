@@ -370,19 +370,26 @@ impl Cpu {
             0xC2 => self.op_c2(dl, dh),                       // JNZ
             0xC3 => self.op_c3(dl, dh),                       // JMP
             0xC5 => self.op_push(Registers::B),               // PUSH B
+            0xC7 => self.op_rst(0b000),                       // RST 0
             0xC9 => self.op_c9(),                             // RET
+            0xCF => self.op_rst(0b001),                       // RST 1
             0xD1 => self.op_pop(Registers::D),                // POP D
             0xD3 => self.op_out(dl),                          // OUT
             0xCD => self.op_cd(dl, dh),                       // CALL Addr
             0xD5 => self.op_push(Registers::D),               // PUSH D
+            0xD7 => self.op_rst(0b010),                       // RST 2
+            0xDF => self.op_rst(0b011),                       // RST 3
             0xF1 => self.op_pop(Registers::PSW),              // POP PSW
             0xF4 => self.op_f4(dl, dh),                       // CP If Plus
             0xF5 => self.op_push(Registers::PSW),             // Push PSW
             0xFE => self.op_fe(dl),                           // CPI
             0xE1 => self.op_pop(Registers::H),                // POP H
             0xE5 => self.op_push(Registers::H),               // PUSH H
+            0xE7 => self.op_rst(0b100),                       // RST 4
             0xEB => self.op_xchg(),                           // XCHG
-            0xFF => self.op_rst(0x38),                        // RST
+            0xEF => self.op_rst(0b101),                       // RST 5
+            0xF7 => self.op_rst(0b110),                       // RST 6
+            0xFF => self.op_rst(0b111),                       // RST 7
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown!!",
@@ -803,7 +810,7 @@ impl Cpu {
         self.memory[usize::from(self.sp - 1)] = (self.pc as u16 & 0xFF) as u8;
         self.sp -= 2;
 
-        ProgramCounter::Jump(loc as usize)
+        ProgramCounter::Jump((loc << 3) as usize)
     }
 
     // JNZ (Jump if nonzero)

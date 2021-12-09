@@ -216,7 +216,15 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
         0xC5 => op_c5(),       // PUSH B
-        0xC9 => op_c9(),       // RET
+        0xC7 => Instr {
+            code: "RST 0".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xC9 => op_c9(), // RET
+        0xCF => Instr {
+            code: "RST 8".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xCD => op_cd(dl, dh), // CALL Addr
         0xD1 => Instr {
             code: "POP D".to_string(),
@@ -227,12 +235,28 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Two,
         },
         0xD5 => op_d5(), // PUSH D
+        0xD7 => Instr {
+            code: "RST 2".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xDF => Instr {
+            code: "RST 3".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xE5 => Instr {
             code: "PUSH H".to_string(),
             size: ProgramCounter::Next,
         },
+        0xE7 => Instr {
+            code: "RST 4".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xEB => Instr {
             code: "XCHG".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xEF => Instr {
+            code: "RST 5".to_string(),
             size: ProgramCounter::Next,
         },
         0xF4 => op_f4(dl, dh), // CALL if Plus
@@ -244,12 +268,16 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "POP H".to_string(),
             size: ProgramCounter::Next,
         },
+        0xF7 => Instr {
+            code: "RST 6".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xFE => Instr {
             code: "CPI".to_string(),
             size: ProgramCounter::Two,
         },
         0xFF => Instr {
-            code: "RST".to_string(),
+            code: "RST 7".to_string(),
             size: ProgramCounter::Next,
         },
         _ => op_unk(), // UNK
