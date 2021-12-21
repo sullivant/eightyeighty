@@ -264,6 +264,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "PUSH PSW".to_string(),
             size: ProgramCounter::Next,
         },
+        0xE0 => Instr {
+            code: "RPO".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xE1 => Instr {
             code: "POP H".to_string(),
             size: ProgramCounter::Next,

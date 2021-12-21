@@ -371,7 +371,7 @@ impl Cpu {
             0xC3 => self.op_c3(dl, dh),                       // JMP
             0xC5 => self.op_push(Registers::B),               // PUSH B
             0xC7 => self.op_rst(0b000),                       // RST 0
-            0xC9 => self.op_c9(),                             // RET
+            0xC9 => self.op_ret(),                            // RET
             0xCF => self.op_rst(0b001),                       // RST 1
             0xD1 => self.op_pop(Registers::D),                // POP D
             0xD3 => self.op_out(dl),                          // OUT
@@ -383,6 +383,7 @@ impl Cpu {
             0xF4 => self.op_f4(dl, dh),                       // CP If Plus
             0xF5 => self.op_push(Registers::PSW),             // Push PSW
             0xFE => self.op_fe(dl),                           // CPI
+            0xE0 => self.op_rpo(),                            // RPO
             0xE1 => self.op_pop(Registers::H),                // POP H
             0xE5 => self.op_push(Registers::H),               // PUSH H
             0xE7 => self.op_rst(0b100),                       // RST 4
@@ -831,7 +832,7 @@ impl Cpu {
     }
 
     // RET (PC.lo <- (sp); PC.hi<-(sp+1); SP <- SP+2)
-    pub fn op_c9(&mut self) -> ProgramCounter {
+    pub fn op_ret(&mut self) -> ProgramCounter {
         let pc_lo = match self.memory.get(usize::from(self.sp)) {
             Some(&v) => v,
             None => 0,
@@ -846,6 +847,15 @@ impl Cpu {
 
         //ProgramCounter::Jump(dest.into())
         ProgramCounter::Three // And go to the next op
+    }
+
+    // RPO - Return if parity odd
+    pub fn op_rpo(&mut self) -> ProgramCounter {
+        if !self.test_flag(super::FLAG_PARITY) {
+            return self.op_ret();
+        }
+
+        ProgramCounter::Next
     }
 
     // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP-2;PC=adr

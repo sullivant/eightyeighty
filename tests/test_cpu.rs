@@ -646,7 +646,7 @@ fn test_op_e5() {
 }
 
 #[test]
-fn test_op_c9() {
+fn test_op_ret() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
@@ -657,6 +657,32 @@ fn test_op_c9() {
     cpu.memory[usize::from(cpu.sp + 1)] = 0x10; // HI
 
     cpu.run_opcode((0xC9, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, 0x1032 + lib::OPCODE_SIZE * 3);
+    assert_eq!(cpu.sp, 0x2402);
+}
+
+#[test]
+fn test_op_rpo() {
+    let mut cpu = Cpu::new();
+    // Setup a current PC value and stack pointer
+    cpu.pc = 0x12;
+    let mut op = cpu.pc;
+    cpu.sp = 0x2400;
+
+    // Setup a location to RETurn to on the stack pointer
+    cpu.memory[usize::from(cpu.sp)] = 0x32; // LO
+    cpu.memory[usize::from(cpu.sp + 1)] = 0x10; // HI
+
+    // try a return with parity NOT odd (parity flag = 1)
+    cpu.set_flag(lib::FLAG_PARITY); // EVEN Parity = true(1)
+    cpu.run_opcode((0xE0, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    op = cpu.pc;
+
+    // Try again with partity odd (parity flag = 0)
+    cpu.reset_flag(lib::FLAG_PARITY); // ODD parity = false(0)
+    cpu.run_opcode((0xE0, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, 0x1032 + lib::OPCODE_SIZE * 3);
     assert_eq!(cpu.sp, 0x2402);
 }
