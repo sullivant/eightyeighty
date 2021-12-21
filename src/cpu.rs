@@ -366,30 +366,36 @@ impl Cpu {
             0x95 => self.op_sub(Registers::L),                // SUB L
             0x96 => self.op_sub(Registers::HL),               // SUB M
             0x97 => self.op_sub(Registers::A),                // SUB A
+            0xC0 => self.op_rets(super::FLAG_CARRY, false),   // RNC
             0xC1 => self.op_push(Registers::B),               // POP B
             0xC2 => self.op_c2(dl, dh),                       // JNZ
             0xC3 => self.op_c3(dl, dh),                       // JMP
             0xC5 => self.op_push(Registers::B),               // PUSH B
             0xC7 => self.op_rst(0b000),                       // RST 0
+            0xC8 => self.op_rets(super::FLAG_CARRY, true),    // RC
             0xC9 => self.op_ret(),                            // RET
             0xCF => self.op_rst(0b001),                       // RST 1
             0xD1 => self.op_pop(Registers::D),                // POP D
             0xD3 => self.op_out(dl),                          // OUT
             0xCD => self.op_cd(dl, dh),                       // CALL Addr
+            0xD0 => self.op_rets(super::FLAG_CARRY, false),   // RNC
             0xD5 => self.op_push(Registers::D),               // PUSH D
             0xD7 => self.op_rst(0b010),                       // RST 2
             0xDF => self.op_rst(0b011),                       // RST 3
+            0xE0 => self.op_rets(super::FLAG_PARITY, false),  // RPO
+            0xE1 => self.op_pop(Registers::H),                // POP H
+            0xE5 => self.op_push(Registers::H),               // PUSH H
+            0xE7 => self.op_rst(0b100),                       // RST 4
+            0xE8 => self.op_rets(super::FLAG_PARITY, true),   // RPE
+            0xEB => self.op_xchg(),                           // XCHG
+            0xEF => self.op_rst(0b101),                       // RST 5
+            0xF0 => self.op_rets(super::FLAG_SIGN, false),    // RP
             0xF1 => self.op_pop(Registers::PSW),              // POP PSW
             0xF4 => self.op_f4(dl, dh),                       // CP If Plus
             0xF5 => self.op_push(Registers::PSW),             // Push PSW
             0xFE => self.op_fe(dl),                           // CPI
-            0xE0 => self.op_rpo(),                            // RPO
-            0xE1 => self.op_pop(Registers::H),                // POP H
-            0xE5 => self.op_push(Registers::H),               // PUSH H
-            0xE7 => self.op_rst(0b100),                       // RST 4
-            0xEB => self.op_xchg(),                           // XCHG
-            0xEF => self.op_rst(0b101),                       // RST 5
             0xF7 => self.op_rst(0b110),                       // RST 6
+            0xF8 => self.op_rets(super::FLAG_SIGN, true),     // RM
             0xFF => self.op_rst(0b111),                       // RST 7
             _ => {
                 return Err(format!(
@@ -849,9 +855,9 @@ impl Cpu {
         ProgramCounter::Three // And go to the next op
     }
 
-    // RPO - Return if parity odd
-    pub fn op_rpo(&mut self) -> ProgramCounter {
-        if !self.test_flag(super::FLAG_PARITY) {
+    // Returns if the flag supplied's value matches the supplied sign
+    pub fn op_rets(&mut self, flag: u8, sign: bool) -> ProgramCounter {
+        if sign == self.test_flag(flag) {
             return self.op_ret();
         }
 

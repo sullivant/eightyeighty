@@ -209,6 +209,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "SUB A".to_string(),
             size: ProgramCounter::Next,
         },
+        0xC0 => Instr {
+            code: "RNC".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xC1 => Instr {
             code: "POP B".to_string(),
             size: ProgramCounter::Next,
@@ -220,12 +224,20 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "RST 0".to_string(),
             size: ProgramCounter::Next,
         },
+        0xC8 => Instr {
+            code: "RC".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xC9 => op_c9(), // RET
         0xCF => Instr {
             code: "RST 8".to_string(),
             size: ProgramCounter::Next,
         },
         0xCD => op_cd(dl, dh), // CALL Addr
+        0xD0 => Instr {
+            code: "RNC".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xD1 => Instr {
             code: "POP D".to_string(),
             size: ProgramCounter::Next,
@@ -243,12 +255,24 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "RST 3".to_string(),
             size: ProgramCounter::Next,
         },
+        0xE0 => Instr {
+            code: "RPO".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xE1 => Instr {
+            code: "POP H".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xE5 => Instr {
             code: "PUSH H".to_string(),
             size: ProgramCounter::Next,
         },
         0xE7 => Instr {
             code: "RST 4".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xE8 => Instr {
+            code: "RPE".to_string(),
             size: ProgramCounter::Next,
         },
         0xEB => Instr {
@@ -264,12 +288,8 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "PUSH PSW".to_string(),
             size: ProgramCounter::Next,
         },
-        0xE0 => Instr {
-            code: "RPO".to_string(),
-            size: ProgramCounter::Next,
-        },
-        0xE1 => Instr {
-            code: "POP H".to_string(),
+        0xF0 => Instr {
+            code: "RP".to_string(),
             size: ProgramCounter::Next,
         },
         0xF7 => Instr {
@@ -279,6 +299,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xFE => Instr {
             code: "CPI".to_string(),
             size: ProgramCounter::Two,
+        },
+        0xF8 => Instr {
+            code: "RM".to_string(),
+            size: ProgramCounter::Next,
         },
         0xFF => Instr {
             code: "RST 7".to_string(),
