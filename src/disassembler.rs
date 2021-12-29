@@ -4,8 +4,7 @@ use std::fmt;
 pub const HEADER: &str = "CYCLE:PC Ins S l h sp SZ0A0P1C (lo,hi) B Command";
 
 pub struct Instr {
-    code: String,         // The string defining what this this instr is actually doing
-    size: ProgramCounter, // The size of the program counter "move" after this instr
+    code: String, // The string defining what this this instr is actually doing
 }
 
 impl fmt::Display for Instr {
@@ -40,145 +39,114 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     match op.0 {
         0x00 => Instr {
             code: "NOP".to_string(),
-            size: ProgramCounter::Next,
         },
         0x01 => Instr {
             code: "LXI B".to_string(),
-            size: ProgramCounter::Three,
         },
         0x03 => op_03(), // INX BC
         0x04 => Instr {
             code: "INR B".to_string(),
-            size: ProgramCounter::Next,
         },
         0x05 => op_05(), // DCR B
         0x06 => op_06(), // MVI B, D8
         0x09 => op_09(), // DAD B (HL = HL + BC)
         0x0A => Instr {
             code: "LDAX BC".to_string(),
-            size: ProgramCounter::Next,
         },
         0x0B => Instr {
             code: "DCX BC".to_string(),
-            size: ProgramCounter::Next,
         },
         0x0C => Instr {
             code: "INR C".to_string(),
-            size: ProgramCounter::Next,
         },
         0x0E => op_0e(), // MVI C, D8
         0x11 => Instr {
             code: "LXI D".to_string(),
-            size: ProgramCounter::Three,
         },
         0x13 => op_13(), // INX DE
         0x14 => Instr {
             code: "INR D".to_string(),
-            size: ProgramCounter::Next,
         },
         0x15 => Instr {
             code: "DCR D".to_string(),
-            size: ProgramCounter::Next,
         },
         0x16 => op_16(), // MVI D
         0x17 => Instr {
             code: "RAL".to_string(),
-            size: ProgramCounter::Next,
         },
         0x19 => op_19(), // DAD D (HL = HL + DE)
         0x1A => op_1a(), // LDAX D
         0x1B => Instr {
             code: "DCX DE".to_string(),
-            size: ProgramCounter::Next,
         },
         0x1C => Instr {
             code: "INR E".to_string(),
-            size: ProgramCounter::Next,
         },
         0x1E => op_1e(), // MVI E
         0x21 => Instr {
             code: "LXI H".to_string(),
-            size: ProgramCounter::Three,
         },
         0x23 => op_23(), // INX HL
         0x24 => Instr {
             code: "INR H".to_string(),
-            size: ProgramCounter::Next,
         },
         0x25 => Instr {
             code: "DCR H".to_string(),
-            size: ProgramCounter::Three,
         },
         0x26 => op_26(), // MVI H, D8
         0x29 => op_29(), // DAD H (HL = HL + HL)
         0x2A => Instr {
             code: "LHLD".to_string(),
-            size: ProgramCounter::Three,
         },
         0x2B => Instr {
             code: "DCX HL".to_string(),
-            size: ProgramCounter::Next,
         },
         0x2C => Instr {
             code: "INR L".to_string(),
-            size: ProgramCounter::Next,
         },
         0x2E => op_2e(), // MVI L, D8
         0x31 => op_31(), // LXI SP, D16
         0x32 => Instr {
             code: "STA (adr)<-A".to_string(),
-            size: ProgramCounter::Three,
         },
         0x33 => op_33(), // INX SP
         0x34 => Instr {
             code: "INR (HL)".to_string(),
-            size: ProgramCounter::Next,
         },
         0x35 => Instr {
             code: "DCR (HL)".to_string(),
-            size: ProgramCounter::Three,
         },
         0x36 => op_36(), // MVI (HL), D8
         0x3B => Instr {
             code: "DCX SP".to_string(),
-            size: ProgramCounter::Next,
         },
         0x3C => Instr {
             code: "INR A".to_string(),
-            size: ProgramCounter::Next,
         },
         0x3E => op_3e(), // MVI A, D8
         0x40 => Instr {
             code: "MOV B,B".to_string(),
-            size: ProgramCounter::Next,
         },
         0x41 => Instr {
             code: "MOV B,C".to_string(),
-            size: ProgramCounter::Next,
         },
         0x42 => Instr {
             code: "MOV B,D".to_string(),
-            size: ProgramCounter::Next,
         },
         0x43 => Instr {
             code: "MOV B,E".to_string(),
-            size: ProgramCounter::Next,
         },
         0x44 => Instr {
             code: "MOV B,H".to_string(),
-            size: ProgramCounter::Next,
         },
         0x45 => Instr {
             code: "MOV B,L".to_string(),
-            size: ProgramCounter::Next,
         },
         0x46 => Instr {
             code: "MOV B,(HL)".to_string(),
-            size: ProgramCounter::Next,
         },
         0x47 => Instr {
             code: "MOV B,A".to_string(),
-            size: ProgramCounter::Next,
         },
         0x6F => op_6f(),              // MOV L, A
         0x70 => op_7m(Registers::B),  // MOV M,B
@@ -199,138 +167,106 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x7F => op_7a(Registers::A),  // MOV A,A
         0x91 => Instr {
             code: "SUB C".to_string(),
-            size: ProgramCounter::Next,
         },
         0x92 => Instr {
             code: "SUB D".to_string(),
-            size: ProgramCounter::Next,
         },
         0x97 => Instr {
             code: "SUB A".to_string(),
-            size: ProgramCounter::Next,
         },
         0xC0 => Instr {
             code: "RNC".to_string(),
-            size: ProgramCounter::Next,
         },
         0xC1 => Instr {
             code: "POP B".to_string(),
-            size: ProgramCounter::Next,
         },
         0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
         0xC4 => Instr {
             code: "CNZ".to_string(),
-            size: ProgramCounter::Next,
         },
         0xC5 => op_c5(), // PUSH B
         0xC7 => Instr {
             code: "RST 0".to_string(),
-            size: ProgramCounter::Next,
         },
         0xC8 => Instr {
             code: "RC".to_string(),
-            size: ProgramCounter::Next,
         },
         0xC9 => op_c9(), // RET
         0xCC => Instr {
             code: "CZ".to_string(),
-            size: ProgramCounter::Next,
         },
         0xCF => Instr {
             code: "RST 8".to_string(),
-            size: ProgramCounter::Next,
         },
         0xCD => op_cd(dl, dh), // CALL Addr
         0xD0 => Instr {
             code: "RNC".to_string(),
-            size: ProgramCounter::Next,
         },
         0xD1 => Instr {
             code: "POP D".to_string(),
-            size: ProgramCounter::Next,
         },
         0xD3 => Instr {
             code: "OUT D".to_string(),
-            size: ProgramCounter::Two,
         },
         0xD5 => op_d5(), // PUSH D
         0xD7 => Instr {
             code: "RST 2".to_string(),
-            size: ProgramCounter::Next,
         },
         0xD4 => Instr {
             code: "CNC Addr".to_string(),
-            size: ProgramCounter::Next,
         },
         0xDC => Instr {
             code: "CC Addr".to_string(),
-            size: ProgramCounter::Next,
         },
         0xDF => Instr {
             code: "RST 3".to_string(),
-            size: ProgramCounter::Next,
         },
         0xE0 => Instr {
             code: "RPO".to_string(),
-            size: ProgramCounter::Next,
         },
         0xE1 => Instr {
             code: "POP H".to_string(),
-            size: ProgramCounter::Next,
         },
         0xE4 => Instr {
             code: "CPO".to_string(),
-            size: ProgramCounter::Next,
         },
         0xE5 => Instr {
             code: "PUSH H".to_string(),
-            size: ProgramCounter::Next,
         },
         0xE7 => Instr {
             code: "RST 4".to_string(),
-            size: ProgramCounter::Next,
         },
         0xE8 => Instr {
             code: "RPE".to_string(),
-            size: ProgramCounter::Next,
         },
         0xEB => Instr {
             code: "XCHG".to_string(),
-            size: ProgramCounter::Next,
         },
         0xEC => Instr {
             code: "CPE".to_string(),
-            size: ProgramCounter::Next,
         },
         0xEF => Instr {
             code: "RST 5".to_string(),
-            size: ProgramCounter::Next,
         },
         0xF4 => op_f4(dl, dh), // CALL if Plus
         0xF5 => Instr {
             code: "PUSH PSW".to_string(),
-            size: ProgramCounter::Next,
         },
         0xF0 => Instr {
             code: "RP".to_string(),
-            size: ProgramCounter::Next,
         },
         0xF7 => Instr {
             code: "RST 6".to_string(),
-            size: ProgramCounter::Next,
         },
         0xFE => Instr {
             code: "CPI".to_string(),
-            size: ProgramCounter::Two,
         },
         0xF8 => Instr {
             code: "RM".to_string(),
-            size: ProgramCounter::Next,
         },
         0xFF => Instr {
             code: "RST 7".to_string(),
-            size: ProgramCounter::Next,
         },
         _ => op_unk(), // UNK
     }
@@ -341,27 +277,14 @@ pub fn disassemble(cpu: &Cpu, last_pc: usize) -> String {
     let dl = cpu.last_opcode.1;
     let dh = cpu.last_opcode.2;
 
-    match i.size {
-        ProgramCounter::Jump(j) => {
-            format!(
-                "{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}->JMP ${:#06X}",
-                cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh,cpu.b, i.code, j
-            )
-        }
-        _ => {
-            format!(
-                "{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}",
-                cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code
-            )
-        }
-    }
+    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}",
+    cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code)
 }
 
 // INX BC
 fn op_03() -> Instr {
     Instr {
         code: "INX BC".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -369,14 +292,12 @@ fn op_03() -> Instr {
 fn op_05() -> Instr {
     Instr {
         code: "DCR B".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
 fn op_06() -> Instr {
     Instr {
         code: "MVI B, D8".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -384,7 +305,6 @@ fn op_06() -> Instr {
 fn op_0e() -> Instr {
     Instr {
         code: "MVI C, D8".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -392,7 +312,6 @@ fn op_0e() -> Instr {
 fn op_13() -> Instr {
     Instr {
         code: "INX DE".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -400,7 +319,6 @@ fn op_13() -> Instr {
 fn op_1a() -> Instr {
     Instr {
         code: "LDAX DE".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -408,7 +326,6 @@ fn op_1a() -> Instr {
 fn op_23() -> Instr {
     Instr {
         code: "INX HL".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -416,7 +333,6 @@ fn op_23() -> Instr {
 fn op_26() -> Instr {
     Instr {
         code: "MVI H".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -424,21 +340,18 @@ fn op_26() -> Instr {
 fn op_29() -> Instr {
     Instr {
         code: "DAD H".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
 fn op_09() -> Instr {
     Instr {
         code: "DAD B".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
 fn op_19() -> Instr {
     Instr {
         code: "DAD D".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -446,7 +359,6 @@ fn op_19() -> Instr {
 fn op_2e() -> Instr {
     Instr {
         code: "MVI L".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -454,7 +366,6 @@ fn op_2e() -> Instr {
 fn op_16() -> Instr {
     Instr {
         code: "MVI D".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -462,14 +373,12 @@ fn op_16() -> Instr {
 fn op_1e() -> Instr {
     Instr {
         code: "MVI E".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
 fn op_31() -> Instr {
     Instr {
         code: "LXI SP, D16".to_string(),
-        size: ProgramCounter::Three,
     }
 }
 
@@ -477,7 +386,6 @@ fn op_31() -> Instr {
 fn op_33() -> Instr {
     Instr {
         code: "INX SP".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -485,7 +393,6 @@ fn op_33() -> Instr {
 fn op_36() -> Instr {
     Instr {
         code: "MVI M(HL), D8".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -493,7 +400,6 @@ fn op_36() -> Instr {
 fn op_3e() -> Instr {
     Instr {
         code: "MVI A, D8".to_string(),
-        size: ProgramCounter::Two,
     }
 }
 
@@ -501,14 +407,12 @@ fn op_3e() -> Instr {
 fn op_6f() -> Instr {
     Instr {
         code: "MOV L, A".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
 fn op_76() -> Instr {
     Instr {
         code: "HALT 1".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -525,10 +429,7 @@ fn op_7m(reg: Registers) -> Instr {
         _ => "MOV M,M".to_string(),
     };
 
-    Instr {
-        code: c,
-        size: ProgramCounter::Next,
-    }
+    Instr { code: c }
 }
 
 // MOV M,A
@@ -546,10 +447,7 @@ fn op_7a(reg: Registers) -> Instr {
         Registers::HL => "MOV A,(HL)".to_string(),
     };
 
-    Instr {
-        code: c,
-        size: ProgramCounter::Next,
-    }
+    Instr { code: c }
 }
 
 // JNZ adr
@@ -558,7 +456,6 @@ fn op_c2(x: u8, y: u8) -> Instr {
     let dest: u16 = ys | u16::from(x);
     Instr {
         code: format!("JNZ {:#06X}", dest),
-        size: ProgramCounter::Jump(dest.into()),
     }
 }
 
@@ -567,21 +464,18 @@ fn op_c3(x: u8, y: u8) -> Instr {
     let dest: u16 = ys | u16::from(x);
     Instr {
         code: format!("JMP {:#06X}", dest),
-        size: ProgramCounter::Jump(dest.into()),
     }
 }
 
 fn op_c5() -> Instr {
     Instr {
         code: "PUSH B".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
 fn op_c9() -> Instr {
     Instr {
         code: "RET".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -592,14 +486,12 @@ fn op_cd(x: u8, y: u8) -> Instr {
 
     Instr {
         code: format!("CALL {:#06X}", adr),
-        size: ProgramCounter::Three,
     }
 }
 
 fn op_d5() -> Instr {
     Instr {
         code: "PUSH D".to_string(),
-        size: ProgramCounter::Next,
     }
 }
 
@@ -609,13 +501,11 @@ fn op_f4(x: u8, y: u8) -> Instr {
 
     Instr {
         code: format!("CP {:#06X}", adr),
-        size: ProgramCounter::Three,
     }
 }
 
 fn op_unk() -> Instr {
     Instr {
         code: "!UNK!".to_string(),
-        size: ProgramCounter::Next,
     }
 }
