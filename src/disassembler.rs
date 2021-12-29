@@ -219,7 +219,11 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         },
         0xC2 => op_c2(dl, dh), // JNZ Addr
         0xC3 => op_c3(dl, dh), // JMP
-        0xC5 => op_c5(),       // PUSH B
+        0xC4 => Instr {
+            code: "CNZ".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xC5 => op_c5(), // PUSH B
         0xC7 => Instr {
             code: "RST 0".to_string(),
             size: ProgramCounter::Next,
@@ -229,6 +233,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             size: ProgramCounter::Next,
         },
         0xC9 => op_c9(), // RET
+        0xCC => Instr {
+            code: "CZ".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xCF => Instr {
             code: "RST 8".to_string(),
             size: ProgramCounter::Next,
@@ -251,6 +259,14 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "RST 2".to_string(),
             size: ProgramCounter::Next,
         },
+        0xD4 => Instr {
+            code: "CNC Addr".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xDC => Instr {
+            code: "CC Addr".to_string(),
+            size: ProgramCounter::Next,
+        },
         0xDF => Instr {
             code: "RST 3".to_string(),
             size: ProgramCounter::Next,
@@ -261,6 +277,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         },
         0xE1 => Instr {
             code: "POP H".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xE4 => Instr {
+            code: "CPO".to_string(),
             size: ProgramCounter::Next,
         },
         0xE5 => Instr {
@@ -277,6 +297,10 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         },
         0xEB => Instr {
             code: "XCHG".to_string(),
+            size: ProgramCounter::Next,
+        },
+        0xEC => Instr {
+            code: "CPE".to_string(),
             size: ProgramCounter::Next,
         },
         0xEF => Instr {

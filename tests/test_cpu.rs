@@ -782,11 +782,44 @@ fn test_op_cd() {
     assert_eq!(cpu.pc, (0x0503));
 }
 
+// If the Carry bit is one, a call operation is
+// performed to subroutine sub.
+#[test]
+fn test_cc_addr() {
+    let mut cpu = Cpu::new();
+    // Setup a current PC value and stack pointer
+    cpu.pc = 0x18D9;
+    let op = cpu.pc;
+    cpu.sp = 0x2400;
+
+    // Run it with no carry flag
+    cpu.run_opcode((0xDC, 0x03, 0x05)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
+
+    // Reset
+    cpu.pc = 0x18D9;
+
+    // Set the carry flag
+    cpu.set_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0xDC, 0x03, 0x05)).unwrap();
+
+    // memory should be set now
+    assert_eq!(cpu.memory[0x23FF], 0x18 as u8);
+    assert_eq!(cpu.memory[0x23FE], 0xD9 as u8);
+
+    // Check stack pointer
+    assert_eq!(cpu.sp, 0x23FE);
+
+    // Check program counter
+    assert_eq!(cpu.pc, (0x0503));
+}
+
 #[test]
 fn test_op_f4() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
+    cpu.sp = 0x2400;
     let op = cpu.pc;
 
     // Set a negative test bit register
