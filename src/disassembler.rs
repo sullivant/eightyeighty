@@ -158,6 +158,30 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x7D => op_7a(Registers::L),  // MOV A,L
         0x7E => op_7a(Registers::HL), // MOV A,M (HL)
         0x7F => op_7a(Registers::A),  // MOV A,A
+        0x80 => Instr {
+            code: "ADD B".to_string(),
+        },
+        0x81 => Instr {
+            code: "ADD C".to_string(),
+        },
+        0x82 => Instr {
+            code: "ADD D".to_string(),
+        },
+        0x83 => Instr {
+            code: "ADD E".to_string(),
+        },
+        0x84 => Instr {
+            code: "ADD H".to_string(),
+        },
+        0x85 => Instr {
+            code: "ADD L".to_string(),
+        },
+        0x86 => Instr {
+            code: "ADD M(HL)".to_string(),
+        },
+        0x87 => Instr {
+            code: "ADD A".to_string(),
+        },
         0x88 => Instr {
             code: "ADC B".to_string(),
         }, // ADC B
@@ -177,7 +201,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
             code: "ADC L".to_string(),
         }, // ADC L
         0x8E => Instr {
-            code: "ADC M".to_string(),
+            code: "ADC M(HL)".to_string(),
         }, // ADC M
         0x8F => Instr {
             code: "ADC A".to_string(),

@@ -360,6 +360,14 @@ impl Cpu {
             0x7D => self.op_mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.op_mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.op_mov(Registers::A, Registers::A),  // MOV A,A
+            0x80 => self.op_add(Registers::B),                // ADD B
+            0x81 => self.op_add(Registers::C),                // ADD C
+            0x82 => self.op_add(Registers::D),                // ADD D
+            0x83 => self.op_add(Registers::E),                // ADD E
+            0x84 => self.op_add(Registers::H),                // ADD H
+            0x85 => self.op_add(Registers::L),                // ADD L
+            0x86 => self.op_add(Registers::HL),               // ADD M
+            0x87 => self.op_add(Registers::A),                // ADD A
             0x88 => self.op_adc(Registers::B),                // ADC B
             0x89 => self.op_adc(Registers::C),                // ADC C
             0x8A => self.op_adc(Registers::D),                // ADC D
@@ -949,7 +957,31 @@ impl Cpu {
     }
 
     // Add to the accumulator the supplied register
+    // as well as update flags
+    pub fn op_add(&mut self, reg: Registers) -> ProgramCounter {
+        let to_add: u8 = match reg {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory[self.get_addr_pointer()],
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+
+        let (res, of) = self.a.overflowing_add(to_add);
+        let ac = self.will_ac(to_add, self.a);
+        self.a = res;
+        self.update_flags(res, of, ac);
+
+        ProgramCounter::Next
+    }
+
+    // Add to the accumulator the supplied register
     // along with the CARRY flag's value
+    // as well as update flags
     pub fn op_adc(&mut self, reg: Registers) -> ProgramCounter {
         let to_add: u8 = self.test_flag(super::FLAG_CARRY) as u8
             + match reg {
