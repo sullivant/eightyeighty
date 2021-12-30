@@ -201,13 +201,15 @@ impl Cpu {
             false => self.reset_flag(super::FLAG_PARITY),
         };
 
-        if overflow {
-            self.set_flag(super::FLAG_CARRY);
-        }
+        match overflow {
+            true => self.set_flag(super::FLAG_CARRY),
+            false => self.reset_flag(super::FLAG_CARRY),
+        };
 
-        if aux_carry {
-            self.set_flag(super::FLAG_AUXCARRY);
-        }
+        match aux_carry {
+            true => self.set_flag(super::FLAG_AUXCARRY),
+            false => self.reset_flag(super::FLAG_AUXCARRY),
+        };
     }
 
     // If number of ones in a number's binary representation is even,
@@ -358,6 +360,14 @@ impl Cpu {
             0x7D => self.op_mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.op_mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.op_mov(Registers::A, Registers::A),  // MOV A,A
+            0x88 => self.op_adc(Registers::B),                // ADC B
+            0x89 => self.op_adc(Registers::C),                // ADC C
+            0x8A => self.op_adc(Registers::D),                // ADC D
+            0x8B => self.op_adc(Registers::E),                // ADC E
+            0x8C => self.op_adc(Registers::H),                // ADC H
+            0x8D => self.op_adc(Registers::L),                // ADC L
+            0x8E => self.op_adc(Registers::HL),               // ADC M
+            0x8F => self.op_adc(Registers::A),                // ADC A
             0x90 => self.op_sub(Registers::B),                // SUB B
             0x91 => self.op_sub(Registers::C),                // SUB C
             0x92 => self.op_sub(Registers::D),                // SUB D
@@ -934,6 +944,30 @@ impl Cpu {
         } else {
             self.reset_flag(super::FLAG_CARRY);
         }
+
+        ProgramCounter::Next
+    }
+
+    // Add to the accumulator the supplied register
+    // along with the CARRY flag's value
+    pub fn op_adc(&mut self, reg: Registers) -> ProgramCounter {
+        let to_add: u8 = self.test_flag(super::FLAG_CARRY) as u8
+            + match reg {
+                Registers::B => self.b,
+                Registers::C => self.c,
+                Registers::D => self.d,
+                Registers::E => self.e,
+                Registers::H => self.h,
+                Registers::L => self.l,
+                Registers::HL => self.memory[self.get_addr_pointer()],
+                Registers::A => self.a,
+                _ => 0_u8,
+            };
+
+        let (res, of) = self.a.overflowing_add(to_add);
+        let ac = self.will_ac(to_add, self.a);
+        self.a = res;
+        self.update_flags(res, of, ac);
 
         ProgramCounter::Next
     }

@@ -666,7 +666,7 @@ fn test_op_rpo() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
-    let mut op = cpu.pc;
+    let op = cpu.pc;
     cpu.sp = 0x2400;
 
     // Setup a location to RETurn to on the stack pointer
@@ -677,8 +677,6 @@ fn test_op_rpo() {
     cpu.set_flag(lib::FLAG_PARITY); // EVEN Parity = true(1)
     cpu.run_opcode((0xE0, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    op = cpu.pc;
 
     // Try again with partity odd (parity flag = 0)
     cpu.reset_flag(lib::FLAG_PARITY); // ODD parity = false(0)
@@ -692,7 +690,7 @@ fn test_op_rpe() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
-    let mut op = cpu.pc;
+    let op = cpu.pc;
     cpu.sp = 0x2400;
 
     // Setup a location to RETurn to on the stack pointer
@@ -703,8 +701,6 @@ fn test_op_rpe() {
     cpu.reset_flag(lib::FLAG_PARITY); // ODD parity = false(0)
     cpu.run_opcode((0xE8, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    op = cpu.pc;
 
     // try a return with parity NOT odd (parity flag = 1)
     cpu.set_flag(lib::FLAG_PARITY); // EVEN Parity = true(1)
@@ -718,7 +714,7 @@ fn test_op_rm() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
-    let mut op = cpu.pc;
+    let op = cpu.pc;
     cpu.sp = 0x2400;
 
     // Setup a location to RETurn to on the stack pointer
@@ -728,8 +724,6 @@ fn test_op_rm() {
     cpu.reset_flag(lib::FLAG_SIGN); // true = minus
     cpu.run_opcode((0xF8, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    op = cpu.pc;
 
     cpu.set_flag(lib::FLAG_SIGN);
     cpu.run_opcode((0xF8, 0x00, 0x00)).unwrap();
@@ -742,7 +736,7 @@ fn test_op_rp() {
     let mut cpu = Cpu::new();
     // Setup a current PC value and stack pointer
     cpu.pc = 0x12;
-    let mut op = cpu.pc;
+    let op = cpu.pc;
     cpu.sp = 0x2400;
 
     // Setup a location to RETurn to on the stack pointer
@@ -752,8 +746,6 @@ fn test_op_rp() {
     cpu.set_flag(lib::FLAG_SIGN);
     cpu.run_opcode((0xF0, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    op = cpu.pc;
 
     cpu.reset_flag(lib::FLAG_SIGN); // true = minus
     cpu.run_opcode((0xF0, 0x00, 0x00)).unwrap();
@@ -1010,4 +1002,19 @@ fn test_ral() {
     assert_eq!(cpu.a, 0x6A);
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+}
+
+#[test]
+fn test_adc() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x42;
+    cpu.b = 0x3D;
+    cpu.set_flag(lib::FLAG_CARRY);
+    // Add the register B to the Accum with the Carry bit, too
+    cpu.run_opcode((0x88, 0x00, 000)).unwrap();
+    assert_eq!(cpu.a, 0x80);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
 }

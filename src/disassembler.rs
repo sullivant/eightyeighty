@@ -13,13 +13,6 @@ impl fmt::Display for Instr {
     }
 }
 
-enum ProgramCounter {
-    Next,        // The operation does not use any data
-    Two,         // The operation uses only 1 byte of data
-    Three,       // The operation uses the full 2 bytes of data
-    Jump(usize), // The operation jumps to a point in memory
-}
-
 enum Registers {
     A,
     B,
@@ -165,6 +158,30 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x7D => op_7a(Registers::L),  // MOV A,L
         0x7E => op_7a(Registers::HL), // MOV A,M (HL)
         0x7F => op_7a(Registers::A),  // MOV A,A
+        0x88 => Instr {
+            code: "ADC B".to_string(),
+        }, // ADC B
+        0x89 => Instr {
+            code: "ADC C".to_string(),
+        }, // ADC C
+        0x8A => Instr {
+            code: "ADC D".to_string(),
+        }, // ADC D
+        0x8B => Instr {
+            code: "ADC E".to_string(),
+        }, // ADC E
+        0x8C => Instr {
+            code: "ADC H".to_string(),
+        }, // ADC H
+        0x8D => Instr {
+            code: "ADC L".to_string(),
+        }, // ADC L
+        0x8E => Instr {
+            code: "ADC M".to_string(),
+        }, // ADC M
+        0x8F => Instr {
+            code: "ADC A".to_string(),
+        }, // ADC A
         0x91 => Instr {
             code: "SUB C".to_string(),
         },
