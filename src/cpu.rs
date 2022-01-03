@@ -301,49 +301,57 @@ impl Cpu {
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
-            0x00 => self.op_00(),                             // NOP
-            0x01 => self.op_lxi(Registers::BC, dl, dh),       // LXI B,D16
-            0x03 => self.op_03(),                             // INX B
-            0x05 => self.op_dcr(Registers::B),                // DCR B
-            0x06 => self.op_mvi(Registers::B, dl),            // MVI B, D8
-            0x09 => self.op_dad(Registers::B),                // DAD BC
-            0x0A => self.op_ldax(Registers::BC),              // LDAX BC
-            0x0B => self.op_dcx(Registers::BC),               // DCX BC
-            0x0E => self.op_mvi(Registers::C, dl),            // MVI C, D8
-            0x11 => self.op_lxi(Registers::DE, dl, dh),       // LXI D,D16
-            0x13 => self.op_13(),                             // INX D
-            0x15 => self.op_dcr(Registers::D),                // DCR D
-            0x16 => self.op_mvi(Registers::D, dl),            // MVI D
-            0x17 => self.op_ral(),                            // RAL
-            0x19 => self.op_dad(Registers::D),                // DAD D
-            0x1A => self.op_ldax(Registers::DE),              // LDAX DE
-            0x1B => self.op_dcx(Registers::DE),               // DCX DE
-            0x1C => self.op_inr(Registers::E),                // INR E
-            0x1E => self.op_mvi(Registers::E, dl),            // MVI E
-            0x21 => self.op_lxi(Registers::HL, dl, dh),       // LXI X,D16
-            0x23 => self.op_23(),                             // INX H
-            0x25 => self.op_dcr(Registers::H),                // DCR H
-            0x26 => self.op_mvi(Registers::H, dl),            // MVI H, D8
-            0x29 => self.op_dad(Registers::H),                // DAD HL
-            0x2E => self.op_mvi(Registers::L, dl),            // MVI L
-            0x2A => self.lhld(dl, dh),                        // LDA DL DH
-            0x2B => self.op_dcx(Registers::HL),               // DCX HL
-            0x31 => self.op_31(dl, dh),                       // LXI SP, D16
-            0x32 => self.op_sta(dl, dh),                      // STA (adr)<-A
-            0x33 => self.op_33(),                             // INX SP
-            0x35 => self.op_dcr(Registers::HL),               // DCR (HL)
-            0x36 => self.op_mvi(Registers::HL, dl),           // MVI (HL)<-D8
-            0x3B => self.op_dcx(Registers::SP),               // DCX SP
-            0x3E => self.op_mvi(Registers::A, dl),            // MVI A
-            0x40 => self.op_mov(Registers::B, Registers::B),  // MOV B <- B
-            0x41 => self.op_mov(Registers::B, Registers::C),  // MOV B <- C
-            0x42 => self.op_mov(Registers::B, Registers::D),  // MOV B <- D
-            0x43 => self.op_mov(Registers::B, Registers::E),  // MOV B <- E
-            0x44 => self.op_mov(Registers::B, Registers::H),  // MOV B <- H
-            0x45 => self.op_mov(Registers::B, Registers::L),  // MOV B <- L
+            0x00 => self.op_00(),                       // NOP
+            0x01 => self.op_lxi(Registers::BC, dl, dh), // LXI B,D16
+            //0x02
+            0x03 => self.op_03(), // INX B
+            //0x04
+            0x05 => self.op_dcr(Registers::B),     // DCR B
+            0x06 => self.op_mvi(Registers::B, dl), // MVI B, D8
+            //0x07
+            //0x08
+            0x09 => self.op_dad(Registers::B),   // DAD BC
+            0x0A => self.op_ldax(Registers::BC), // LDAX BC
+            0x0B => self.op_dcx(Registers::BC),  // DCX BC
+            //0x0C
+            //0x0D
+            0x0E => self.op_mvi(Registers::C, dl), // MVI C, D8
+            //0x0F
+            //0x10
+            0x11 => self.op_lxi(Registers::DE, dl, dh), // LXI D,D16
+            0x13 => self.op_13(),                       // INX D
+            0x15 => self.op_dcr(Registers::D),          // DCR D
+            0x16 => self.op_mvi(Registers::D, dl),      // MVI D
+            0x17 => self.op_ral(),                      // RAL
+            0x19 => self.op_dad(Registers::D),          // DAD D
+            0x1A => self.op_ldax(Registers::DE),        // LDAX DE
+            0x1B => self.op_dcx(Registers::DE),         // DCX DE
+            0x1C => self.op_inr(Registers::E),          // INR E
+            0x1E => self.op_mvi(Registers::E, dl),      // MVI E
+            0x21 => self.op_lxi(Registers::HL, dl, dh), // LXI X,D16
+            0x23 => self.op_23(),                       // INX H
+            0x25 => self.op_dcr(Registers::H),          // DCR H
+            0x26 => self.op_mvi(Registers::H, dl),      // MVI H, D8
+            0x29 => self.op_dad(Registers::H),          // DAD HL
+            0x2E => self.op_mvi(Registers::L, dl),      // MVI L
+            0x2A => self.lhld(dl, dh),                  // LDA DL DH
+            0x2B => self.op_dcx(Registers::HL),         // DCX HL
+            0x31 => self.op_31(dl, dh),                 // LXI SP, D16
+            0x32 => self.op_sta(dl, dh),                // STA (adr)<-A
+            0x33 => self.op_33(),                       // INX SP
+            0x35 => self.op_dcr(Registers::HL),         // DCR (HL)
+            0x36 => self.op_mvi(Registers::HL, dl),     // MVI (HL)<-D8
+            0x3B => self.op_dcx(Registers::SP),         // DCX SP
+            0x3E => self.op_mvi(Registers::A, dl),      // MVI A
+            0x40 => self.op_mov(Registers::B, Registers::B), // MOV B <- B
+            0x41 => self.op_mov(Registers::B, Registers::C), // MOV B <- C
+            0x42 => self.op_mov(Registers::B, Registers::D), // MOV B <- D
+            0x43 => self.op_mov(Registers::B, Registers::E), // MOV B <- E
+            0x44 => self.op_mov(Registers::B, Registers::H), // MOV B <- H
+            0x45 => self.op_mov(Registers::B, Registers::L), // MOV B <- L
             0x46 => self.op_mov(Registers::B, Registers::HL), // MOV B <- (HL)
-            0x47 => self.op_mov(Registers::B, Registers::A),  // MOV B <- A
-            0x6F => self.op_mov(Registers::L, Registers::A),  // MOV L <- A
+            0x47 => self.op_mov(Registers::B, Registers::A), // MOV B <- A
+            0x6F => self.op_mov(Registers::L, Registers::A), // MOV L <- A
             0x70 => self.op_mov(Registers::HL, Registers::B), // MOV M,B	1		(HL) <- B
             0x71 => self.op_mov(Registers::HL, Registers::C), // MOV M,C	1		(HL) <- C
             0x72 => self.op_mov(Registers::HL, Registers::D), // MOV M,D	1		(HL) <- D
