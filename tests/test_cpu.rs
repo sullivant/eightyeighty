@@ -1036,3 +1036,26 @@ fn test_add() {
     assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
 }
+
+#[test]
+fn test_stax() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.memory[0x3F16] = 0x00; // Reset
+    cpu.a = 0x20; // This value will be stored at mem loc BC, below
+    cpu.b = 0x3F;
+    cpu.c = 0x16;
+
+    cpu.run_opcode((0x02, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[0x3F16], 0x20);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+
+    cpu.memory[0x3F16] = 0x00; // Reset
+    cpu.a = 0x20; // This value will be stored at mem loc BC, below
+    cpu.d = 0x3F;
+    cpu.e = 0x16;
+
+    cpu.run_opcode((0x12, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.memory[0x3F16], 0x20);
+}

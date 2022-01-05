@@ -303,11 +303,11 @@ impl Cpu {
         let i = match opcode.0 {
             0x00 => self.op_00(),                       // NOP
             0x01 => self.op_lxi(Registers::BC, dl, dh), // LXI B,D16
-            //0x02
-            0x03 => self.op_03(),                  // INX B
-            0x04 => self.op_inr(Registers::B),     // INR B
-            0x05 => self.op_dcr(Registers::B),     // DCR B
-            0x06 => self.op_mvi(Registers::B, dl), // MVI B, D8
+            0x02 => self.op_stax(Registers::BC),        // STAX (BC)
+            0x03 => self.op_03(),                       // INX B
+            0x04 => self.op_inr(Registers::B),          // INR B
+            0x05 => self.op_dcr(Registers::B),          // DCR B
+            0x06 => self.op_mvi(Registers::B, dl),      // MVI B, D8
             //0x07
             //0x08
             0x09 => self.op_dad(Registers::B),   // DAD BC
@@ -319,6 +319,7 @@ impl Cpu {
             //0x0F
             //0x10
             0x11 => self.op_lxi(Registers::DE, dl, dh), // LXI D,D16
+            0x12 => self.op_stax(Registers::DE),        // STAX (DE)
             0x13 => self.op_13(),                       // INX D
             0x14 => self.op_inr(Registers::D),          // INR D
             0x15 => self.op_dcr(Registers::D),          // DCR D
@@ -1013,6 +1014,23 @@ impl Cpu {
         let ac = self.will_ac(to_add, self.a);
         self.a = res;
         self.update_flags(res, of, ac);
+
+        ProgramCounter::Next
+    }
+
+    // Stores accumulator at memory location of supplied register
+    pub fn op_stax(&mut self, reg: Registers) -> ProgramCounter {
+        // Get our location first
+        let location = match reg {
+            Registers::BC => Some(self.get_register_pair(Registers::BC)),
+            Registers::DE => Some(self.get_register_pair(Registers::DE)),
+            _ => None,
+        };
+
+        // Update memory with the value of the accumulator
+        if let Some(l) = location {
+            self.memory[l as usize] = self.a
+        }
 
         ProgramCounter::Next
     }

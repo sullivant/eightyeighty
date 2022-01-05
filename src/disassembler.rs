@@ -25,17 +25,20 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     match op.0 {
         0x00 => cmd("NOP"),
         0x01 => cmd("LXI B"),
+        0x02 => cmd("STAX (BC)"),
         0x03 => cmd("INX BC"),
         0x04 => cmd("INR B"),
-        0x05 => cmd("DCR B"), // DCR B
-        0x06 => cmd("MVI B"), // MVI B, D8
-        0x09 => cmd("DAD B"), // DAD B (HL = HL + BC)
+        0x05 => cmd("DCR B"),
+        0x06 => cmd("MVI B"),
+        0x07 => cmd("RLC"),
+        0x09 => cmd("DAD B"),
         0x0A => cmd("LDAX BC"),
         0x0B => cmd("DCX BC"),
         0x0C => cmd("INR C"),
-        0x0E => cmd("MVI C"), // MVI C, D8
+        0x0E => cmd("MVI C"),
         0x11 => cmd("LXI D"),
-        0x13 => cmd("INX DE"), // INX DE
+        0x12 => cmd("STAX (DE)"),
+        0x13 => cmd("INX DE"),
         0x14 => cmd("INR D"),
         0x15 => cmd("DCR D"),
         0x16 => cmd("MVI D"), // MVI D
