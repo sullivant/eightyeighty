@@ -36,6 +36,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x0B => cmd("DCX BC"),
         0x0C => cmd("INR C"),
         0x0E => cmd("MVI C"),
+        0x0F => cmd("RRC"),
         0x11 => cmd("LXI D"),
         0x12 => cmd("STAX (DE)"),
         0x13 => cmd("INX DE"),
@@ -48,6 +49,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x1B => cmd("DCX DE"),
         0x1C => cmd("INR E"),
         0x1E => cmd("MVI E"), // MVI E
+        0x1F => cmd("RAR"),
         0x21 => cmd("LXI H"),
         0x23 => cmd("INX HL"), // INX HL
         0x24 => cmd("INR H"),
@@ -121,14 +123,14 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xC8 => cmd("RC"),
         0xC9 => cmd("RET"), // RET
         0xCC => cmd("CZ"),
-        0xCF => cmd("RST 8"),
         0xCD => cmd("CALL Addr"), // CALL Addr
+        0xCF => cmd("RST 8"),
         0xD0 => cmd("RNC"),
         0xD1 => cmd("POP D"),
         0xD3 => cmd("OUT D"),
+        0xD4 => cmd("CNC Addr"),
         0xD5 => cmd("PUSH D"), // PUSH D
         0xD7 => cmd("RST 2"),
-        0xD4 => cmd("CNC Addr"),
         0xDC => cmd("CC Addr"),
         0xDF => cmd("RST 3"),
         0xE0 => cmd("RPO"),
@@ -140,12 +142,12 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xEB => cmd("XCHG"),
         0xEC => cmd("CPE"),
         0xEF => cmd("RST 5"),
+        0xF0 => cmd("RP"),
         0xF4 => cmd("CP"), // CALL if Plus
         0xF5 => cmd("PUSH PSW"),
-        0xF0 => cmd("RP"),
         0xF7 => cmd("RST 6"),
-        0xFE => cmd("CPI"),
         0xF8 => cmd("RM"),
+        0xFE => cmd("CPI"),
         0xFF => cmd("RST 7"),
         _ => cmd("UNK"), // UNK
     }

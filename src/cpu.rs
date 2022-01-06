@@ -308,7 +308,7 @@ impl Cpu {
             0x04 => self.op_inr(Registers::B),          // INR B
             0x05 => self.op_dcr(Registers::B),          // DCR B
             0x06 => self.op_mvi(Registers::B, dl),      // MVI B, D8
-            //0x07
+            0x07 => self.op_rotl(false),                // RLC (Rotate left)
             //0x08
             0x09 => self.op_dad(Registers::B),   // DAD BC
             0x0A => self.op_ldax(Registers::BC), // LDAX BC
@@ -316,7 +316,7 @@ impl Cpu {
             0x0C => self.op_inr(Registers::C),   // INR C
             //0x0D
             0x0E => self.op_mvi(Registers::C, dl), // MVI C, D8
-            //0x0F
+            0x0F => self.op_rotr(false),           // RRC
             //0x10
             0x11 => self.op_lxi(Registers::DE, dl, dh), // LXI D,D16
             0x12 => self.op_stax(Registers::DE),        // STAX (DE)
@@ -324,12 +324,13 @@ impl Cpu {
             0x14 => self.op_inr(Registers::D),          // INR D
             0x15 => self.op_dcr(Registers::D),          // DCR D
             0x16 => self.op_mvi(Registers::D, dl),      // MVI D
-            0x17 => self.op_ral(),                      // RAL
+            0x17 => self.op_rotl(true),                 // RAL (Rotate left through carry)
             0x19 => self.op_dad(Registers::D),          // DAD D
             0x1A => self.op_ldax(Registers::DE),        // LDAX DE
             0x1B => self.op_dcx(Registers::DE),         // DCX DE
             0x1C => self.op_inr(Registers::E),          // INR E
             0x1E => self.op_mvi(Registers::E, dl),      // MVI E
+            0x1F => self.op_rotr(true),                 // RAR
             0x21 => self.op_lxi(Registers::HL, dl, dh), // LXI X,D16
             0x23 => self.op_23(),                       // INX H
             0x24 => self.op_inr(Registers::H),          // INR H
@@ -938,11 +939,8 @@ impl Cpu {
         ProgramCounter::Two
     }
 
-    // The contents of the accumulator are rotated one bit position to the left.
-    // The high-order bit of the accumulator replaces the
-    // Carry bit, while the Carry bit replaces the high-order bit of
-    // the accumulator.
-    pub fn op_ral(&mut self) -> ProgramCounter {
+    // Rotates left, if through_carry is true, it does that.
+    pub fn op_rotl(&mut self, through_carry: bool) -> ProgramCounter {
         // Store off our current carry bit
         let carry_bit = self.test_flag(super::FLAG_CARRY);
 
@@ -952,16 +950,49 @@ impl Cpu {
         // Shift one position to the left
         let mut new_accum: u8 = self.a << 1;
 
-        // Update its high order bit with the old carry bit
-        new_accum = match carry_bit {
-            true => (1 << 7) | new_accum,
-            false => 0b0111_1111 & new_accum,
+        match through_carry {
+            true => {
+                new_accum |= carry_bit as u8; // carry bit replaces low order
+            }
+            // Normal carry
+            false => {
+                new_accum |= high_order as u8; // high order replaces low order
+            }
         };
 
         self.a = new_accum;
 
         // Update the carry bit with the old high order bit
         if high_order > 0 {
+            self.set_flag(super::FLAG_CARRY);
+        } else {
+            self.reset_flag(super::FLAG_CARRY);
+        }
+
+        ProgramCounter::Next
+    }
+
+    // Rotates right, if through_carry is true, it does that.
+    pub fn op_rotr(&mut self, through_carry: bool) -> ProgramCounter {
+        // Store off our current carry bit
+        let carry_bit = self.test_flag(super::FLAG_CARRY);
+        let low_order = self.a & 0x01; // Save off the low order bit so we can rotate it.
+
+        let mut new_accum: u8 = self.a >> 1;
+
+        match through_carry {
+            true => {
+                new_accum |= (carry_bit as u8) << 7; // Carry bit replaces high order
+            }
+            // Normal carry
+            false => {
+                new_accum |= low_order << 7; // Low order replaces high order
+            }
+        };
+
+        self.a = new_accum;
+
+        if low_order > 0 {
             self.set_flag(super::FLAG_CARRY);
         } else {
             self.reset_flag(super::FLAG_CARRY);

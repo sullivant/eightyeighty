@@ -1005,6 +1005,43 @@ fn test_ral() {
 }
 
 #[test]
+fn test_rlc() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0xF2;
+    cpu.run_opcode((0x07, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0xE5);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+}
+
+#[test]
+fn test_rar() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x6A;
+    cpu.set_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0x1F, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0xB5);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+}
+
+#[test]
+fn test_rrc() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0xF2;
+    cpu.run_opcode((0x0F, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x79);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+}
+
+#[test]
 fn test_adc() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
