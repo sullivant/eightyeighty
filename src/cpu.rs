@@ -310,11 +310,11 @@ impl Cpu {
             0x06 => self.op_mvi(Registers::B, dl),      // MVI B, D8
             0x07 => self.op_rotl(false),                // RLC (Rotate left)
             //0x08
-            0x09 => self.op_dad(Registers::B),   // DAD BC
-            0x0A => self.op_ldax(Registers::BC), // LDAX BC
-            0x0B => self.op_dcx(Registers::BC),  // DCX BC
-            0x0C => self.op_inr(Registers::C),   // INR C
-            //0x0D
+            0x09 => self.op_dad(Registers::B),     // DAD BC
+            0x0A => self.op_ldax(Registers::BC),   // LDAX BC
+            0x0B => self.op_dcx(Registers::BC),    // DCX BC
+            0x0C => self.op_inr(Registers::C),     // INR C
+            0x0D => self.op_dcr(Registers::C),     // DCR D
             0x0E => self.op_mvi(Registers::C, dl), // MVI C, D8
             0x0F => self.op_rotr(false),           // RRC
             //0x10
@@ -329,6 +329,7 @@ impl Cpu {
             0x1A => self.op_ldax(Registers::DE),        // LDAX DE
             0x1B => self.op_dcx(Registers::DE),         // DCX DE
             0x1C => self.op_inr(Registers::E),          // INR E
+            0x1D => self.op_dcr(Registers::E),          // DCR E
             0x1E => self.op_mvi(Registers::E, dl),      // MVI E
             0x1F => self.op_rotr(true),                 // RAR
             0x21 => self.op_lxi(Registers::HL, dl, dh), // LXI X,D16
@@ -596,10 +597,20 @@ impl Cpu {
                 self.update_flags(res, of, (1 & 0x0F) > (self.b & 0x0F));
                 self.b = res;
             }
+            Registers::C => {
+                let (res, of) = self.c.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.c & 0x0F));
+                self.c = res;
+            }
             Registers::D => {
                 let (res, of) = self.d.overflowing_sub(1);
                 self.update_flags(res, of, (1 & 0x0F) > (self.d & 0x0F));
                 self.d = res;
+            }
+            Registers::E => {
+                let (res, of) = self.e.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.e & 0x0F));
+                self.e = res;
             }
             Registers::H => {
                 let (res, of) = self.h.overflowing_sub(1);

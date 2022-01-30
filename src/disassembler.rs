@@ -35,6 +35,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x0A => cmd("LDAX BC"),
         0x0B => cmd("DCX BC"),
         0x0C => cmd("INR C"),
+        0x0D => cmd("DCR C"),
         0x0E => cmd("MVI C"),
         0x0F => cmd("RRC"),
         0x11 => cmd("LXI D"),
@@ -42,13 +43,14 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x13 => cmd("INX DE"),
         0x14 => cmd("INR D"),
         0x15 => cmd("DCR D"),
-        0x16 => cmd("MVI D"), // MVI D
+        0x16 => cmd("MVI D"),
         0x17 => cmd("RAL"),
-        0x19 => cmd("DAD D"),  // DAD D (HL = HL + DE)
-        0x1A => cmd("LDAX D"), // LDAX D
+        0x19 => cmd("DAD D"),
+        0x1A => cmd("LDAX D"),
         0x1B => cmd("DCX DE"),
         0x1C => cmd("INR E"),
-        0x1E => cmd("MVI E"), // MVI E
+        0x1D => cmd("DCR E"),
+        0x1E => cmd("MVI E"),
         0x1F => cmd("RAR"),
         0x21 => cmd("LXI H"),
         0x23 => cmd("INX HL"), // INX HL

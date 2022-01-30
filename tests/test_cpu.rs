@@ -149,7 +149,7 @@ fn test_op_03() {
 }
 
 #[test]
-fn test_op_05() {
+fn test_op_dcr() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
 
