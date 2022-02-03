@@ -1,6 +1,8 @@
 # eightyeighty
 An Intel 8080 Emulator, written in Rust.
 
+[![Continuous integration](https://github.com/sullivant/eightyeighty/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sullivant/eightyeighty/actions/workflows/ci.yml)
+
 ## The deal
 - Clone.
 - `cargo build`
