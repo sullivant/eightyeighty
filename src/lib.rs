@@ -43,7 +43,6 @@ const BLACK: Color = Color::RGB(0, 0, 0);
 
 #[derive(Clone)]
 pub struct Emu {
-    dt: std::time::Duration,
     cpu: Cpu,
     last_msg: String, // Contains last disassembler message
     last_pc: usize,
@@ -55,7 +54,6 @@ pub struct Emu {
 impl Emu {
     fn new(rom_file: String) -> Result<Emu, String> {
         println!("Creating new Emu Object");
-        let dt = std::time::Duration::new(0, 0);
 
         // Generate our CPU
         let mut cpu = Cpu::new();
@@ -84,7 +82,6 @@ impl Emu {
 
         // Return a good version of the app object
         Ok(Emu {
-            dt,
             cpu,
             last_msg: "N/A".to_string(),
             last_pc: 0,

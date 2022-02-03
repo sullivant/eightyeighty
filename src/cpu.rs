@@ -24,7 +24,7 @@ pub enum Registers {
     DE,  // A register pair
     HL,  // A register pair, used to reference memory locations
     SP,  // Stack pointer
-    PSW, // Program Status Word
+    Psw, // Program Status Word
 }
 
 impl fmt::Display for Registers {
@@ -41,7 +41,7 @@ impl fmt::Display for Registers {
             Registers::DE => write!(f, "DE"),
             Registers::HL => write!(f, "HL"),
             Registers::SP => write!(f, "SP"),
-            Registers::PSW => write!(f, "PSW"),
+            Registers::Psw => write!(f, "PSW"),
         }
     }
 }
@@ -430,9 +430,9 @@ impl Cpu {
             0xEC => self.op_call_if(super::FLAG_PARITY, true, dl, dh), // CPE
             0xEF => self.op_rst(0b101),                       // RST 5
             0xF0 => self.op_rets(super::FLAG_SIGN, false),    // RP
-            0xF1 => self.op_pop(Registers::PSW),              // POP PSW
+            0xF1 => self.op_pop(Registers::Psw),              // POP PSW
             0xF4 => self.op_call_if(super::FLAG_SIGN, false, dl, dh), // CP
-            0xF5 => self.op_push(Registers::PSW),             // Push PSW
+            0xF5 => self.op_push(Registers::Psw),             // Push PSW
             0xFE => self.op_fe(dl),                           // CPI
             0xF7 => self.op_rst(0b110),                       // RST 6
             0xF8 => self.op_rets(super::FLAG_SIGN, true),     // RM
@@ -662,7 +662,7 @@ impl Cpu {
                 self.memory[usize::from(self.sp - 2)] = self.l;
                 self.memory[usize::from(self.sp - 1)] = self.h;
             }
-            Registers::PSW => {
+            Registers::Psw => {
                 // PSW 0xF5
                 self.memory[usize::from(self.sp - 2)] = self.flags;
                 self.memory[usize::from(self.sp - 1)] = self.a;
@@ -692,7 +692,7 @@ impl Cpu {
                 self.l = self.memory[usize::from(self.sp)];
                 self.h = self.memory[usize::from(self.sp + 1)];
             }
-            Registers::PSW => {
+            Registers::Psw => {
                 // PSW 0xF1
                 self.flags = self.memory[usize::from(self.sp)];
                 self.a = self.memory[usize::from(self.sp + 1)];
