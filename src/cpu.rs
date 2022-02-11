@@ -304,7 +304,7 @@ impl Cpu {
             0x00 => self.op_00(),                       // NOP
             0x01 => self.op_lxi(Registers::BC, dl, dh), // LXI B,D16
             0x02 => self.op_stax(Registers::BC),        // STAX (BC)
-            0x03 => self.op_03(),                       // INX B
+            0x03 => self.op_inx(Registers::BC),         // INX B
             0x04 => self.op_inr(Registers::B),          // INR B
             0x05 => self.op_dcr(Registers::B),          // DCR B
             0x06 => self.op_mvi(Registers::B, dl),      // MVI B, D8
@@ -320,7 +320,7 @@ impl Cpu {
             //0x10
             0x11 => self.op_lxi(Registers::DE, dl, dh), // LXI D,D16
             0x12 => self.op_stax(Registers::DE),        // STAX (DE)
-            0x13 => self.op_13(),                       // INX D
+            0x13 => self.op_inx(Registers::DE),         // INX DE
             0x14 => self.op_inr(Registers::D),          // INR D
             0x15 => self.op_dcr(Registers::D),          // DCR D
             0x16 => self.op_mvi(Registers::D, dl),      // MVI D
@@ -333,7 +333,7 @@ impl Cpu {
             0x1E => self.op_mvi(Registers::E, dl),      // MVI E
             0x1F => self.op_rotr(true),                 // RAR
             0x21 => self.op_lxi(Registers::HL, dl, dh), // LXI X,D16
-            0x23 => self.op_23(),                       // INX H
+            0x23 => self.op_inx(Registers::HL),         // INX HL
             0x24 => self.op_inr(Registers::H),          // INR H
             0x25 => self.op_dcr(Registers::H),          // DCR H
             0x26 => self.op_mvi(Registers::H, dl),      // MVI H, D8
@@ -342,14 +342,16 @@ impl Cpu {
             0x2A => self.lhld(dl, dh),                  // LDA DL DH
             0x2B => self.op_dcx(Registers::HL),         // DCX HL
             0x2C => self.op_inr(Registers::L),          // INR L
-            0x31 => self.op_31(dl, dh),                 // LXI SP, D16
+            0x2D => self.op_dcr(Registers::L),          // DCR L
+            0x31 => self.op_lxi(Registers::SP, dl, dh), // LXI SP, D16
             0x32 => self.op_sta(dl, dh),                // STA (adr)<-A
-            0x33 => self.op_33(),                       // INX SP
+            0x33 => self.op_inx(Registers::SP),         // INX SP
             0x34 => self.op_inr(Registers::HL),         // INR (HL)
             0x35 => self.op_dcr(Registers::HL),         // DCR (HL)
             0x36 => self.op_mvi(Registers::HL, dl),     // MVI (HL)<-D8
             0x3B => self.op_dcx(Registers::SP),         // DCX SP
             0x3C => self.op_inr(Registers::A),          // INR A
+            0x3D => self.op_dcr(Registers::A),          // DCR A
             0x3E => self.op_mvi(Registers::A, dl),      // MVI A
             0x40 => self.op_mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.op_mov(Registers::B, Registers::C), // MOV B <- C
@@ -483,16 +485,6 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // INX B
-    pub fn op_03(&mut self) -> ProgramCounter {
-        let mut bc_pair: u16 = self.get_register_pair(Registers::BC);
-        bc_pair = bc_pair.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
-
-        self.set_register_pair(Registers::BC, bc_pair);
-
-        ProgramCounter::Next
-    }
-
     // Store accumulator direct to location in memory specified
     // by address dhdl
     pub fn op_sta(&mut self, dl: u8, dh: u8) -> ProgramCounter {
@@ -592,6 +584,11 @@ impl Cpu {
         //let new_val = self.b.wrapping_sub(1);
 
         match reg {
+            Registers::A => {
+                let (res, of) = self.b.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
+                self.a = res;
+            }
             Registers::B => {
                 let (res, of) = self.b.overflowing_sub(1);
                 self.update_flags(res, of, (1 & 0x0F) > (self.b & 0x0F));
@@ -616,6 +613,11 @@ impl Cpu {
                 let (res, of) = self.h.overflowing_sub(1);
                 self.update_flags(res, of, (1 & 0x0F) > (self.h & 0x0F));
                 self.h = res;
+            }
+            Registers::L => {
+                let (res, of) = self.l.overflowing_sub(1);
+                self.update_flags(res, of, (1 & 0x0F) > (self.l & 0x0F));
+                self.l = res;
             }
             Registers::HL => {
                 let mem = self.memory[self.get_addr_pointer()];
@@ -761,17 +763,23 @@ impl Cpu {
                 self.h = y;
                 self.l = x;
             }
+            Registers::SP => {
+                self.sp = u16::from(y) << 8 | u16::from(x);
+            }
             _ => (),
         }
         ProgramCounter::Three
     }
 
-    // INX D
-    pub fn op_13(&mut self) -> ProgramCounter {
-        let mut c: u16 = u16::from(self.d) << 8 | u16::from(self.e);
-        c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
-        self.d = (c >> 8) as u8;
-        self.e = (c & 0xFF) as u8;
+    pub fn op_inx(&mut self, target: Registers) -> ProgramCounter {
+        match target {
+            Registers::SP | Registers::BC | Registers::DE | Registers::HL => {
+                let mut pair: u16 = self.get_register_pair(target);
+                pair = pair.overflowing_add(0x01).0;
+                self.set_register_pair(target, pair);
+            }
+            _ => (),
+        }
 
         ProgramCounter::Next
     }
@@ -802,23 +810,6 @@ impl Cpu {
         self.set_register_pair(reg, val);
 
         ProgramCounter::Next
-    }
-
-    // INX H
-    pub fn op_23(&mut self) -> ProgramCounter {
-        let mut c: u16 = u16::from(self.h) << 8 | u16::from(self.l);
-        c = c.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
-        self.h = (c >> 8) as u8;
-        self.l = (c & 0xFF) as u8;
-
-        ProgramCounter::Next
-    }
-
-    // Load Stack Pointer with the value (y<<8|x)
-    // SP.hi <- byte 3, SP.lo <- byte 2
-    pub fn op_31(&mut self, x: u8, y: u8) -> ProgramCounter {
-        self.sp = u16::from(y) << 8 | u16::from(x);
-        ProgramCounter::Three
     }
 
     // INX SP
