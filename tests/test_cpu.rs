@@ -1132,3 +1132,41 @@ fn test_lda() {
     assert_eq!(cpu.a, 0x3F);
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 }
+
+#[test]
+fn test_op_cmc() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    // Reset the carry flag
+    cpu.set_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0x3F, 0x00, 000)).unwrap();
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    // Set it if it is false
+    cpu.run_opcode((0x3F, 0x00, 000)).unwrap();
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+}
+
+#[test]
+fn test_op_cma() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x51;
+    cpu.run_opcode((0x2F, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0xAE);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+}
+
+#[test]
+fn test_op_stc() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.reset_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0x37, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+}

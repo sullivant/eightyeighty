@@ -188,6 +188,24 @@ impl Cpu {
         self.flags &= !mask;
     }
 
+    // Sets the carry flag
+    pub fn op_stc(&mut self) -> ProgramCounter {
+        self.set_flag(super::FLAG_CARRY);
+        ProgramCounter::Next
+    }
+
+    // Sets the carry flag to the compliment of itself
+    pub fn op_cmc(&mut self) -> ProgramCounter {
+        if self.test_flag(super::FLAG_CARRY) {
+            // Flag needs to be reset
+            self.reset_flag(super::FLAG_CARRY);
+        } else {
+            // Flag needs to be set
+            self.set_flag(super::FLAG_CARRY)
+        }
+        ProgramCounter::Next
+    }
+
     // Computes and sets the mask of flags for a supplied value
     // sets flags: Zero, Sign, Parity, Carry, and Auxiliary Carry
     pub fn update_flags(&mut self, val: u8, overflow: bool, aux_carry: bool) {
@@ -343,23 +361,26 @@ impl Cpu {
             0x25 => self.op_dcr(Registers::H),          // DCR H
             0x26 => self.op_mvi(Registers::H, dl),      // MVI H, D8
             0x29 => self.op_dad(Registers::H),          // DAD HL
-            0x2E => self.op_mvi(Registers::L, dl),      // MVI L
             0x2A => self.lhld(dl, dh),                  // LDA DL DH
             0x2B => self.op_dcx(Registers::HL),         // DCX HL
             0x2C => self.op_inr(Registers::L),          // INR L
             0x2D => self.op_dcr(Registers::L),          // DCR L
+            0x2E => self.op_mvi(Registers::L, dl),      // MVI L
+            0x2F => self.op_comp(Registers::A),         // CMA
             0x31 => self.op_lxi(Registers::SP, dl, dh), // LXI SP, D16
             0x32 => self.op_sta(dl, dh),                // STA (adr)<-A
             0x33 => self.op_inx(Registers::SP),         // INX SP
             0x34 => self.op_inr(Registers::HL),         // INR (HL)
             0x35 => self.op_dcr(Registers::HL),         // DCR (HL)
             0x36 => self.op_mvi(Registers::HL, dl),     // MVI (HL)<-D8
+            0x37 => self.op_stc(),                      // STC
             0x39 => self.op_dad(Registers::SP),         // DAD SP
             0x3A => self.op_lda(dl, dh),                // LDA adr
             0x3B => self.op_dcx(Registers::SP),         // DCX SP
             0x3C => self.op_inr(Registers::A),          // INR A
             0x3D => self.op_dcr(Registers::A),          // DCR A
             0x3E => self.op_mvi(Registers::A, dl),      // MVI A
+            0x3F => self.op_cmc(),                      // CMC
             0x40 => self.op_mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.op_mov(Registers::B, Registers::C), // MOV B <- C
             0x42 => self.op_mov(Registers::B, Registers::D), // MOV B <- D
@@ -504,6 +525,14 @@ impl Cpu {
     // Returns true if an addition will case an aux carry
     pub fn will_ac(&mut self, a: u8, b: u8) -> bool {
         ((a & 0x0F) + (b & 0x0F)) & 0x10 == 0x10
+    }
+
+    // Sets a register to the compliment of itself
+    pub fn op_comp(&mut self, register: Registers) -> ProgramCounter {
+        if let Registers::A = register {
+            self.a = !self.a;
+        }
+        ProgramCounter::Next
     }
 
     // INR Reg

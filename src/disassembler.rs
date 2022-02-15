@@ -63,18 +63,21 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x2C => cmd("INR L"),
         0x2D => cmd("DCR L"),
         0x2E => cmd("MVI L"),  // MVI L, D8
+        0x2F => cmd("CMA"),    // A <= !A
         0x31 => cmd("LXI SP"), // LXI SP, D16
         0x32 => cmd("STA (adr)<-A"),
         0x33 => cmd("INX SP"), // INX SP
         0x34 => cmd("INR (HL)"),
         0x35 => cmd("DCR (HL)"),
         0x36 => cmd("MVI (HL)"), // MVI (HL), D8
+        0x37 => cmd("STC"),
         0x39 => cmd("DAD SP"),
         0x3A => cmd("LDA (adr)"),
         0x3B => cmd("DCX SP"),
         0x3C => cmd("INR A"),
         0x3D => cmd("DCR A"),
         0x3E => cmd("MVI A"),
+        0x3F => cmd("CMC"), // CY <= !CY
         0x40 => cmd("MOV B,B"),
         0x41 => cmd("MOV B,C"),
         0x42 => cmd("MOV B,D"),
