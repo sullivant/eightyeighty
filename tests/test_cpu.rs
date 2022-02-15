@@ -860,6 +860,22 @@ fn test_op_29() {
 }
 
 #[test]
+fn test_op_39() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.sp = 0x0101;
+    cpu.h = 0x1;
+    cpu.l = 0x1;
+
+    cpu.run_opcode((0x39, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.h, 0x2);
+    assert_eq!(cpu.l, 0x2);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
+}
+
+#[test]
 fn test_op_19() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
@@ -1095,4 +1111,24 @@ fn test_stax() {
 
     cpu.run_opcode((0x12, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.memory[0x3F16], 0x20);
+}
+
+#[test]
+fn test_make_pointer() {
+    let mut cpu = Cpu::new();
+
+    assert_eq!(cpu.make_pointer(0x00, 0x03), 0x0300);
+}
+
+#[test]
+fn test_lda() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x00;
+    cpu.memory[0x0300] = 0x3F; // A value in a spot in memory
+
+    cpu.run_opcode((0x3A, 0x00, 0x03)).unwrap();
+    assert_eq!(cpu.a, 0x3F);
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 }

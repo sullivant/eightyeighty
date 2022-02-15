@@ -69,6 +69,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x34 => cmd("INR (HL)"),
         0x35 => cmd("DCR (HL)"),
         0x36 => cmd("MVI (HL)"), // MVI (HL), D8
+        0x39 => cmd("DAD SP"),
         0x3A => cmd("LDA (adr)"),
         0x3B => cmd("DCX SP"),
         0x3C => cmd("INR A"),

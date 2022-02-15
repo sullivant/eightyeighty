@@ -118,6 +118,11 @@ impl Cpu {
         usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
 
+    // Makes a memory pointer by simply concatenating the two values
+    pub fn make_pointer(&mut self, dl: u8, dh: u8) -> usize {
+        usize::from(u16::from(dh) << 8 | u16::from(dl))
+    }
+
     pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
         (&self.pc, &self.sp, &self.h, &self.l, &self.b)
     }
@@ -349,6 +354,8 @@ impl Cpu {
             0x34 => self.op_inr(Registers::HL),         // INR (HL)
             0x35 => self.op_dcr(Registers::HL),         // DCR (HL)
             0x36 => self.op_mvi(Registers::HL, dl),     // MVI (HL)<-D8
+            0x39 => self.op_dad(Registers::SP),         // DAD SP
+            0x3A => self.op_lda(dl, dh),                // LDA adr
             0x3B => self.op_dcx(Registers::SP),         // DCX SP
             0x3C => self.op_inr(Registers::A),          // INR A
             0x3D => self.op_dcr(Registers::A),          // DCR A
@@ -706,6 +713,12 @@ impl Cpu {
         ProgramCounter::Next
     }
 
+    // Loads the byte located at dhdl into the accumulator
+    pub fn op_lda(&mut self, dl: u8, dh: u8) -> ProgramCounter {
+        self.a = self.memory[self.make_pointer(dl, dh)];
+        ProgramCounter::Three
+    }
+
     // Performs the MVI functionality
     pub fn op_mvi(&mut self, target: Registers, x: u8) -> ProgramCounter {
         match target {
@@ -732,6 +745,7 @@ impl Cpu {
         let src: usize = match source {
             Registers::B | Registers::BC => usize::from(self.get_register_pair(Registers::BC)),
             Registers::D | Registers::DE => usize::from(self.get_register_pair(Registers::DE)),
+            Registers::SP => usize::from(self.get_register_pair(Registers::SP)),
             Registers::H | Registers::HL => val,
             _ => 0,
         };
