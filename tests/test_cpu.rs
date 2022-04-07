@@ -72,7 +72,7 @@ fn test_get_addr_pointer() {
     cpu.h = 0x10;
     cpu.l = 0x01;
 
-    let loc = usize::from(u16::from(0x10 as u8) << 8 | u16::from(0x01 as u8));
+    let loc = usize::from(u16::from(0x10_u8) << 8 | u16::from(0x01_u8));
 
     assert_eq!(cpu.get_addr_pointer(), loc);
 }
@@ -117,7 +117,7 @@ fn test_update_flags() {
     // (a & 0xf) + (b & 0xf) & 0x10 == 0x10
 
     cpu.update_flags(0b10001000, true, false);
-    cpu.update_flags(0b10001000, true, (62 & 0xf) + (34 & 0xf) & 0x10 == 0x10);
+    cpu.update_flags(0b10001000, true, ((62 & 0xf) + (34 & 0xf)) & 0x10 == 0x10);
     assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
 }
 
@@ -764,8 +764,8 @@ fn test_op_cd() {
     cpu.run_opcode((0xCD, 0x03, 0x05)).unwrap();
 
     // memory should be set now
-    assert_eq!(cpu.memory[0x23FF], 0x18 as u8);
-    assert_eq!(cpu.memory[0x23FE], 0xD9 as u8);
+    assert_eq!(cpu.memory[0x23FF], 0x18_u8);
+    assert_eq!(cpu.memory[0x23FE], 0xD9_u8);
 
     // Check stack pointer
     assert_eq!(cpu.sp, 0x23FE);
@@ -796,8 +796,8 @@ fn test_cc_addr() {
     cpu.run_opcode((0xDC, 0x03, 0x05)).unwrap();
 
     // memory should be set now
-    assert_eq!(cpu.memory[0x23FF], 0x18 as u8);
-    assert_eq!(cpu.memory[0x23FE], 0xD9 as u8);
+    assert_eq!(cpu.memory[0x23FF], 0x18_u8);
+    assert_eq!(cpu.memory[0x23FE], 0xD9_u8);
 
     // Check stack pointer
     assert_eq!(cpu.sp, 0x23FE);

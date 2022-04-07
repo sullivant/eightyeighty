@@ -136,7 +136,7 @@ impl Emu {
         // Flags
         add_display_text(
             canvas,
-            &"SZ0A0P1C",
+            "SZ0A0P1C",
             ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
             0,
         );
@@ -150,7 +150,7 @@ impl Emu {
         // Stack
         add_display_text(
             canvas,
-            &"---Stack---",
+            "---Stack---",
             ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
             (LINE_SPACE * 2) as i32,
         );
@@ -171,7 +171,7 @@ impl Emu {
         // Registers
         add_display_text(
             canvas,
-            &"---Registers---",
+            "---Registers---",
             ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
             (LINE_SPACE * 6) as i32,
         );
