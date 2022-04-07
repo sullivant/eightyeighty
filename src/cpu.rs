@@ -20,11 +20,11 @@ pub enum Registers {
     E,
     H,
     L,
-    BC,  // A register pair
-    DE,  // A register pair
-    HL,  // A register pair, used to reference memory locations
-    SP,  // Stack pointer
-    Psw, // Program Status Word
+    BC, // A register pair
+    DE, // A register pair
+    HL, // A register pair, used to reference memory locations
+    SP, // Stack pointer
+    SW, // Program Status Word
 }
 
 impl fmt::Display for Registers {
@@ -41,7 +41,7 @@ impl fmt::Display for Registers {
             Registers::DE => write!(f, "DE"),
             Registers::HL => write!(f, "HL"),
             Registers::SP => write!(f, "SP"),
-            Registers::Psw => write!(f, "PSW"),
+            Registers::SW => write!(f, "SW"),
         }
     }
 }
@@ -92,6 +92,7 @@ impl fmt::Display for Cpu {
 }
 
 impl Cpu {
+    #[must_use]
     pub fn new() -> Cpu {
         Cpu {
             memory: [0; RAM_SIZE],
@@ -360,6 +361,7 @@ impl Cpu {
             0x24 => self.op_inr(Registers::H),          // INR H
             0x25 => self.op_dcr(Registers::H),          // DCR H
             0x26 => self.op_mvi(Registers::H, dl),      // MVI H, D8
+            0x27 => self.op_daa(),                      // DAA
             0x29 => self.op_dad(Registers::H),          // DAD HL
             0x2A => self.lhld(dl, dh),                  // LDA DL DH
             0x2B => self.op_dcx(Registers::HL),         // DCX HL
@@ -460,9 +462,9 @@ impl Cpu {
             0xEC => self.op_call_if(super::FLAG_PARITY, true, dl, dh), // CPE
             0xEF => self.op_rst(0b101),                       // RST 5
             0xF0 => self.op_rets(super::FLAG_SIGN, false),    // RP
-            0xF1 => self.op_pop(Registers::Psw),              // POP PSW
+            0xF1 => self.op_pop(Registers::SW),               // POP SW
             0xF4 => self.op_call_if(super::FLAG_SIGN, false, dl, dh), // CP
-            0xF5 => self.op_push(Registers::Psw),             // Push PSW
+            0xF5 => self.op_push(Registers::SW),              // Push SW
             0xFE => self.op_fe(dl),                           // CPI
             0xF7 => self.op_rst(0b110),                       // RST 6
             0xF8 => self.op_rets(super::FLAG_SIGN, true),     // RM
@@ -523,8 +525,10 @@ impl Cpu {
     }
 
     // Returns true if an addition will case an aux carry
-    pub fn will_ac(&mut self, a: u8, b: u8) -> bool {
-        ((a & 0x0F) + (b & 0x0F)) & 0x10 == 0x10
+    // value: the value we are trying to add to source
+    // source: the source that value is added to
+    pub fn will_ac(&mut self, value: u8, source: u8) -> bool {
+        ((value & 0x0F) + (source & 0x0F)) & 0x10 == 0x10
     }
 
     // Sets a register to the compliment of itself
@@ -700,8 +704,8 @@ impl Cpu {
                 self.memory[usize::from(self.sp - 2)] = self.l;
                 self.memory[usize::from(self.sp - 1)] = self.h;
             }
-            Registers::Psw => {
-                // PSW 0xF5
+            Registers::SW => {
+                // SW 0xF5
                 self.memory[usize::from(self.sp - 2)] = self.flags;
                 self.memory[usize::from(self.sp - 1)] = self.a;
             }
@@ -730,8 +734,8 @@ impl Cpu {
                 self.l = self.memory[usize::from(self.sp)];
                 self.h = self.memory[usize::from(self.sp + 1)];
             }
-            Registers::Psw => {
-                // PSW 0xF1
+            Registers::SW => {
+                // SW 0xF1
                 self.flags = self.memory[usize::from(self.sp)];
                 self.a = self.memory[usize::from(self.sp + 1)];
             }
@@ -1107,6 +1111,34 @@ impl Cpu {
         if let Some(l) = location {
             self.memory[l as usize] = self.a
         }
+
+        ProgramCounter::Next
+    }
+
+    // Decimal Adjust Accumulator
+    // If the least significant four bits of the accumulator have a value greater than nine,
+    // or if the auxiliary carry flag is ON, DAA adds six to the accumulator.
+    //
+    // If the most significant four bits of the accumulator have a value greater than nine,
+    // or if the carry flag IS ON, DAA adds six to the most significant four bits of the accumulator.
+    pub fn op_daa(&mut self) -> ProgramCounter {
+        // Find the LS4B of the accumulator
+        let mut ac = false;
+        let mut carry = false;
+
+        if (self.a & 0b00001111) > 9 {
+            let res = self.a.overflowing_add(6).0;
+            ac = self.will_ac(6, self.a);
+            self.a = res;
+        }
+
+        if (self.a & 0b11110000) > 9 {
+            let (res, c) = self.a.overflowing_add(6 << 4);
+            self.a = res;
+            carry = c;
+        }
+
+        self.update_flags(self.a, carry, ac);
 
         ProgramCounter::Next
     }

@@ -1,3 +1,4 @@
+// #![warn(clippy::pedantic)]
 mod cpu;
 mod disassembler;
 
