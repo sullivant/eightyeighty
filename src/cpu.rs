@@ -1018,7 +1018,7 @@ impl Cpu {
         let mut new_accum: u8 = self.a << 1;
 
         if through_carry {
-            new_accum |= carry_bit as u8; // carry bit replaces low order
+            new_accum |= u8::from(carry_bit); // carry bit replaces low order
         } else {
             new_accum |= high_order as u8; // high order replaces low order
         };
@@ -1044,7 +1044,7 @@ impl Cpu {
         let mut new_accum: u8 = self.a >> 1;
 
         if through_carry {
-            new_accum |= (carry_bit as u8) << 7; // Carry bit replaces high order
+            new_accum |= u8::from(carry_bit) << 7; // Carry bit replaces high order
         } else {
             // Normal carry
             new_accum |= low_order << 7; // Low order replaces high order
@@ -1088,7 +1088,7 @@ impl Cpu {
     // along with the CARRY flag's value
     // as well as update flags
     pub fn op_adc(&mut self, register: Registers) -> ProgramCounter {
-        let to_add: u8 = self.test_flag(super::FLAG_CARRY) as u8
+        let to_add: u8 = u8::from(self.test_flag(super::FLAG_CARRY))
             + match register {
                 Registers::B => self.b,
                 Registers::C => self.c,
