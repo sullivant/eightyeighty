@@ -1,8 +1,10 @@
+#![warn(clippy::all, clippy::pedantic)]
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 
-pub const RAM_SIZE: usize = 0xFFFF;
+pub use crate::constants::*;
+pub use crate::utils::*;
 
 pub enum ProgramCounter {
     Next,        // The operation does not use any data
@@ -119,11 +121,7 @@ impl Cpu {
         usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
 
-    // Makes a memory pointer by simply concatenating the two values
-    pub fn make_pointer(&mut self, dl: u8, dh: u8) -> usize {
-        usize::from(u16::from(dh) << 8 | u16::from(dl))
-    }
-
+    #[must_use]
     pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
         (&self.pc, &self.sp, &self.h, &self.l, &self.b)
     }
@@ -131,6 +129,7 @@ impl Cpu {
     // Returns a paired register such as HL or BC.
     // Pass to the function the beginning register for the pair
     // Returned value will be a u16 value
+    #[must_use]
     pub fn get_register_pair(&self, register: Registers) -> u16 {
         match register {
             Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
@@ -166,6 +165,7 @@ impl Cpu {
     }
 
     // Returns the current flag values
+    #[must_use]
     pub fn get_flags(&self) -> u8 {
         self.flags
     }
@@ -202,7 +202,7 @@ impl Cpu {
             self.reset_flag(super::FLAG_CARRY);
         } else {
             // Flag needs to be set
-            self.set_flag(super::FLAG_CARRY)
+            self.set_flag(super::FLAG_CARRY);
         }
         ProgramCounter::Next
     }
@@ -210,41 +210,35 @@ impl Cpu {
     // Computes and sets the mask of flags for a supplied value
     // sets flags: Zero, Sign, Parity, Carry, and Auxiliary Carry
     pub fn update_flags(&mut self, val: u8, overflow: bool, aux_carry: bool) {
-        match val == 0 {
-            true => self.set_flag(super::FLAG_ZERO),
-            false => self.reset_flag(super::FLAG_ZERO),
-        };
+        if val == 0 {
+            self.set_flag(super::FLAG_ZERO);
+        } else {
+            self.reset_flag(super::FLAG_ZERO);
+        }
 
-        match self.get_sign(val) {
-            true => self.set_flag(super::FLAG_SIGN), // A negative number
-            false => self.reset_flag(super::FLAG_SIGN), // A positive number
-        };
+        if get_sign(val) {
+            self.set_flag(super::FLAG_SIGN); // A negative number
+        } else {
+            self.reset_flag(super::FLAG_SIGN); // A positive number
+        }
 
-        match self.get_parity(val.into()) {
-            true => self.set_flag(super::FLAG_PARITY),
-            false => self.reset_flag(super::FLAG_PARITY),
-        };
+        if get_parity(val.into()) {
+            self.set_flag(super::FLAG_PARITY);
+        } else {
+            self.reset_flag(super::FLAG_PARITY);
+        }
 
-        match overflow {
-            true => self.set_flag(super::FLAG_CARRY),
-            false => self.reset_flag(super::FLAG_CARRY),
-        };
+        if overflow {
+            self.set_flag(super::FLAG_CARRY);
+        } else {
+            self.reset_flag(super::FLAG_CARRY);
+        }
 
-        match aux_carry {
-            true => self.set_flag(super::FLAG_AUXCARRY),
-            false => self.reset_flag(super::FLAG_AUXCARRY),
-        };
-    }
-
-    // If number of ones in a number's binary representation is even,
-    // parity flag is TRUE (1) else it is FALSE (0)
-    pub fn get_parity(&mut self, v: u16) -> bool {
-        v.count_ones() % 2 == 0
-    }
-
-    // Returns true if MSB = 1
-    pub fn get_sign(&mut self, x: u8) -> bool {
-        (0b10000000 & x) != 0
+        if aux_carry {
+            self.set_flag(super::FLAG_AUXCARRY);
+        } else {
+            self.reset_flag(super::FLAG_AUXCARRY);
+        }
     }
 
     pub fn set_disassemble(&mut self, d: bool) {
@@ -255,9 +249,14 @@ impl Cpu {
         self.nop = n;
     }
 
-    // Load the ROM file into memory, starting at start_index
-    // Returns a tuple containing the index we started at and where we
-    // actually finished at.
+    /// Load the ROM file into memory, starting at ``start_index``
+    /// Returns a tuple containing the index we started at and where we
+    /// actually finished at.
+    ///
+    /// # Errors
+    /// Will return a standard io Error if necessary
+    /// # Panics
+    /// If the error happens, this will cause the function to panic
     pub fn load_rom(
         &mut self,
         file: String,
@@ -272,10 +271,15 @@ impl Cpu {
         Ok((start_index, start_index + last_idx + 1))
     }
 
-    // Gathers a word from memory based on program counter location,
-    // then passes it along to the run_opcode() function
-    // On successful tick, returns the program counter value that was run
-    // On unsuccessful tick, returns an error
+    /// Gathers a word from memory based on program counter location,
+    /// then passes it along to the ``run_opcode()`` function
+    /// On successful tick, returns the program counter value that was run
+    /// On unsuccessful tick, returns an error
+    ///
+    /// # Errors
+    /// Will return an error if necessary
+    /// # Panics
+    /// Will panic if an error happens
     pub fn tick(&mut self) -> Result<usize, String> {
         let opcode = self.read_opcode();
         self.last_opcode = opcode;
@@ -311,13 +315,15 @@ impl Cpu {
         (o, x, y)
     }
 
-    // This will parse the opcode, printing a disassembly if asked
-    //
-    // An opcode consists of:
-    //  Instruction (1 byte)
-    //  Data (1 or 2 bytes) depending on opcode.  Little endian.
-    //
-    // It will also return ERROR if the opcode was not recognized
+    /// This will parse the opcode, printing a disassembly if asked
+    ///
+    /// An opcode consists of:
+    ///  Instruction (1 byte)
+    ///  Data (1 or 2 bytes) depending on opcode.  Little endian.
+    ///
+    /// # Errors
+    /// It will return ERROR if the opcode was not recognized
+    #[allow(clippy::too_many_lines, clippy::match_same_arms)]
     pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
         let dl = opcode.1; // Potential data points for usage by an instruction
         let dh = opcode.2; // Potential data points for usage by an instruction
@@ -507,10 +513,14 @@ impl Cpu {
     // OUT D8
     // Would send the contents of accumulator to the device sent
     // as the data portion of this command
+    #[must_use]
+    #[allow(clippy::unused_self)]
     pub fn op_out(&self, _data: u8) -> ProgramCounter {
         ProgramCounter::Two
     }
 
+    #[must_use]
+    #[allow(clippy::unused_self)]
     pub fn op_00(&self) -> ProgramCounter {
         ProgramCounter::Next
     }
@@ -527,6 +537,7 @@ impl Cpu {
     // Returns true if an addition will case an aux carry
     // value: the value we are trying to add to source
     // source: the source that value is added to
+    #[allow(clippy::unused_self)]
     pub fn will_ac(&mut self, value: u8, source: u8) -> bool {
         ((value & 0x0F) + (source & 0x0F)) & 0x10 == 0x10
     }
@@ -541,6 +552,7 @@ impl Cpu {
 
     // INR Reg
     // Flags affected: Z,S,P,AC
+    #[allow(clippy::similar_names)]
     pub fn op_inr(&mut self, reg: Registers) -> ProgramCounter {
         match reg {
             Registers::B => {
@@ -620,6 +632,7 @@ impl Cpu {
 
     // DCR Reg
     // Flags affected: Z,S,P,AC
+    #[allow(clippy::similar_names)]
     pub fn op_dcr(&mut self, reg: Registers) -> ProgramCounter {
         //let new_val = self.b.wrapping_sub(1);
 
@@ -748,7 +761,7 @@ impl Cpu {
 
     // Loads the byte located at dhdl into the accumulator
     pub fn op_lda(&mut self, dl: u8, dh: u8) -> ProgramCounter {
-        self.a = self.memory[self.make_pointer(dl, dh)];
+        self.a = self.memory[make_pointer(dl, dh)];
         ProgramCounter::Three
     }
 

@@ -1,4 +1,6 @@
-pub use super::cpu::Cpu;
+pub use crate::cpu::*;
+pub use crate::utils::*;
+
 use std::fmt;
 
 pub const HEADER: &str = "CYCLE:PC Ins S l h sp SZ0A0P1C (lo,hi) B Command";
@@ -168,5 +170,5 @@ pub fn disassemble(cpu: &Cpu, last_pc: usize) -> String {
     let dl = cpu.last_opcode.1;
     let dh = cpu.last_opcode.2;
     format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}",
-    cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code)
+        cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code)
 }

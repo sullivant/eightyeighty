@@ -1,6 +1,13 @@
-// #![warn(clippy::pedantic)]
+#![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+mod constants;
 mod cpu;
 mod disassembler;
+mod utils;
+
+pub use crate::constants::*;
+pub use crate::cpu::*; //Cpu;
+pub use crate::utils::*;
 
 use clap::{App, Arg};
 use sdl2::event::Event;
@@ -13,30 +20,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-pub use cpu::Cpu;
-pub const OPCODE_SIZE: usize = 1;
-
-// S - Sign Flag
-// Z - Zero Flag
-// 0 - Not used, always zero
-// A - also called AC, Auxiliary Carry Flag
-// 0 - Not used, always zero
-// P - Parity Flag
-// 1 - Not used, always one
-// C - Carry Flag
-pub const FLAG_SIGN: u8 = 0b1000_0000;
-pub const FLAG_ZERO: u8 = 0b0100_0000;
-pub const FLAG_AUXCARRY: u8 = 0b0001_0000;
-pub const FLAG_PARITY: u8 = 0b0000_0100;
-pub const FLAG_CARRY: u8 = 0b0000_0001;
-
-// Window and display concerns
-pub const DISP_WIDTH: u16 = 640; // Overall width/height
-pub const DISP_HEIGHT: u16 = 480;
-pub const EMU_WIDTH: u16 = 224; // Emulator display area width/height
-pub const EMU_HEIGHT: u16 = 256;
-pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
-const LINE_SPACE: u16 = 20; // Space between lines of text
+// Specific color stuff for the UI
 const WHITE: Color = Color::RGB(255, 255, 255);
 const BLACK: Color = Color::RGB(0, 0, 0);
 //const RED: Color = Color::RGB(255, 0, 0);
@@ -53,7 +37,7 @@ pub struct Emu {
 }
 
 impl Emu {
-    fn new(rom_file: String) -> Result<Emu, String> {
+    fn new(rom_file: &str) -> Result<Emu, String> {
         println!("Creating new Emu Object");
 
         // Generate our CPU
@@ -70,7 +54,8 @@ impl Emu {
                 dims = i;
             }
             Err(err) => {
-                panic!("Unable to load rom file {}: {}", file_to_load, err);
+                return Err(format!("Unable to load rom file {}: {}", file_to_load, err));
+                //panic!("Unable to load rom file {}: {}", file_to_load, err);
             }
         }
 
@@ -124,35 +109,36 @@ impl Emu {
             canvas,
             disassembler::HEADER,
             0,
-            ((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 3)) as i32,
+            i32::from((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 3)),
+            //((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 3)) as i32,
         );
         add_display_text(
             canvas,
             &self.last_msg.to_string(),
             0,
-            ((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 4)) as i32,
+            i32::from((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 4)),
         );
 
         // Flags
         add_display_text(
             canvas,
             "SZ0A0P1C",
-            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
+            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
             0,
         );
         add_display_text(
             canvas,
             &format!("{:08b}", self.cpu.get_flags()),
-            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-            (LINE_SPACE) as i32,
+            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
+            i32::from(LINE_SPACE),
         );
 
         // Stack
         add_display_text(
             canvas,
             "---Stack---",
-            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-            (LINE_SPACE * 2) as i32,
+            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
+            i32::from(LINE_SPACE * 2),
         );
 
         for i in 0..3 {
@@ -163,8 +149,8 @@ impl Emu {
                     self.cpu.sp + i,
                     self.cpu.memory[(self.cpu.sp + i) as usize]
                 ),
-                ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-                (LINE_SPACE * (i + 3)) as i32,
+                i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
+                i32::from(LINE_SPACE * (i + 3)),
             );
         }
 
@@ -172,8 +158,8 @@ impl Emu {
         add_display_text(
             canvas,
             "---Registers---",
-            ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-            (LINE_SPACE * 6) as i32,
+            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
+            i32::from(LINE_SPACE * 6),
         );
 
         for (i, r) in ["A", "B", "C", "D", "E", "H", "L"].iter().enumerate() {
@@ -190,8 +176,8 @@ impl Emu {
             add_display_text(
                 canvas,
                 &format!("{} = {:04X}", r, val),
-                ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE) as i32,
-                (LINE_SPACE * (i as u16 + 7)) as i32,
+                i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
+                i32::from(LINE_SPACE * (i as u16 + 7)),
             );
         }
 
@@ -204,8 +190,8 @@ impl Emu {
             add_display_text(
                 canvas,
                 &format!("Pair: {} {:04X}", r, val),
-                ((EMU_WIDTH * CELL_SIZE) + CELL_SIZE * 50) as i32,
-                (LINE_SPACE * (i as u16 + 7)) as i32,
+                i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE * 50),
+                i32::from(LINE_SPACE * (i as u16 + 7)),
             );
         }
     }
@@ -218,19 +204,7 @@ impl Emu {
         }
 
         // If we are not in pause_on_tick mode, tick away
-        if !self.pause_on_tick {
-            // Tick the cpu
-            match self.cpu.tick() {
-                Ok(n) => {
-                    tick_happened = true;
-                    self.last_pc = n;
-                }
-                Err(e) => {
-                    println!("Shutting down. Final CPU state:\n{}", self.cpu);
-                    panic!("{}", e);
-                }
-            }
-        } else {
+        if self.pause_on_tick {
             // We want to tick only when tick_once is true (Space key sets this)
             if self.single_tick {
                 // Tick the cpu
@@ -240,10 +214,22 @@ impl Emu {
                         self.last_pc = n;
                     }
                     Err(e) => {
-                        panic!("Unable to tick {}", e);
+                        return Err(format!("Unable to tick {}", e));
                     }
                 }
                 self.single_tick = false;
+            }
+        } else {
+            // Tick the cpu
+            match self.cpu.tick() {
+                Ok(n) => {
+                    tick_happened = true;
+                    self.last_pc = n;
+                }
+                Err(e) => {
+                    println!("Shutting down. Final CPU state:\n{}", self.cpu);
+                    return Err(format!("Shutting down: {}", e));
+                }
             }
         }
 
@@ -260,7 +246,17 @@ impl Emu {
         Ok(())
     }
 }
-
+/// go()
+///
+/// The initial starting point of the application.  This processes parameters,
+/// passed from the command line and tries to load a ROM and begin execution.
+///
+/// # Errors
+/// Will return an 'Err' if the filename for the rom passed on the command line does not exist.
+///
+/// # Panics
+/// Will panic if necessary, sending up any of the aformentioned errors.
+#[allow(clippy::too_many_lines)]
 pub fn go() -> Result<(), String> {
     // Get some cli options from CLAP
     let matches = App::new("EightyEighty")
@@ -310,7 +306,7 @@ pub fn go() -> Result<(), String> {
         rom_file = String::from(f);
     }
 
-    let app = Arc::new(Mutex::new(Emu::new(rom_file)?));
+    let app = Arc::new(Mutex::new(Emu::new(&rom_file)?));
     let app_clone = Arc::clone(&app);
 
     // If we are in debug mode, set that now

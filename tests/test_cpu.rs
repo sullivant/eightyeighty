@@ -1,4 +1,6 @@
-use lib::Cpu;
+//#![warn(clippy::all, clippy::pedantic)]
+
+pub use lib::*;
 
 // Lovely aux carry detection
 // (a & 0xf) + (b & 0xf) & 0x10 == 0x10
@@ -38,9 +40,9 @@ fn test_set_flag() {
 #[test]
 fn test_reset_flag() {
     let mut cpu = Cpu::new();
-    cpu.flags = 0b11111111;
+    cpu.flags = 0b1111_1111;
     cpu.reset_flag(lib::FLAG_SIGN);
-    assert_eq!(cpu.flags, 0b01111111);
+    assert_eq!(cpu.flags, 0b0111_1111);
 
     // Test an already reset flag
     cpu.flags = 0b01111111;
@@ -54,16 +56,15 @@ fn test_reset_flag() {
 
 #[test]
 fn test_get_parity() {
-    let mut cpu = Cpu::new();
     let mut n: u16 = 0b1100;
-    assert_eq!(cpu.get_parity(n), true); // Even 1s, = parity 1
+    assert_eq!(lib::get_parity(n), true); // Even 1s, = parity 1
     n = 0b1110;
-    assert_eq!(cpu.get_parity(n), false); // Odd 1s, = parity 0
+    assert_eq!(lib::get_parity(n), false); // Odd 1s, = parity 0
     n = 0b11000011;
-    assert_eq!(cpu.get_parity(n), true);
+    assert_eq!(lib::get_parity(n), true);
 
     // Ensure zero is true
-    assert_eq!(cpu.get_parity(0b0000), true);
+    assert_eq!(lib::get_parity(0b0000), true);
 }
 
 #[test]
@@ -79,11 +80,10 @@ fn test_get_addr_pointer() {
 
 #[test]
 fn test_get_sign() {
-    let mut cpu = Cpu::new();
-    assert_eq!(cpu.get_sign(0b11110000), true);
-    assert_eq!(cpu.get_sign(0b01110000), false);
-    assert_eq!(cpu.get_sign(0b1000u8), false);
-    assert_eq!(cpu.get_sign(0b1000 << 4), true);
+    assert_eq!(get_sign(0b1111_0000), true);
+    assert_eq!(get_sign(0b0111_0000), false);
+    assert_eq!(get_sign(0b1000u8), false);
+    assert_eq!(get_sign(0b1000 << 4), true);
 }
 
 #[test]
@@ -1115,9 +1115,7 @@ fn test_stax() {
 
 #[test]
 fn test_make_pointer() {
-    let mut cpu = Cpu::new();
-
-    assert_eq!(cpu.make_pointer(0x00, 0x03), 0x0300);
+    assert_eq!(make_pointer(0x00, 0x03), 0x0300);
 }
 
 #[test]
@@ -1184,7 +1182,7 @@ fn test_op_daa() {
     cpu.run_opcode((0x27, 0x00, 0x00)).unwrap();
 
     assert_eq!(cpu.a, 0x01);
-    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
-    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
+    assert!(cpu.test_flag(lib::FLAG_CARRY));
+    assert!(cpu.test_flag(lib::FLAG_AUXCARRY));
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }
