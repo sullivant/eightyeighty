@@ -23,6 +23,7 @@ pub fn cmd(s: &str) -> Instr {
 
 // Really this just prints stuff to the standard output so we can view details on what is
 // happening. Later, it will probably print out more of the registers, etc.
+#[allow(clippy::too_many_lines)]
 pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
     match op.0 {
         0x00 => cmd("NOP"),
@@ -125,7 +126,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0x91 => cmd("SUB C"),
         0x92 => cmd("SUB D"),
         0x97 => cmd("SUB A"),
-        0xC0 => cmd("RNC"),
+        0xC0 | 0xD0 => cmd("RNC"),
         0xC1 => cmd("POP B"),
         0xC2 => cmd("JNZ Addr"), // JNZ Addr
         0xC3 => cmd("JMP"),      // JMP
@@ -137,7 +138,6 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xCC => cmd("CZ"),
         0xCD => cmd("CALL Addr"), // CALL Addr
         0xCF => cmd("RST 8"),
-        0xD0 => cmd("RNC"),
         0xD1 => cmd("POP D"),
         0xD3 => cmd("OUT D"),
         0xD4 => cmd("CNC Addr"),

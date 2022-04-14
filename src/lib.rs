@@ -214,7 +214,7 @@ impl Emu {
                         self.last_pc = n;
                     }
                     Err(e) => {
-                        return Err(format!("Unable to tick {}", e));
+                        return Err(format!("Unable to single tick {}", e));
                     }
                 }
                 self.single_tick = false;
@@ -227,8 +227,7 @@ impl Emu {
                     self.last_pc = n;
                 }
                 Err(e) => {
-                    println!("Shutting down. Final CPU state:\n{}", self.cpu);
-                    return Err(format!("Shutting down: {}", e));
+                    return Err(e);
                 }
             }
         }
@@ -330,6 +329,7 @@ pub fn go() -> Result<(), String> {
                 Ok(_) => (),
                 Err(e) => {
                     println!("Unable to tick: {}", e);
+                    break;
                 }
             }
         }

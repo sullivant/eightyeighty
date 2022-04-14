@@ -1,4 +1,5 @@
 #![warn(clippy::all, clippy::pedantic)]
+#![allow(clippy::unused_self, clippy::cast_possible_truncation)]
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
@@ -478,7 +479,7 @@ impl Cpu {
             0xFF => self.op_rst(0b111),                       // RST 7
             _ => {
                 return Err(format!(
-                    "!! OPCODE: {:#04X} {:#010b} is unknown!!",
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
                     opcode.0, opcode.0
                 ))
             }
@@ -891,7 +892,9 @@ impl Cpu {
             Registers::L => self.l,
             Registers::H => self.h,
             Registers::HL => self.memory[self.get_addr_pointer()],
-            _ => self.l, // Ignored
+            _ => {
+                return ProgramCounter::Next;
+            } // Ignored
         };
 
         match target {
@@ -901,7 +904,7 @@ impl Cpu {
             Registers::D => self.d = val,
             Registers::E => self.e = val,
             Registers::L => self.l = val,
-            Registers::H => self.l = val,
+            Registers::H => self.h = val,
             Registers::HL => self.memory[self.get_addr_pointer()] = val,
             _ => (), // Do nothing
         };
@@ -926,13 +929,15 @@ impl Cpu {
     pub fn op_c2(&mut self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
         let dest: u16 = ys | u16::from(x);
-        match self.test_flag(super::FLAG_ZERO) {
-            true => ProgramCounter::Three,
-            false => ProgramCounter::Jump(dest.into()),
+        if self.test_flag(super::FLAG_ZERO) {
+            ProgramCounter::Three
+        } else {
+            ProgramCounter::Jump(dest.into())
         }
     }
 
     // Jump to a given location as provided by (y<<8 | x)
+    #[must_use]
     pub fn op_c3(&self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
         let dest: u16 = ys | u16::from(x);
@@ -1012,14 +1017,10 @@ impl Cpu {
         // Shift one position to the left
         let mut new_accum: u8 = self.a << 1;
 
-        match through_carry {
-            true => {
-                new_accum |= carry_bit as u8; // carry bit replaces low order
-            }
-            // Normal carry
-            false => {
-                new_accum |= high_order as u8; // high order replaces low order
-            }
+        if through_carry {
+            new_accum |= carry_bit as u8; // carry bit replaces low order
+        } else {
+            new_accum |= high_order as u8; // high order replaces low order
         };
 
         self.a = new_accum;
@@ -1042,14 +1043,11 @@ impl Cpu {
 
         let mut new_accum: u8 = self.a >> 1;
 
-        match through_carry {
-            true => {
-                new_accum |= (carry_bit as u8) << 7; // Carry bit replaces high order
-            }
+        if through_carry {
+            new_accum |= (carry_bit as u8) << 7; // Carry bit replaces high order
+        } else {
             // Normal carry
-            false => {
-                new_accum |= low_order << 7; // Low order replaces high order
-            }
+            new_accum |= low_order << 7; // Low order replaces high order
         };
 
         self.a = new_accum;
@@ -1065,8 +1063,8 @@ impl Cpu {
 
     // Add to the accumulator the supplied register
     // as well as update flags
-    pub fn op_add(&mut self, reg: Registers) -> ProgramCounter {
-        let to_add: u8 = match reg {
+    pub fn op_add(&mut self, register: Registers) -> ProgramCounter {
+        let to_add: u8 = match register {
             Registers::B => self.b,
             Registers::C => self.c,
             Registers::D => self.d,
@@ -1089,9 +1087,9 @@ impl Cpu {
     // Add to the accumulator the supplied register
     // along with the CARRY flag's value
     // as well as update flags
-    pub fn op_adc(&mut self, reg: Registers) -> ProgramCounter {
+    pub fn op_adc(&mut self, register: Registers) -> ProgramCounter {
         let to_add: u8 = self.test_flag(super::FLAG_CARRY) as u8
-            + match reg {
+            + match register {
                 Registers::B => self.b,
                 Registers::C => self.c,
                 Registers::D => self.d,
@@ -1122,7 +1120,7 @@ impl Cpu {
 
         // Update memory with the value of the accumulator
         if let Some(l) = location {
-            self.memory[l as usize] = self.a
+            self.memory[l as usize] = self.a;
         }
 
         ProgramCounter::Next
@@ -1139,13 +1137,13 @@ impl Cpu {
         let mut ac = false;
         let mut carry = false;
 
-        if (self.a & 0b00001111) > 9 {
+        if (self.a & 0b0000_1111) > 9 {
             let res = self.a.overflowing_add(6).0;
             ac = self.will_ac(6, self.a);
             self.a = res;
         }
 
-        if (self.a & 0b11110000) > 9 {
+        if (self.a & 0b1111_0000) > 9 {
             let (res, c) = self.a.overflowing_add(6 << 4);
             self.a = res;
             carry = c;
