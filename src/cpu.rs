@@ -316,21 +316,14 @@ impl Cpu {
         (o, x, y)
     }
 
-    /// This will parse the opcode, printing a disassembly if asked
-    ///
-    /// An opcode consists of:
-    ///  Instruction (1 byte)
-    ///  Data (1 or 2 bytes) depending on opcode.  Little endian.
+    /// This processes the opcodes beginning with the pattern "0X"
     ///
     /// # Errors
-    /// It will return ERROR if the opcode was not recognized
-    #[allow(clippy::too_many_lines, clippy::match_same_arms)]
-    pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_0x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
         let dl = opcode.1; // Potential data points for usage by an instruction
         let dh = opcode.2; // Potential data points for usage by an instruction
 
-        // D8 = 8 bits (1st byte = y)
-        // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
             0x00 => self.op_00(),                       // NOP
             0x01 => self.op_lxi(Registers::BC, dl, dh), // LXI B,D16
@@ -348,6 +341,26 @@ impl Cpu {
             0x0D => self.op_dcr(Registers::C),     // DCR D
             0x0E => self.op_mvi(Registers::C, dl), // MVI C, D8
             0x0F => self.op_rotr(false),           // RRC
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "1X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_1x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
             //0x10
             0x11 => self.op_lxi(Registers::DE, dl, dh), // LXI D,D16
             0x12 => self.op_stax(Registers::DE),        // STAX (DE)
@@ -363,6 +376,26 @@ impl Cpu {
             0x1D => self.op_dcr(Registers::E),          // DCR E
             0x1E => self.op_mvi(Registers::E, dl),      // MVI E
             0x1F => self.op_rotr(true),                 // RAR
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "2X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_2x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
             0x21 => self.op_lxi(Registers::HL, dl, dh), // LXI X,D16
             0x23 => self.op_inx(Registers::HL),         // INX HL
             0x24 => self.op_inr(Registers::H),          // INR H
@@ -376,6 +409,26 @@ impl Cpu {
             0x2D => self.op_dcr(Registers::L),          // DCR L
             0x2E => self.op_mvi(Registers::L, dl),      // MVI L
             0x2F => self.op_comp(Registers::A),         // CMA
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "3X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_3x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
             0x31 => self.op_lxi(Registers::SP, dl, dh), // LXI SP, D16
             0x32 => self.op_sta(dl, dh),                // STA (adr)<-A
             0x33 => self.op_inx(Registers::SP),         // INX SP
@@ -390,6 +443,23 @@ impl Cpu {
             0x3D => self.op_dcr(Registers::A),          // DCR A
             0x3E => self.op_mvi(Registers::A, dl),      // MVI A
             0x3F => self.op_cmc(),                      // CMC
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "4X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_4x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
             0x40 => self.op_mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.op_mov(Registers::B, Registers::C), // MOV B <- C
             0x42 => self.op_mov(Registers::B, Registers::D), // MOV B <- D
@@ -398,7 +468,61 @@ impl Cpu {
             0x45 => self.op_mov(Registers::B, Registers::L), // MOV B <- L
             0x46 => self.op_mov(Registers::B, Registers::HL), // MOV B <- (HL)
             0x47 => self.op_mov(Registers::B, Registers::A), // MOV B <- A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    //    /// This processes the opcodes beginning with the pattern "5X"
+    //    ///
+    //    /// # Errors
+    //    /// Will return ERROR if opcode was not recognized
+    //    pub fn opcodes_5x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+    //        let dl = opcode.1; // Potential data points for usage by an instruction
+    //        let dh = opcode.2; // Potential data points for usage by an instruction
+    //
+    //        let i = match opcode.0 {
+    //            _ => {
+    //                return Err(format!(
+    //                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+    //                    opcode.0, opcode.0
+    //                ))
+    //            }
+    //        };
+    //
+    //        Ok(i)
+    //    }
+    //
+    /// This processes the opcodes beginning with the pattern "6X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_6x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
             0x6F => self.op_mov(Registers::L, Registers::A), // MOV L <- A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "7X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_7x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
             0x70 => self.op_mov(Registers::HL, Registers::B), // MOV M,B	1		(HL) <- B
             0x71 => self.op_mov(Registers::HL, Registers::C), // MOV M,C	1		(HL) <- C
             0x72 => self.op_mov(Registers::HL, Registers::D), // MOV M,D	1		(HL) <- D
@@ -415,68 +539,262 @@ impl Cpu {
             0x7D => self.op_mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.op_mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.op_mov(Registers::A, Registers::A),  // MOV A,A
-            0x80 => self.op_add(Registers::B),                // ADD B
-            0x81 => self.op_add(Registers::C),                // ADD C
-            0x82 => self.op_add(Registers::D),                // ADD D
-            0x83 => self.op_add(Registers::E),                // ADD E
-            0x84 => self.op_add(Registers::H),                // ADD H
-            0x85 => self.op_add(Registers::L),                // ADD L
-            0x86 => self.op_add(Registers::HL),               // ADD M
-            0x87 => self.op_add(Registers::A),                // ADD A
-            0x88 => self.op_adc(Registers::B),                // ADC B
-            0x89 => self.op_adc(Registers::C),                // ADC C
-            0x8A => self.op_adc(Registers::D),                // ADC D
-            0x8B => self.op_adc(Registers::E),                // ADC E
-            0x8C => self.op_adc(Registers::H),                // ADC H
-            0x8D => self.op_adc(Registers::L),                // ADC L
-            0x8E => self.op_adc(Registers::HL),               // ADC M
-            0x8F => self.op_adc(Registers::A),                // ADC A
-            0x90 => self.op_sub(Registers::B),                // SUB B
-            0x91 => self.op_sub(Registers::C),                // SUB C
-            0x92 => self.op_sub(Registers::D),                // SUB D
-            0x93 => self.op_sub(Registers::E),                // SUB E
-            0x94 => self.op_sub(Registers::H),                // SUB H
-            0x95 => self.op_sub(Registers::L),                // SUB L
-            0x96 => self.op_sub(Registers::HL),               // SUB M
-            0x97 => self.op_sub(Registers::A),                // SUB A
-            0xC0 => self.op_rets(super::FLAG_CARRY, false),   // RNC
-            0xC1 => self.op_push(Registers::B),               // POP B
-            0xC2 => self.op_c2(dl, dh),                       // JNZ
-            0xC3 => self.op_c3(dl, dh),                       // JMP
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "8X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_8x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
+            0x80 => self.op_add(Registers::B),  // ADD B
+            0x81 => self.op_add(Registers::C),  // ADD C
+            0x82 => self.op_add(Registers::D),  // ADD D
+            0x83 => self.op_add(Registers::E),  // ADD E
+            0x84 => self.op_add(Registers::H),  // ADD H
+            0x85 => self.op_add(Registers::L),  // ADD L
+            0x86 => self.op_add(Registers::HL), // ADD M
+            0x87 => self.op_add(Registers::A),  // ADD A
+            0x88 => self.op_adc(Registers::B),  // ADC B
+            0x89 => self.op_adc(Registers::C),  // ADC C
+            0x8A => self.op_adc(Registers::D),  // ADC D
+            0x8B => self.op_adc(Registers::E),  // ADC E
+            0x8C => self.op_adc(Registers::H),  // ADC H
+            0x8D => self.op_adc(Registers::L),  // ADC L
+            0x8E => self.op_adc(Registers::HL), // ADC M
+            0x8F => self.op_adc(Registers::A),  // ADC A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "9X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_9x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
+            0x90 => self.op_sub(Registers::B),  // SUB B
+            0x91 => self.op_sub(Registers::C),  // SUB C
+            0x92 => self.op_sub(Registers::D),  // SUB D
+            0x93 => self.op_sub(Registers::E),  // SUB E
+            0x94 => self.op_sub(Registers::H),  // SUB H
+            0x95 => self.op_sub(Registers::L),  // SUB L
+            0x96 => self.op_sub(Registers::HL), // SUB M
+            0x97 => self.op_sub(Registers::A),  // SUB A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    ///// This processes the opcodes beginning with the pattern "AX"
+    /////
+    ///// # Errors
+    ///// Will return ERROR if opcode was not recognized
+    //    pub fn opcodes_ax(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+    //        let dl = opcode.1; // Potential data points for usage by an instruction
+    //        let dh = opcode.2; // Potential data points for usage by an instruction
+    //
+    //        let i = match opcode.0 {
+    //            _ => {
+    //                return Err(format!(
+    //                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+    //                    opcode.0, opcode.0
+    //                ))
+    //            }
+    //        };
+    //
+    //        Ok(i)
+    //    }
+    //
+    //    /// This processes the opcodes beginning with the pattern "BX"
+    //    ///
+    //    /// # Errors
+    //    /// Will return ERROR if opcode was not recognized
+    //    pub fn opcodes_bx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+    //        let dl = opcode.1; // Potential data points for usage by an instruction
+    //        let dh = opcode.2; // Potential data points for usage by an instruction
+    //
+    //        let i = match opcode.0 {
+    //            _ => {
+    //                return Err(format!(
+    //                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+    //                    opcode.0, opcode.0
+    //                ))
+    //            }
+    //        };
+    //
+    //        Ok(i)
+    //    }
+
+    /// This processes the opcodes beginning with the pattern "CX"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_cx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
+            0xC0 => self.op_rets(super::FLAG_CARRY, false), // RNC
+            0xC1 => self.op_pop(Registers::B),              // POP B
+            0xC2 => self.op_c2(dl, dh),                     // JNZ
+            0xC3 => self.op_c3(dl, dh),                     // JMP
             0xC4 => self.op_call_if(super::FLAG_ZERO, false, dl, dh), // CNZ
-            0xC5 => self.op_push(Registers::B),               // PUSH B
-            0xC7 => self.op_rst(0b000),                       // RST 0
-            0xC8 => self.op_rets(super::FLAG_CARRY, true),    // RC
-            0xC9 => self.op_ret(),                            // RET
+            0xC5 => self.op_push(Registers::B),             // PUSH B
+            0xC7 => self.op_rst(0b000),                     // RST 0
+            0xC8 => self.op_rets(super::FLAG_CARRY, true),  // RC
+            0xC9 => self.op_ret(),                          // RET
             0xCC => self.op_call_if(super::FLAG_ZERO, true, dl, dh), // CZ
-            0xCF => self.op_rst(0b001),                       // RST 1
-            0xD1 => self.op_pop(Registers::D),                // POP D
-            0xD3 => self.op_out(dl),                          // OUT
-            0xCD => self.op_cd(dl, dh),                       // CALL Addr
-            0xD0 => self.op_rets(super::FLAG_CARRY, false),   // RNC
+            0xCD => self.op_cd(dl, dh),                     // CALL Addr
+            0xCF => self.op_rst(0b001),                     // RST 1
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "DX"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_dx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
+            0xD0 => self.op_rets(super::FLAG_CARRY, false), // RNC
+            0xD1 => self.op_pop(Registers::D),              // POP D
+            0xD3 => self.op_out(dl),                        // OUT
             0xD4 => self.op_call_if(super::FLAG_CARRY, false, dl, dh), // CNC
-            0xD5 => self.op_push(Registers::D),               // PUSH D
-            0xD7 => self.op_rst(0b010),                       // RST 2
-            0xDF => self.op_rst(0b011),                       // RST 3
+            0xD5 => self.op_push(Registers::D),             // PUSH D
+            0xD7 => self.op_rst(0b010),                     // RST 2
             0xDC => self.op_call_if(super::FLAG_CARRY, true, dl, dh), // CC
-            0xE0 => self.op_rets(super::FLAG_PARITY, false),  // RPO
-            0xE1 => self.op_pop(Registers::H),                // POP H
+            0xDF => self.op_rst(0b011),                     // RST 3
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "EX"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_ex(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
+            0xE0 => self.op_rets(super::FLAG_PARITY, false), // RPO
+            0xE1 => self.op_pop(Registers::H),               // POP H
             0xE4 => self.op_call_if(super::FLAG_PARITY, false, dl, dh), // CPO
-            0xE5 => self.op_push(Registers::H),               // PUSH H
-            0xE7 => self.op_rst(0b100),                       // RST 4
-            0xE8 => self.op_rets(super::FLAG_PARITY, true),   // RPE
-            0xEB => self.op_xchg(),                           // XCHG
+            0xE5 => self.op_push(Registers::H),              // PUSH H
+            0xE7 => self.op_rst(0b100),                      // RST 4
+            0xE8 => self.op_rets(super::FLAG_PARITY, true),  // RPE
+            0xEB => self.op_xchg(),                          // XCHG
             0xEC => self.op_call_if(super::FLAG_PARITY, true, dl, dh), // CPE
-            0xEF => self.op_rst(0b101),                       // RST 5
-            0xF0 => self.op_rets(super::FLAG_SIGN, false),    // RP
-            0xF1 => self.op_pop(Registers::SW),               // POP SW
+            0xEF => self.op_rst(0b101),                      // RST 5
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This processes the opcodes beginning with the pattern "FX"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_fx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let dl = opcode.1; // Potential data points for usage by an instruction
+        let dh = opcode.2; // Potential data points for usage by an instruction
+
+        let i = match opcode.0 {
+            0xF0 => self.op_rets(super::FLAG_SIGN, false), // RP
+            0xF1 => self.op_pop(Registers::SW),            // POP SW
             0xF4 => self.op_call_if(super::FLAG_SIGN, false, dl, dh), // CP
-            0xF5 => self.op_push(Registers::SW),              // Push SW
-            0xFE => self.op_fe(dl),                           // CPI
-            0xF7 => self.op_rst(0b110),                       // RST 6
-            0xF8 => self.op_rets(super::FLAG_SIGN, true),     // RM
+            0xF5 => self.op_push(Registers::SW),           // Push SW
+            0xFE => self.op_fe(dl),                        // CPI
+            0xF7 => self.op_rst(0b110),                    // RST 6
+            0xF8 => self.op_rets(super::FLAG_SIGN, true),  // RM
             0xFC => self.op_call_if(super::FLAG_SIGN, true, dl, dh), // CM
-            0xFF => self.op_rst(0b111),                       // RST 7
+            0xFF => self.op_rst(0b111),                    // RST 7
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
+    /// This will parse the opcode, printing a disassembly if asked
+    ///
+    /// An opcode consists of:
+    ///  Instruction (1 byte)
+    ///  Data (1 or 2 bytes) depending on opcode.  Little endian.
+    ///
+    /// # Errors
+    /// It will return ERROR if the opcode was not recognized
+    #[allow(clippy::too_many_lines, clippy::match_same_arms)]
+    pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
+        // D8 = 8 bits (1st byte = y)
+        // D16 = 16 bits (1st (y) and 2nd byte (x))
+        let i = match opcode.0 {
+            0x00..=0x0F => self.opcodes_0x(opcode),
+            0x10..=0x1F => self.opcodes_1x(opcode),
+            0x20..=0x2F => self.opcodes_2x(opcode),
+            0x30..=0x3F => self.opcodes_3x(opcode),
+            0x40..=0x4F => self.opcodes_4x(opcode),
+            //0x50..=0x5F => self.opcodes_5x(opcode),
+            0x60..=0x6F => self.opcodes_6x(opcode),
+            0x70..=0x7F => self.opcodes_7x(opcode),
+            0x80..=0x8F => self.opcodes_8x(opcode),
+            0x90..=0x9F => self.opcodes_9x(opcode),
+            //0xA0..=0xAF => self.opcodes_ax(opcode),
+            //0xB0..=0xBF => self.opcodes_bx(opcode),
+            0xC0..=0xCF => self.opcodes_cx(opcode),
+            0xD0..=0xDF => self.opcodes_dx(opcode),
+            0xE0..=0xEF => self.opcodes_ex(opcode),
+            0xF0..=0xFF => self.opcodes_fx(opcode),
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -486,10 +804,11 @@ impl Cpu {
         };
 
         match i {
-            ProgramCounter::Next => self.pc += super::OPCODE_SIZE,
-            ProgramCounter::Two => self.pc += super::OPCODE_SIZE * 2,
-            ProgramCounter::Three => self.pc += super::OPCODE_SIZE * 3,
-            ProgramCounter::Jump(d) => self.pc = d,
+            Ok(ProgramCounter::Next) => self.pc += super::OPCODE_SIZE,
+            Ok(ProgramCounter::Two) => self.pc += super::OPCODE_SIZE * 2,
+            Ok(ProgramCounter::Three) => self.pc += super::OPCODE_SIZE * 3,
+            Ok(ProgramCounter::Jump(d)) => self.pc = d,
+            Err(e) => return Err(e),
         }
 
         Ok(())
