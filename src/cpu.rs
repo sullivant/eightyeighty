@@ -286,6 +286,12 @@ impl Cpu {
         self.last_opcode = opcode;
         let this_pc = self.pc;
 
+        // If we are in a STOPPED state, no action is necessary
+        // This will be "unstopped" when an interrupt occurs
+        if self.nop {
+            return Ok(this_pc);
+        }
+
         self.cycle_count += 1;
 
         match self.run_opcode(opcode) {
@@ -468,6 +474,14 @@ impl Cpu {
             0x45 => self.op_mov(Registers::B, Registers::L), // MOV B <- L
             0x46 => self.op_mov(Registers::B, Registers::HL), // MOV B <- (HL)
             0x47 => self.op_mov(Registers::B, Registers::A), // MOV B <- A
+            0x48 => self.op_mov(Registers::C, Registers::B), // MOV C <- B
+            0x49 => self.op_mov(Registers::C, Registers::C), // MOV C <- C
+            0x4A => self.op_mov(Registers::C, Registers::D), // MOV C <- D
+            0x4B => self.op_mov(Registers::C, Registers::E), // MOV C <- E
+            0x4C => self.op_mov(Registers::C, Registers::H), // MOV C <- H
+            0x4D => self.op_mov(Registers::C, Registers::L), // MOV C <- L
+            0x4E => self.op_mov(Registers::C, Registers::HL), // MOV C <- HL
+            0x4F => self.op_mov(Registers::C, Registers::A), // MOV C <- A
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -479,32 +493,60 @@ impl Cpu {
         Ok(i)
     }
 
-    //    /// This processes the opcodes beginning with the pattern "5X"
-    //    ///
-    //    /// # Errors
-    //    /// Will return ERROR if opcode was not recognized
-    //    pub fn opcodes_5x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
-    //        let dl = opcode.1; // Potential data points for usage by an instruction
-    //        let dh = opcode.2; // Potential data points for usage by an instruction
-    //
-    //        let i = match opcode.0 {
-    //            _ => {
-    //                return Err(format!(
-    //                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
-    //                    opcode.0, opcode.0
-    //                ))
-    //            }
-    //        };
-    //
-    //        Ok(i)
-    //    }
-    //
+    /// This processes the opcodes beginning with the pattern "5X"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_5x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
+            0x50 => self.op_mov(Registers::D, Registers::B), // MOV D <- B
+            0x51 => self.op_mov(Registers::D, Registers::C), // MOV D <- C
+            0x52 => self.op_mov(Registers::D, Registers::D), // MOV D <- D
+            0x53 => self.op_mov(Registers::D, Registers::E), // MOV D <- E
+            0x54 => self.op_mov(Registers::D, Registers::H), // MOV D <- H
+            0x55 => self.op_mov(Registers::D, Registers::L), // MOV D <- L
+            0x56 => self.op_mov(Registers::D, Registers::HL), // MOV D <- (HL)
+            0x57 => self.op_mov(Registers::D, Registers::A), // MOV D <- A
+            0x58 => self.op_mov(Registers::E, Registers::B), // MOV E <- B
+            0x59 => self.op_mov(Registers::E, Registers::C), // MOV E <- C
+            0x5A => self.op_mov(Registers::E, Registers::D), // MOV E <- D
+            0x5B => self.op_mov(Registers::E, Registers::E), // MOV E <- E
+            0x5C => self.op_mov(Registers::E, Registers::H), // MOV E <- H
+            0x5D => self.op_mov(Registers::E, Registers::L), // MOV E <- L
+            0x5E => self.op_mov(Registers::E, Registers::HL), // MOV E <- HL
+            0x5F => self.op_mov(Registers::E, Registers::A), // MOV E <- A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
     /// This processes the opcodes beginning with the pattern "6X"
     ///
     /// # Errors
     /// Will return ERROR if opcode was not recognized
     pub fn opcodes_6x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
         let i = match opcode.0 {
+            0x60 => self.op_mov(Registers::H, Registers::B), // MOV H <- B
+            0x61 => self.op_mov(Registers::H, Registers::C), // MOV H <- C
+            0x62 => self.op_mov(Registers::H, Registers::D), // MOV H <- D
+            0x63 => self.op_mov(Registers::H, Registers::E), // MOV H <- E
+            0x64 => self.op_mov(Registers::H, Registers::H), // MOV H <- H
+            0x65 => self.op_mov(Registers::H, Registers::L), // MOV H <- L
+            0x66 => self.op_mov(Registers::H, Registers::HL), // MOV H <- (HL)
+            0x67 => self.op_mov(Registers::H, Registers::A), // MOV H <- A
+            0x68 => self.op_mov(Registers::L, Registers::B), // MOV L <- B
+            0x69 => self.op_mov(Registers::L, Registers::C), // MOV L <- C
+            0x6A => self.op_mov(Registers::L, Registers::D), // MOV L <- D
+            0x6B => self.op_mov(Registers::L, Registers::E), // MOV L <- E
+            0x6C => self.op_mov(Registers::L, Registers::H), // MOV L <- H
+            0x6D => self.op_mov(Registers::L, Registers::L), // MOV L <- L
+            0x6E => self.op_mov(Registers::L, Registers::HL), // MOV L <- HL
             0x6F => self.op_mov(Registers::L, Registers::A), // MOV L <- A
             _ => {
                 return Err(format!(
@@ -529,7 +571,7 @@ impl Cpu {
             0x73 => self.op_mov(Registers::HL, Registers::E), // MOV M,E	1		(HL) <- E
             0x74 => self.op_mov(Registers::HL, Registers::H), // MOV M,H	1		(HL) <- H
             0x75 => self.op_mov(Registers::HL, Registers::L), // MOV M,L	1		(HL) <- L
-            //0x76 => self.op_76(),              // HLT 1 (special)
+            0x76 => self.op_hlt(),                            // HLT 1 (special)
             0x77 => self.op_mov(Registers::HL, Registers::A), // MOV M,A
             0x78 => self.op_mov(Registers::A, Registers::B),  // MOV A,B
             0x79 => self.op_mov(Registers::A, Registers::C),  // MOV A,C
@@ -774,7 +816,6 @@ impl Cpu {
     ///
     /// # Errors
     /// It will return ERROR if the opcode was not recognized
-    #[allow(clippy::too_many_lines, clippy::match_same_arms)]
     pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
@@ -784,7 +825,7 @@ impl Cpu {
             0x20..=0x2F => self.opcodes_2x(opcode),
             0x30..=0x3F => self.opcodes_3x(opcode),
             0x40..=0x4F => self.opcodes_4x(opcode),
-            //0x50..=0x5F => self.opcodes_5x(opcode),
+            0x50..=0x5F => self.opcodes_5x(opcode),
             0x60..=0x6F => self.opcodes_6x(opcode),
             0x70..=0x7F => self.opcodes_7x(opcode),
             0x80..=0x8F => self.opcodes_8x(opcode),
@@ -1470,6 +1511,14 @@ impl Cpu {
 
         self.update_flags(self.a, carry, ac);
 
+        ProgramCounter::Next
+    }
+
+    // ProgramCounter is incremented and then the CPU enters a
+    // STOPPED state and no further activity takes place until
+    // an interrupt occurrs
+    pub fn op_hlt(&mut self) -> ProgramCounter {
+        self.set_nop(true);
         ProgramCounter::Next
     }
 }

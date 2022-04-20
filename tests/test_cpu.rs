@@ -1186,3 +1186,40 @@ fn test_op_daa() {
     assert!(cpu.test_flag(lib::FLAG_AUXCARRY));
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }
+
+#[test]
+fn test_op_mov() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.b = 0x00;
+    cpu.h = 0x20;
+    cpu.l = 0x10;
+    cpu.c = 0x00;
+    cpu.memory[0x2010] = 0x11;
+
+    cpu.run_opcode((0x44, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.b, cpu.h);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    cpu.run_opcode((0x4E, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.c, 0x11);
+}
+
+#[test]
+fn test_op_hlt() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.run_opcode((0x76, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    // Try to run a tick, PC should not move
+    cpu.tick().unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    // "unhalt" and see if pc moves next tick
+    cpu.set_nop(false);
+    cpu.tick().unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
+}
