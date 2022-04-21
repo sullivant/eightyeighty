@@ -3,7 +3,16 @@ pub use crate::utils::*;
 
 use std::fmt;
 
-pub const HEADER: &str = "CYCLE:PC Ins S l h sp SZ0A0P1C (lo,hi) B Command";
+pub const HEADER: &str =
+    "CYCLE :PC       Ins  S  l,   h,   sp      SZ0A0P1C  data(l,h)  B    Halt? : Command";
+
+pub fn disassemble(cpu: &Cpu, last_pc: usize) -> String {
+    let i = get_opcode_text(cpu.last_opcode);
+    let dl = cpu.last_opcode.1;
+    let dh = cpu.last_opcode.2;
+    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X} {} : {}",
+        cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, cpu.nop, i.code)
+}
 
 pub struct Instr {
     code: String, // The string defining what this this instr is actually doing
@@ -202,12 +211,4 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xFF => cmd("RST 7"),
         _ => cmd("UNK"), // UNK
     }
-}
-
-pub fn disassemble(cpu: &Cpu, last_pc: usize) -> String {
-    let i = get_opcode_text(cpu.last_opcode);
-    let dl = cpu.last_opcode.1;
-    let dh = cpu.last_opcode.2;
-    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X}  {}",
-        cpu.cycle_count, last_pc, cpu.last_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, dl, dh, cpu.b, i.code)
 }

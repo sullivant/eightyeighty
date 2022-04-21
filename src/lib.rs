@@ -43,7 +43,7 @@ impl Emu {
         // Generate our CPU
         let mut cpu = Cpu::new();
         cpu.set_disassemble(true);
-        cpu.set_nop(true);
+        //cpu.set_nop(true);
 
         // The list of rom files to load for this particular collection/game
         let file_to_load = format!("./resources/roms/{}.COM", rom_file);
@@ -234,7 +234,7 @@ impl Emu {
 
         // If needed/wanted, call off to the disassembler to print some pretty details
         if self.cpu.disassemble && tick_happened {
-            if self.cpu.cycle_count % 25 == 0 {
+            if self.cpu.cycle_count == 1 || (self.cpu.cycle_count % 25 == 0) {
                 println!("{}", disassembler::HEADER);
             }
             // Get our disassembler message text as well as our "next" opcode description
@@ -423,7 +423,9 @@ fn add_display_text(canvas: &mut sdl2::render::WindowCanvas, to_display: &str, x
     let texture_creator = canvas.texture_creator();
     let ttf_context = sdl2::ttf::init().unwrap();
     let font = ttf_context
-        .load_font("./resources/fonts/OpenSans-Regular.ttf", 16)
+        .load_font("./resources/fonts/CamingoCode-Regular.ttf", 16)
+        //.load_font("./resources/fonts/OpenSans-Regular.ttf", 16)
+        //.load_font("./resources/fonts/xkcd-script.ttf", 20)
         .unwrap();
 
     let surface = font.render(to_display).solid(BLACK).unwrap();
