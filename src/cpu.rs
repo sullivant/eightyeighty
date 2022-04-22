@@ -176,6 +176,11 @@ impl Cpu {
         self.flags & mask != 0
     }
 
+    // Returns the binary value of a flag, as a u8 for various ops.
+    pub fn get_flag(&mut self, mask: u8) -> u8 {
+        self.test_flag(mask) as u8
+    }
+
     // Sets a flag using a bitwise OR operation
     // Mask of 2 (00100) with a value of 1 = 00100
     // if flags = 10010 new value will be 10110
@@ -630,15 +635,24 @@ impl Cpu {
     /// # Errors
     /// Will return ERROR if opcode was not recognized
     pub fn opcodes_9x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let sub = self.get_flag(super::FLAG_CARRY);
         let i = match opcode.0 {
-            0x90 => self.op_sub(Registers::B),  // SUB B
-            0x91 => self.op_sub(Registers::C),  // SUB C
-            0x92 => self.op_sub(Registers::D),  // SUB D
-            0x93 => self.op_sub(Registers::E),  // SUB E
-            0x94 => self.op_sub(Registers::H),  // SUB H
-            0x95 => self.op_sub(Registers::L),  // SUB L
-            0x96 => self.op_sub(Registers::HL), // SUB M
-            0x97 => self.op_sub(Registers::A),  // SUB A
+            0x90 => self.op_sub(Registers::B, 0),    // SUB B
+            0x91 => self.op_sub(Registers::C, 0),    // SUB C
+            0x92 => self.op_sub(Registers::D, 0),    // SUB D
+            0x93 => self.op_sub(Registers::E, 0),    // SUB E
+            0x94 => self.op_sub(Registers::H, 0),    // SUB H
+            0x95 => self.op_sub(Registers::L, 0),    // SUB L
+            0x96 => self.op_sub(Registers::HL, 0),   // SUB M
+            0x97 => self.op_sub(Registers::A, 0),    // SUB A
+            0x98 => self.op_sub(Registers::B, sub),  // SBB B
+            0x99 => self.op_sub(Registers::C, sub),  // SBB B
+            0x9A => self.op_sub(Registers::D, sub),  // SBB B
+            0x9B => self.op_sub(Registers::E, sub),  // SBB B
+            0x9C => self.op_sub(Registers::H, sub),  // SBB B
+            0x9D => self.op_sub(Registers::L, sub),  // SBB B
+            0x9E => self.op_sub(Registers::HL, sub), // SBB B
+            0x9F => self.op_sub(Registers::A, sub),  // SBB B
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -650,26 +664,39 @@ impl Cpu {
         Ok(i)
     }
 
-    ///// This processes the opcodes beginning with the pattern "AX"
-    /////
-    ///// # Errors
-    ///// Will return ERROR if opcode was not recognized
-    //    pub fn opcodes_ax(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
-    //        let dl = opcode.1; // Potential data points for usage by an instruction
-    //        let dh = opcode.2; // Potential data points for usage by an instruction
-    //
-    //        let i = match opcode.0 {
-    //            _ => {
-    //                return Err(format!(
-    //                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
-    //                    opcode.0, opcode.0
-    //                ))
-    //            }
-    //        };
-    //
-    //        Ok(i)
-    //    }
-    //
+    /// This processes the opcodes beginning with the pattern "AX"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_ax(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
+            0xA0 => self.op_ana(Registers::B),  // ANA B
+            0xA1 => self.op_ana(Registers::C),  // ANA C
+            0xA2 => self.op_ana(Registers::D),  // ANA D
+            0xA3 => self.op_ana(Registers::E),  // ANA E
+            0xA4 => self.op_ana(Registers::H),  // ANA H
+            0xA5 => self.op_ana(Registers::L),  // ANA L
+            0xA6 => self.op_ana(Registers::HL), // ANA HL
+            0xA7 => self.op_ana(Registers::A),  // ANA A
+            0xA8 => self.op_xra(Registers::B),  // XRA B
+            0xA9 => self.op_xra(Registers::C),  // XRA C
+            0xAA => self.op_xra(Registers::D),  // XRA D
+            0xAB => self.op_xra(Registers::E),  // XRA E
+            0xAC => self.op_xra(Registers::H),  // XRA H
+            0xAD => self.op_xra(Registers::L),  // XRA L
+            0xAE => self.op_xra(Registers::HL), // XRA HL
+            0xAF => self.op_xra(Registers::A),  // XRA A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
+
     //    /// This processes the opcodes beginning with the pattern "BX"
     //    ///
     //    /// # Errors
@@ -830,7 +857,7 @@ impl Cpu {
             0x70..=0x7F => self.opcodes_7x(opcode),
             0x80..=0x8F => self.opcodes_8x(opcode),
             0x90..=0x9F => self.opcodes_9x(opcode),
-            //0xA0..=0xAF => self.opcodes_ax(opcode),
+            0xA0..=0xAF => self.opcodes_ax(opcode),
             //0xB0..=0xBF => self.opcodes_bx(opcode),
             0xC0..=0xCF => self.opcodes_cx(opcode),
             0xD0..=0xDF => self.opcodes_dx(opcode),
@@ -971,22 +998,30 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // SUB A (Subtract register param from A)
+    // SUB  / SBB (Subtract register param from A with borrow if necessary)
+    // Additionally, an optional subtrahend can be supplied, in the case of SBB
+    // and it will be included in the subtraction
+    //
     // Flags affected: Z, S, P, CY, AC
-    pub fn op_sub(&mut self, reg: Registers) -> ProgramCounter {
+    pub fn op_sub(&mut self, reg: Registers, sub: u8) -> ProgramCounter {
         let o: (u8, bool) = match reg {
-            Registers::A => self.a.overflowing_sub(self.a),
-            Registers::B => self.a.overflowing_sub(self.b),
-            Registers::C => self.a.overflowing_sub(self.c),
-            Registers::D => self.a.overflowing_sub(self.d),
-            Registers::E => self.a.overflowing_sub(self.e),
-            Registers::H => self.a.overflowing_sub(self.h),
-            Registers::L => self.a.overflowing_sub(self.l),
-            Registers::HL => self.a.overflowing_sub(self.memory[self.get_addr_pointer()]),
+            Registers::A => self.a.overflowing_sub(self.a.overflowing_add(sub).0),
+            Registers::B => self.a.overflowing_sub(self.b.overflowing_add(sub).0),
+            Registers::C => self.a.overflowing_sub(self.c.overflowing_add(sub).0),
+            Registers::D => self.a.overflowing_sub(self.d.overflowing_add(sub).0),
+            Registers::E => self.a.overflowing_sub(self.e.overflowing_add(sub).0),
+            Registers::H => self.a.overflowing_sub(self.h.overflowing_add(sub).0),
+            Registers::L => self.a.overflowing_sub(self.l.overflowing_add(sub).0),
+            Registers::HL => self
+                .a
+                .overflowing_sub(self.memory[self.get_addr_pointer()].overflowing_add(sub).0),
             _ => (0_u8, false),
         };
 
-        self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
+        let ac = self.will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
+
+        //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
+        self.update_flags(o.0, o.1, ac);
         self.a = o.0;
         ProgramCounter::Next
     }
@@ -1519,6 +1554,50 @@ impl Cpu {
     // an interrupt occurrs
     pub fn op_hlt(&mut self) -> ProgramCounter {
         self.set_nop(true);
+        ProgramCounter::Next
+    }
+
+    /// The specified byte is logically ``ANDed`` bit
+    /// by bit with the contents of the accumulator. The Carry bit
+    /// is reset to zero.
+    pub fn op_ana(&mut self, register: Registers) -> ProgramCounter {
+        self.a &= match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory[self.get_addr_pointer()],
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+
+        self.reset_flag(super::FLAG_CARRY);
+        self.update_flags(self.a, false, false);
+        ProgramCounter::Next
+    }
+
+    /// The specified byte is locally ``XORed`` bit by bit with the contents
+    /// of the accumulator.  The carry bit is reset to zero.
+    pub fn op_xra(&mut self, register: Registers) -> ProgramCounter {
+        let orig_value = self.a;
+        let source_value = match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory[self.get_addr_pointer()],
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+        let ac = self.will_ac(orig_value, source_value);
+        self.a ^= source_value;
+
+        self.reset_flag(super::FLAG_CARRY);
+        self.update_flags(self.a, false, ac);
         ProgramCounter::Next
     }
 }

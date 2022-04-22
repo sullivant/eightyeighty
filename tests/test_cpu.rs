@@ -978,6 +978,25 @@ fn test_sub() {
 }
 
 #[test]
+fn test_sbb() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.a = 0x04;
+    cpu.l = 0x02;
+
+    cpu.set_flag(lib::FLAG_CARRY);
+
+    cpu.run_opcode((0x9D, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x01);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
+}
+
+#[test]
 fn test_lhld() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;
@@ -1222,4 +1241,47 @@ fn test_op_hlt() {
     cpu.set_nop(false);
     cpu.tick().unwrap();
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
+}
+
+#[test]
+fn test_get_flag() {
+    let mut cpu = Cpu::new();
+
+    cpu.reset_flag(lib::FLAG_CARRY);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.get_flag(lib::FLAG_CARRY), 0);
+
+    cpu.set_flag(lib::FLAG_CARRY);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+    assert_eq!(cpu.get_flag(lib::FLAG_CARRY), 1);
+}
+
+#[test]
+fn test_op_ana() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0xFC;
+    cpu.c = 0x0F;
+
+    cpu.run_opcode((0xA1, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+}
+
+#[test]
+fn test_op_xra() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0xFC;
+
+    // Should zero out the A register
+    cpu.run_opcode((0xAF, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x00);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    cpu.a = 0xFF;
+    cpu.b = 0b0000_1010;
+    cpu.run_opcode((0xA8, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0b1111_0101);
 }
