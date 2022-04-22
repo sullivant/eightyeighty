@@ -716,6 +716,14 @@ impl Cpu {
             0xB5 => self.op_ora(Registers::L),  // ORA L
             0xB6 => self.op_ora(Registers::HL), // ORA (HL)
             0xB7 => self.op_ora(Registers::A),  // ORA A
+            0xB8 => self.op_cmp(Registers::B),  // CMP B
+            0xB9 => self.op_cmp(Registers::C),  // CMP C
+            0xBA => self.op_cmp(Registers::D),  // CMP D
+            0xBB => self.op_cmp(Registers::E),  // CMP E
+            0xBC => self.op_cmp(Registers::H),  // CMP H
+            0xBD => self.op_cmp(Registers::L),  // CMP L
+            0xBE => self.op_cmp(Registers::HL), // CMP (HL)
+            0xBF => self.op_cmp(Registers::A),  // CMP A
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -1622,6 +1630,33 @@ impl Cpu {
 
         self.reset_flag(super::FLAG_CARRY);
         self.update_flags(self.a, None, None);
+
+        ProgramCounter::Next
+    }
+
+    /// The specified byte is compared to the contents of the accumulator.
+    /// The comparison is performed by internally subtracting the contents of REG from the accumulator
+    /// (leaving both unchanged) and setting the condition bits according to the result.
+    /// In particular, the Zero bit is set if the quantities are equal, and reset if they are unequal.
+    /// Since a subtract operation is performed, the Carry bit will be set if there is no
+    /// carry out of bit 7, indicating that the contents of REG are greater than the
+    /// contents of the accumulator, and reset otherwise.
+    pub fn op_cmp(&mut self, register: Registers) -> ProgramCounter {
+        let min = self.a;
+        let sub = match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory[self.get_addr_pointer()],
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+        let res = min.overflowing_sub(sub).0;
+        let ac = self.will_ac(min.wrapping_neg(), sub.wrapping_neg()); // Because it's a subtraction
+        self.update_flags(res, Some(sub > min), Some(ac));
 
         ProgramCounter::Next
     }

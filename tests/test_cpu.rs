@@ -1313,3 +1313,31 @@ fn test_op_ora() {
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }
+
+#[test]
+fn test_op_cmp() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x0A;
+    cpu.e = 0x05;
+    cpu.set_flag(lib::FLAG_CARRY);
+
+    cpu.run_opcode((0xBB, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x0A);
+    assert_eq!(cpu.e, 0x05);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+
+    cpu.a = 0x02;
+    cpu.run_opcode((0xBB, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x02);
+    assert_eq!(cpu.e, 0x05);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+
+    cpu.a = !0x1B;
+    cpu.run_opcode((0xBB, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, !0x1B);
+    assert_eq!(cpu.e, 0x05);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+}
