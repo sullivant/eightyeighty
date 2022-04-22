@@ -671,6 +671,15 @@ fn test_op_ret() {
     cpu.run_opcode((0xC9, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.pc, 0x1032 + lib::OPCODE_SIZE * 3);
     assert_eq!(cpu.sp, 0x2402);
+
+    // Try a return if zero flag is zero
+    cpu.pc = 0x12;
+    cpu.sp = 0x2400;
+    cpu.memory[usize::from(cpu.sp)] = 0x32; // LO
+    cpu.memory[usize::from(cpu.sp + 1)] = 0x10; // HI
+    cpu.reset_flag(lib::FLAG_ZERO);
+    cpu.run_opcode((0xC0, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.pc, 0x1032 + lib::OPCODE_SIZE * 3);
 }
 
 #[test]
@@ -1340,4 +1349,20 @@ fn test_op_cmp() {
     assert_eq!(cpu.a, !0x1B);
     assert_eq!(cpu.e, 0x05);
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+}
+
+#[test]
+fn test_op_pop() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.sp = 0x2400;
+
+    // Setup some memory values to pop into our pair
+    cpu.memory[usize::from(cpu.sp)] = 0x32; // LO
+    cpu.memory[usize::from(cpu.sp + 1)] = 0x10; // HI
+
+    cpu.run_opcode((0xC1, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.c, 0x32);
+    assert_eq!(cpu.b, 0x10);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }

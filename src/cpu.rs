@@ -744,18 +744,22 @@ impl Cpu {
         let dh = opcode.2; // Potential data points for usage by an instruction
 
         let i = match opcode.0 {
-            0xC0 => self.op_rets(super::FLAG_CARRY, false), // RNC
-            0xC1 => self.op_pop(Registers::B),              // POP B
-            0xC2 => self.op_c2(dl, dh),                     // JNZ
-            0xC3 => self.op_c3(dl, dh),                     // JMP
+            0xC0 => self.op_rets(super::FLAG_ZERO, false), // RNZ
+            0xC1 => self.op_pop(Registers::B),             // POP B
+            0xC2 => self.op_jnz(dl, dh),                   // JNZ
+            0xC3 => self.op_jmp(dl, dh),                   // JMP
             0xC4 => self.op_call_if(super::FLAG_ZERO, false, dl, dh), // CNZ
-            0xC5 => self.op_push(Registers::B),             // PUSH B
-            0xC7 => self.op_rst(0b000),                     // RST 0
-            0xC8 => self.op_rets(super::FLAG_CARRY, true),  // RC
-            0xC9 => self.op_ret(),                          // RET
+            0xC5 => self.op_push(Registers::B),            // PUSH B
+            //0xC6
+            0xC7 => self.op_rst(0b000),                    // RST 0
+            0xC8 => self.op_rets(super::FLAG_CARRY, true), // RC
+            0xC9 => self.op_ret(),                         // RET
+            // 0xCA
+            // 0xCB
             0xCC => self.op_call_if(super::FLAG_ZERO, true, dl, dh), // CZ
-            0xCD => self.op_cd(dl, dh),                     // CALL Addr
-            0xCF => self.op_rst(0b001),                     // RST 1
+            0xCD => self.op_call(dl, dh),                            // CALL Addr
+            // 0xCE
+            0xCF => self.op_rst(0b001), // RST 1
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -1333,7 +1337,7 @@ impl Cpu {
     }
 
     // JNZ (Jump if nonzero)
-    pub fn op_c2(&mut self, x: u8, y: u8) -> ProgramCounter {
+    pub fn op_jnz(&mut self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
         let dest: u16 = ys | u16::from(x);
         if self.test_flag(super::FLAG_ZERO) {
@@ -1345,7 +1349,7 @@ impl Cpu {
 
     // Jump to a given location as provided by (y<<8 | x)
     #[must_use]
-    pub fn op_c3(&self, x: u8, y: u8) -> ProgramCounter {
+    pub fn op_jmp(&self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
         let dest: u16 = ys | u16::from(x);
         ProgramCounter::Jump(dest.into())
@@ -1381,13 +1385,13 @@ impl Cpu {
     // Calls if the flag's supplied value matches the supplied sign
     pub fn op_call_if(&mut self, flag: u8, sign: bool, x: u8, y: u8) -> ProgramCounter {
         if sign == self.test_flag(flag) {
-            return self.op_cd(x, y);
+            return self.op_call(x, y);
         }
         ProgramCounter::Three
     }
 
     // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP-2;PC=adr
-    pub fn op_cd(&mut self, x: u8, y: u8) -> ProgramCounter {
+    pub fn op_call(&mut self, x: u8, y: u8) -> ProgramCounter {
         // Save away the current PC hi/lo into the stack
         let pc_hi = self.pc >> 8;
         let pc_lo = self.pc & 0xFF;

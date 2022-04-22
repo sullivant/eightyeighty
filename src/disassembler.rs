@@ -219,7 +219,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xBD => cmd("CMP L"),
         0xBE => cmd("CMP (HL)"),
         0xBF => cmd("CMP A"),
-        0xC0 | 0xD0 => cmd("RNC"),
+        0xC0 => cmd("RNZ"),
         0xC1 => cmd("POP B"),
         0xC2 => cmd("JNZ Addr"), // JNZ Addr
         0xC3 => cmd("JMP"),      // JMP
@@ -231,6 +231,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xCC => cmd("CZ"),
         0xCD => cmd("CALL Addr"), // CALL Addr
         0xCF => cmd("RST 8"),
+        0xD0 => cmd("RNC"),
         0xD1 => cmd("POP D"),
         0xD3 => cmd("OUT D"),
         0xD4 => cmd("CNC Addr"),
