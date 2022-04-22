@@ -99,14 +99,14 @@ fn test_test_flag() {
 fn test_update_flags() {
     let mut cpu = Cpu::new();
     // Should update: PARITY (TRUE) SIGN(FALSE) ZERO (TRUE)
-    cpu.update_flags(0b0000, false, false);
+    cpu.update_flags(0b0000, Some(false), Some(false));
     assert_eq!(cpu.test_flag(lib::FLAG_SIGN), false);
 
     cpu.flags = 0;
 
     // Should update: PARITY (TRUE) SIGN(TRUE) and ZERO (FALSE)
     // And CARRY (TRUE) AUX CARRY(TRUE)
-    cpu.update_flags(0b10001000, true, true);
+    cpu.update_flags(0b10001000, Some(true), Some(true));
     assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
     assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
     assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
@@ -116,8 +116,20 @@ fn test_update_flags() {
     // Check our "aux carry" function for addition
     // (a & 0xf) + (b & 0xf) & 0x10 == 0x10
 
-    cpu.update_flags(0b10001000, true, false);
-    cpu.update_flags(0b10001000, true, ((62 & 0xf) + (34 & 0xf)) & 0x10 == 0x10);
+    cpu.update_flags(0b10001000, Some(true), Some(false));
+    cpu.update_flags(
+        0b10001000,
+        Some(true),
+        Some(((62 & 0xf) + (34 & 0xf)) & 0x10 == 0x10),
+    );
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
+
+    // This should skip updating / changing flags because of Some/None
+    cpu.update_flags(0b0000, Some(true), Some(true)); // Start with carry and aux carry set
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
+    cpu.update_flags(0b0000, None, None); // Should not touch the carry or aux carry
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
     assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
 }
 
@@ -1284,4 +1296,20 @@ fn test_op_xra() {
     cpu.b = 0b0000_1010;
     cpu.run_opcode((0xA8, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.a, 0b1111_0101);
+}
+
+#[test]
+fn test_op_ora() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.a = 0x33;
+    cpu.c = 0x0F;
+    cpu.set_flag(lib::FLAG_CARRY);
+
+    // Should zero out the A register
+    cpu.run_opcode((0xB1, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x3F);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }

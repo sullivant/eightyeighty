@@ -178,7 +178,7 @@ impl Cpu {
 
     // Returns the binary value of a flag, as a u8 for various ops.
     pub fn get_flag(&mut self, mask: u8) -> u8 {
-        self.test_flag(mask) as u8
+        u8::from(self.test_flag(mask))
     }
 
     // Sets a flag using a bitwise OR operation
@@ -215,7 +215,8 @@ impl Cpu {
 
     // Computes and sets the mask of flags for a supplied value
     // sets flags: Zero, Sign, Parity, Carry, and Auxiliary Carry
-    pub fn update_flags(&mut self, val: u8, overflow: bool, aux_carry: bool) {
+
+    pub fn update_flags(&mut self, val: u8, overflow: Option<bool>, aux_carry: Option<bool>) {
         if val == 0 {
             self.set_flag(super::FLAG_ZERO);
         } else {
@@ -234,17 +235,21 @@ impl Cpu {
             self.reset_flag(super::FLAG_PARITY);
         }
 
-        if overflow {
-            self.set_flag(super::FLAG_CARRY);
-        } else {
-            self.reset_flag(super::FLAG_CARRY);
-        }
+        if let Some(of) = overflow {
+            if of {
+                self.set_flag(super::FLAG_CARRY);
+            } else {
+                self.reset_flag(super::FLAG_CARRY);
+            }
+        };
 
-        if aux_carry {
-            self.set_flag(super::FLAG_AUXCARRY);
-        } else {
-            self.reset_flag(super::FLAG_AUXCARRY);
-        }
+        if let Some(ac) = aux_carry {
+            if ac {
+                self.set_flag(super::FLAG_AUXCARRY);
+            } else {
+                self.reset_flag(super::FLAG_AUXCARRY);
+            }
+        };
     }
 
     pub fn set_disassemble(&mut self, d: bool) {
@@ -697,25 +702,30 @@ impl Cpu {
         Ok(i)
     }
 
-    //    /// This processes the opcodes beginning with the pattern "BX"
-    //    ///
-    //    /// # Errors
-    //    /// Will return ERROR if opcode was not recognized
-    //    pub fn opcodes_bx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
-    //        let dl = opcode.1; // Potential data points for usage by an instruction
-    //        let dh = opcode.2; // Potential data points for usage by an instruction
-    //
-    //        let i = match opcode.0 {
-    //            _ => {
-    //                return Err(format!(
-    //                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
-    //                    opcode.0, opcode.0
-    //                ))
-    //            }
-    //        };
-    //
-    //        Ok(i)
-    //    }
+    /// This processes the opcodes beginning with the pattern "BX"
+    ///
+    /// # Errors
+    /// Will return ERROR if opcode was not recognized
+    pub fn opcodes_bx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
+        let i = match opcode.0 {
+            0xB0 => self.op_ora(Registers::B),  // ORA B
+            0xB1 => self.op_ora(Registers::C),  // ORA C
+            0xB2 => self.op_ora(Registers::D),  // ORA D
+            0xB3 => self.op_ora(Registers::E),  // ORA E
+            0xB4 => self.op_ora(Registers::H),  // ORA H
+            0xB5 => self.op_ora(Registers::L),  // ORA L
+            0xB6 => self.op_ora(Registers::HL), // ORA (HL)
+            0xB7 => self.op_ora(Registers::A),  // ORA A
+            _ => {
+                return Err(format!(
+                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
+                    opcode.0, opcode.0
+                ))
+            }
+        };
+
+        Ok(i)
+    }
 
     /// This processes the opcodes beginning with the pattern "CX"
     ///
@@ -858,17 +868,11 @@ impl Cpu {
             0x80..=0x8F => self.opcodes_8x(opcode),
             0x90..=0x9F => self.opcodes_9x(opcode),
             0xA0..=0xAF => self.opcodes_ax(opcode),
-            //0xB0..=0xBF => self.opcodes_bx(opcode),
+            0xB0..=0xBF => self.opcodes_bx(opcode),
             0xC0..=0xCF => self.opcodes_cx(opcode),
             0xD0..=0xDF => self.opcodes_dx(opcode),
             0xE0..=0xEF => self.opcodes_ex(opcode),
             0xF0..=0xFF => self.opcodes_fx(opcode),
-            _ => {
-                return Err(format!(
-                    "!! OPCODE: {:#04X} {:#010b} is unknown !!",
-                    opcode.0, opcode.0
-                ))
-            }
         };
 
         match i {
@@ -946,50 +950,50 @@ impl Cpu {
             Registers::B => {
                 let (res, of) = self.b.overflowing_add(1);
                 let ac = self.will_ac(1, self.b);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.b = res;
             }
             Registers::C => {
                 let (res, of) = self.c.overflowing_add(1);
                 let ac = self.will_ac(1, self.c);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.c = res;
             }
             Registers::D => {
                 let (res, of) = self.d.overflowing_add(1);
                 let ac = self.will_ac(1, self.d);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.d = res;
             }
             Registers::E => {
                 let (res, of) = self.e.overflowing_add(1);
                 let ac = self.will_ac(1, self.d);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.e = res;
             }
             Registers::H => {
                 let (res, of) = self.h.overflowing_add(1);
                 let ac = self.will_ac(1, self.h);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.h = res;
             }
             Registers::L => {
                 let (res, of) = self.l.overflowing_add(1);
                 let ac = self.will_ac(1, self.l);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.l = res;
             }
             Registers::HL => {
                 let val = self.memory[self.get_addr_pointer()];
                 let ac = self.will_ac(1, val);
                 let (res, of) = val.overflowing_add(1);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.memory[self.get_addr_pointer()] = res;
             }
             Registers::A => {
                 let (res, of) = self.a.overflowing_add(1);
                 let ac = self.will_ac(1, self.a);
-                self.update_flags(res, of, ac);
+                self.update_flags(res, Some(of), Some(ac));
                 self.a = res;
             }
             _ => (),
@@ -1021,7 +1025,7 @@ impl Cpu {
         let ac = self.will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
 
         //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
-        self.update_flags(o.0, o.1, ac);
+        self.update_flags(o.0, Some(o.1), Some(ac));
         self.a = o.0;
         ProgramCounter::Next
     }
@@ -1035,43 +1039,43 @@ impl Cpu {
         match reg {
             Registers::A => {
                 let (res, of) = self.b.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.a & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.a & 0x0F)));
                 self.a = res;
             }
             Registers::B => {
                 let (res, of) = self.b.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.b & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.b & 0x0F)));
                 self.b = res;
             }
             Registers::C => {
                 let (res, of) = self.c.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.c & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.c & 0x0F)));
                 self.c = res;
             }
             Registers::D => {
                 let (res, of) = self.d.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.d & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.d & 0x0F)));
                 self.d = res;
             }
             Registers::E => {
                 let (res, of) = self.e.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.e & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.e & 0x0F)));
                 self.e = res;
             }
             Registers::H => {
                 let (res, of) = self.h.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.h & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.h & 0x0F)));
                 self.h = res;
             }
             Registers::L => {
                 let (res, of) = self.l.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (self.l & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.l & 0x0F)));
                 self.l = res;
             }
             Registers::HL => {
                 let mem = self.memory[self.get_addr_pointer()];
                 let (res, of) = mem.overflowing_sub(1);
-                self.update_flags(res, of, (1 & 0x0F) > (mem & 0x0F));
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
                 self.memory[self.get_addr_pointer()] = res;
             }
 
@@ -1396,7 +1400,7 @@ impl Cpu {
         let (res, overflow) = self.a.overflowing_sub(data);
         let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
 
-        self.update_flags(res, overflow, aux_carry);
+        self.update_flags(res, Some(overflow), Some(aux_carry));
 
         ProgramCounter::Two
     }
@@ -1474,7 +1478,7 @@ impl Cpu {
         let (res, of) = self.a.overflowing_add(to_add);
         let ac = self.will_ac(to_add, self.a);
         self.a = res;
-        self.update_flags(res, of, ac);
+        self.update_flags(res, Some(of), Some(ac));
 
         ProgramCounter::Next
     }
@@ -1499,7 +1503,7 @@ impl Cpu {
         let (res, of) = self.a.overflowing_add(to_add);
         let ac = self.will_ac(to_add, self.a);
         self.a = res;
-        self.update_flags(res, of, ac);
+        self.update_flags(res, Some(of), Some(ac));
 
         ProgramCounter::Next
     }
@@ -1544,7 +1548,7 @@ impl Cpu {
             carry = c;
         }
 
-        self.update_flags(self.a, carry, ac);
+        self.update_flags(self.a, Some(carry), Some(ac));
 
         ProgramCounter::Next
     }
@@ -1574,7 +1578,7 @@ impl Cpu {
         };
 
         self.reset_flag(super::FLAG_CARRY);
-        self.update_flags(self.a, false, false);
+        self.update_flags(self.a, None, None);
         ProgramCounter::Next
     }
 
@@ -1597,7 +1601,28 @@ impl Cpu {
         self.a ^= source_value;
 
         self.reset_flag(super::FLAG_CARRY);
-        self.update_flags(self.a, false, ac);
+        self.update_flags(self.a, None, Some(ac));
+        ProgramCounter::Next
+    }
+
+    /// The specified byte is localled ``ORed`` bit by bit with the contents
+    /// of the accumulator.  The carry bit is reset to zero.
+    pub fn op_ora(&mut self, register: Registers) -> ProgramCounter {
+        self.a |= match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory[self.get_addr_pointer()],
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+
+        self.reset_flag(super::FLAG_CARRY);
+        self.update_flags(self.a, None, None);
+
         ProgramCounter::Next
     }
 }
