@@ -225,11 +225,14 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xC3 => cmd("JMP"),      // JMP
         0xC4 => cmd("CNZ"),
         0xC5 => cmd("PUSH B"), // PUSH B
+        0xC6 => cmd("ADI"),
         0xC7 => cmd("RST 0"),
         0xC8 => cmd("RC"),
         0xC9 => cmd("RET"), // RET
+        0xCA => cmd("JZ Addr"),
         0xCC => cmd("CZ"),
         0xCD => cmd("CALL Addr"), // CALL Addr
+        0xCE => cmd("ACI D8"),
         0xCF => cmd("RST 8"),
         0xD0 => cmd("RNC"),
         0xD1 => cmd("POP D"),

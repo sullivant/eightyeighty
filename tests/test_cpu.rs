@@ -542,6 +542,20 @@ fn test_op_c2() {
 }
 
 #[test]
+fn test_op_jz() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.set_flag(lib::FLAG_ZERO);
+    cpu.run_opcode((0xCA, 0x01, 0x10)).unwrap();
+    assert_eq!(cpu.pc, 0x1001);
+
+    cpu.pc = op;
+    cpu.reset_flag(lib::FLAG_ZERO);
+    cpu.run_opcode((0xCA, 0x01, 0x02)).unwrap();
+    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
+}
+
+#[test]
 fn test_op_c3() {
     let mut cpu = Cpu::new();
     cpu.run_opcode((0xC3, 0x01, 0x02)).unwrap();
@@ -1365,4 +1379,51 @@ fn test_op_pop() {
     assert_eq!(cpu.c, 0x32);
     assert_eq!(cpu.b, 0x10);
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
+}
+
+#[test]
+fn test_op_adi() {
+    let mut cpu = Cpu::new();
+
+    // Set the accumulator to 0x14
+    cpu.run_opcode((0x3E, 0x14, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x14);
+
+    let op = cpu.pc;
+    cpu.run_opcode((0xC6, 0x42, 0x00)).unwrap();
+
+    // Accumulator should now be 0x56 (0x14 + 0x42 = 0x56)
+    assert_eq!(cpu.a, 0x56);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
+
+    // Bring us back to the original accumulator value
+    cpu.run_opcode((0xC6, 0xBE, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x14);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
+    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), false);
+    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
+}
+
+#[test]
+fn test_op_aci() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    cpu.run_opcode((0x3E, 0x56, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x56);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
+
+    cpu.reset_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0xCE, 0xBE, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x14);
+    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
+
+    // Now, let's do one with a carry flag
+    cpu.run_opcode((0xCE, 0x42, 0x00)).unwrap();
+    assert_eq!(cpu.a, 0x57);
 }

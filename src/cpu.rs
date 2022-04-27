@@ -742,6 +742,7 @@ impl Cpu {
     pub fn opcodes_cx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
         let dl = opcode.1; // Potential data points for usage by an instruction
         let dh = opcode.2; // Potential data points for usage by an instruction
+        let flag_carry = self.test_flag(super::FLAG_CARRY);
 
         let i = match opcode.0 {
             0xC0 => self.op_rets(super::FLAG_ZERO, false), // RNZ
@@ -750,16 +751,16 @@ impl Cpu {
             0xC3 => self.op_jmp(dl, dh),                   // JMP
             0xC4 => self.op_call_if(super::FLAG_ZERO, false, dl, dh), // CNZ
             0xC5 => self.op_push(Registers::B),            // PUSH B
-            //0xC6
+            0xC6 => self.op_adi_aci(dl, false),            // ADI
             0xC7 => self.op_rst(0b000),                    // RST 0
             0xC8 => self.op_rets(super::FLAG_CARRY, true), // RC
             0xC9 => self.op_ret(),                         // RET
-            // 0xCA
+            0xCA => self.op_jz(dl, dh),                    // JZ
             // 0xCB
             0xCC => self.op_call_if(super::FLAG_ZERO, true, dl, dh), // CZ
             0xCD => self.op_call(dl, dh),                            // CALL Addr
-            // 0xCE
-            0xCF => self.op_rst(0b001), // RST 1
+            0xCE => self.op_adi_aci(dl, flag_carry),                 // ACI
+            0xCF => self.op_rst(0b001),                              // RST 1
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -1336,6 +1337,17 @@ impl Cpu {
         ProgramCounter::Jump((loc << 3) as usize)
     }
 
+    // JZ (Jump if zero)
+    pub fn op_jz(&mut self, x: u8, y: u8) -> ProgramCounter {
+        let ys: u16 = u16::from(y) << 8;
+        let dest: u16 = ys | u16::from(x);
+        if self.test_flag(super::FLAG_ZERO) {
+            ProgramCounter::Jump(dest.into())
+        } else {
+            ProgramCounter::Three
+        }
+    }
+
     // JNZ (Jump if nonzero)
     pub fn op_jnz(&mut self, x: u8, y: u8) -> ProgramCounter {
         let ys: u16 = u16::from(y) << 8;
@@ -1519,6 +1531,34 @@ impl Cpu {
 
         ProgramCounter::Next
     }
+
+    /// Add to the accumulator the supplied data byte after
+    /// the opcode byte.
+    ///
+    /// If the parmeter ``carry_bit`` is true this performs the function
+    /// of the opcode "ACI" by including the value of the carry bit in the
+    /// addition.
+    ///
+    /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
+    pub fn op_adi_aci(&mut self, dl: u8, carry_bit: bool) -> ProgramCounter {
+        let mut to_add = dl;
+
+        if carry_bit {
+            to_add = to_add.overflowing_add(1).0; // Do we need to care about overflow here?
+        };
+
+        let ac = self.will_ac(to_add, self.a);
+        let (res, of) = self.a.overflowing_add(to_add);
+        self.a = res;
+        self.update_flags(res, Some(of), Some(ac));
+
+        ProgramCounter::Two
+    }
+
+    /// Add to the accumulator the supplied byte after
+    /// the opcode byte, plus the contents of the carry bit
+    ///
+    /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
 
     // Stores accumulator at memory location of supplied register
     pub fn op_stax(&mut self, reg: Registers) -> ProgramCounter {
