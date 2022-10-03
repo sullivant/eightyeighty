@@ -783,6 +783,7 @@ impl Cpu {
         let i = match opcode.0 {
             0xD0 => self.op_rets(super::FLAG_CARRY, false), // RNC
             0xD1 => self.op_pop(Registers::D),              // POP D
+            0xD2 => self.op_jnc(dl, dh),                    // JNC
             0xD3 => self.op_out(dl),                        // OUT
             0xD4 => self.op_call_if(super::FLAG_CARRY, false, dl, dh), // CNC
             0xD5 => self.op_push(Registers::D),             // PUSH D
@@ -1335,6 +1336,18 @@ impl Cpu {
         self.sp -= 2;
 
         ProgramCounter::Jump((loc << 3) as usize)
+    }
+
+    // JNC (Jump if No Carry)
+    pub fn op_jnc(&mut self, x: u8, y: u8) -> ProgramCounter {
+        let ys: u16 = u16::from(y) << 8;
+        let dest: u16 = ys | u16::from(x);
+
+        if self.test_flag(super::FLAG_CARRY) {
+            ProgramCounter::Three
+        } else {
+            ProgramCounter::Jump(dest.into())
+        }
     }
 
     // JZ (Jump if zero)

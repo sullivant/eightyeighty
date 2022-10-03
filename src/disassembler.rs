@@ -236,6 +236,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xCF => cmd("RST 8"),
         0xD0 => cmd("RNC"),
         0xD1 => cmd("POP D"),
+        0xD2 => cmd("JNC Addr"),
         0xD3 => cmd("OUT D"),
         0xD4 => cmd("CNC Addr"),
         0xD5 => cmd("PUSH D"), // PUSH D
@@ -251,6 +252,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xEB => cmd("XCHG"),
         0xEC => cmd("CPE"),
         0xEF => cmd("RST 5"),
+        0xF1 => cmd("POP PSW"),
         0xF0 => cmd("RP"),
         0xF4 => cmd("CP"), // CALL if Plus
         0xF5 => cmd("PUSH PSW"),

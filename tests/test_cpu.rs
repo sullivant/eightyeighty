@@ -1427,3 +1427,19 @@ fn test_op_aci() {
     cpu.run_opcode((0xCE, 0x42, 0x00)).unwrap();
     assert_eq!(cpu.a, 0x57);
 }
+
+#[test]
+fn test_op_jnc() {
+    let mut cpu = Cpu::new();
+
+    // With no carry, jumps to address
+    cpu.reset_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0xD2, 0x01, 0x10)).unwrap();
+    assert_eq!(cpu.pc, 0x1001);
+
+    // With a carry, jumps 3
+    let op = cpu.pc;
+    cpu.set_flag(lib::FLAG_CARRY);
+    cpu.run_opcode((0xD2, 0x01, 0x10)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
+}
