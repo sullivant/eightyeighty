@@ -1447,17 +1447,15 @@ fn test_op_jnc() {
 #[test]
 fn test_op_ani() {
     let mut cpu = Cpu::new();
-    
+
     // Setup the accumulator with 0x3A
     cpu.run_opcode((0x3E, 0x3A, 0x00)).unwrap();
     assert_eq!(cpu.a, 0x3A);
     let op = cpu.pc;
 
-
     // Try ANI with 0xFF for the data
     cpu.run_opcode((0xE6, 0x0F, 0x00)).unwrap();
     assert_eq!(cpu.a, 0x0A);
-
 
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
 }
@@ -1468,11 +1466,11 @@ fn test_ei_di() {
     let op = cpu.pc;
 
     cpu.interrupts = false;
-    cpu.run_opcode((0xFB,0x00,0x00)).unwrap();
-    assert_eq!(cpu.interrupts,true);
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 1);   
+    cpu.run_opcode((0xFB, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.interrupts, true);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 1);
 
-    cpu.run_opcode((0xF3,0x00,0x00)).unwrap();
-    assert_eq!(cpu.interrupts,false);
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);   
+    cpu.run_opcode((0xF3, 0x00, 0x00)).unwrap();
+    assert_eq!(cpu.interrupts, false);
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
 }

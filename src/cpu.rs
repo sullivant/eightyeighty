@@ -73,7 +73,7 @@ pub struct Cpu {
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
     pub nop: bool,
 
-    pub interrupts: bool,          // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
+    pub interrupts: bool, // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
 
     pub cycle_count: usize,        // Cycle count
     pub last_opcode: (u8, u8, u8), // Just a record of the last opcode.
@@ -817,7 +817,7 @@ impl Cpu {
             0xE1 => self.op_pop(Registers::H),               // POP H
             0xE4 => self.op_call_if(super::FLAG_PARITY, false, dl, dh), // CPO
             0xE5 => self.op_push(Registers::H),              // PUSH H
-            0xE6 => self.op_ani(dl), // ANI (And with Accum, Immediate)
+            0xE6 => self.op_ani(dl),                         // ANI (And with Accum, Immediate)
             0xE7 => self.op_rst(0b100),                      // RST 4
             0xE8 => self.op_rets(super::FLAG_PARITY, true),  // RPE
             0xEB => self.op_xchg(),                          // XCHG
@@ -845,13 +845,19 @@ impl Cpu {
         let i = match opcode.0 {
             0xF0 => self.op_rets(super::FLAG_SIGN, false), // RP
             0xF1 => self.op_pop(Registers::SW),            // POP SW
-            0xF3 => {self.interrupts = false; ProgramCounter::Next}, // Disable interrupts
+            0xF3 => {
+                self.interrupts = false;
+                ProgramCounter::Next
+            } // Disable interrupts
             0xF4 => self.op_call_if(super::FLAG_SIGN, false, dl, dh), // CP
             0xF5 => self.op_push(Registers::SW),           // Push SW
             0xFE => self.op_fe(dl),                        // CPI
             0xF7 => self.op_rst(0b110),                    // RST 6
             0xF8 => self.op_rets(super::FLAG_SIGN, true),  // RM
-            0xFB => {self.interrupts = true; ProgramCounter::Next}, // Enable interrupts
+            0xFB => {
+                self.interrupts = true;
+                ProgramCounter::Next
+            } // Enable interrupts
             0xFC => self.op_call_if(super::FLAG_SIGN, true, dl, dh), // CM
             0xFF => self.op_rst(0b111),                    // RST 7
             _ => {
