@@ -1474,3 +1474,41 @@ fn test_ei_di() {
     assert_eq!(cpu.interrupts, false);
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
 }
+
+#[test]
+fn test_op_fc() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+    cpu.sp = 0x0018;
+
+    cpu.reset_flag(lib::FLAG_SIGN);
+    cpu.run_opcode((0xFC, 0x10, 0x11)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
+
+    cpu.set_flag(lib::FLAG_SIGN);
+    cpu.run_opcode((0xFC, 0x10, 0x11)).unwrap();
+    assert_eq!(cpu.pc, 0x1110);
+}
+
+#[test]
+fn test_create_pc_location() {
+    let mut cpu = Cpu::new();
+
+    assert_eq!(0x1001, cpu.create_pc_location(0x01, 0x10));
+}
+
+#[test]
+fn test_op_fa() {
+    let mut cpu = Cpu::new();
+    let op = cpu.pc;
+
+    // When flag is not set, should not jump
+    cpu.reset_flag(lib::FLAG_SIGN);
+    cpu.run_opcode((0xFA, 0x10, 0x11)).unwrap();
+    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
+
+    // When flag is set, should jump
+    cpu.set_flag(lib::FLAG_SIGN);
+    cpu.run_opcode((0xFA, 0x10, 0x11)).unwrap();
+    assert_eq!(cpu.pc, 0x1110);
+}

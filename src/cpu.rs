@@ -125,6 +125,12 @@ impl Cpu {
         usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
 
+    // Creates a new PC location from two data bytes
+    pub fn create_pc_location(&mut self, dl: u8, dh: u8) -> usize {
+        let ys: u16 = u16::from(dh) << 8;
+        usize::from(ys | u16::from(dl))
+    }
+
     #[must_use]
     pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
         (&self.pc, &self.sp, &self.h, &self.l, &self.b)
@@ -854,6 +860,7 @@ impl Cpu {
             0xFE => self.op_fe(dl),                        // CPI
             0xF7 => self.op_rst(0b110),                    // RST 6
             0xF8 => self.op_rets(super::FLAG_SIGN, true),  // RM
+            0xFA => self.op_jump_if(super::FLAG_SIGN, true, dl, dh), // JM
             0xFB => {
                 self.interrupts = true;
                 ProgramCounter::Next
@@ -1419,6 +1426,17 @@ impl Cpu {
         ProgramCounter::Next
     }
 
+    // Jumps if the flag's supplied value matches the supplied sign
+    pub fn op_jump_if(&mut self, flag: u8, sign: bool, x: u8, y: u8) -> ProgramCounter {
+        if sign == self.test_flag(flag) {
+            self.pc = self.create_pc_location(x, y);
+
+            ProgramCounter::Jump(self.pc)
+        } else {
+            ProgramCounter::Three
+        }
+    }
+
     // Calls if the flag's supplied value matches the supplied sign
     pub fn op_call_if(&mut self, flag: u8, sign: bool, x: u8, y: u8) -> ProgramCounter {
         if sign == self.test_flag(flag) {
@@ -1427,7 +1445,7 @@ impl Cpu {
         ProgramCounter::Three
     }
 
-    // (SP-1)<-PC.hi;(SP-2)<-PC.lo;SP<-SP-2;PC=adr
+    // Similar to a jump, but it saves the current PC to the stack
     pub fn op_call(&mut self, x: u8, y: u8) -> ProgramCounter {
         // Save away the current PC hi/lo into the stack
         let pc_hi = self.pc >> 8;
