@@ -6,10 +6,9 @@ pub use lib::*;
 // (a & 0xf) + (b & 0xf) & 0x10 == 0x10
 #[test]
 fn test_will_ac() {
-    let mut cpu = Cpu::new();
-    assert_eq!(cpu.will_ac(62, 34), true);
-    assert_eq!(cpu.will_ac(0b1111, 1), true);
-    assert_eq!(cpu.will_ac(2, 4), false);
+    assert_eq!(will_ac(62, 34), true);
+    assert_eq!(will_ac(0b1111, 1), true);
+    assert_eq!(will_ac(2, 4), false);
 }
 
 #[test]
@@ -1488,13 +1487,6 @@ fn test_op_fc() {
     cpu.set_flag(lib::FLAG_SIGN);
     cpu.run_opcode((0xFC, 0x10, 0x11)).unwrap();
     assert_eq!(cpu.pc, 0x1110);
-}
-
-#[test]
-fn test_create_pc_location() {
-    let mut cpu = Cpu::new();
-
-    assert_eq!(0x1001, cpu.create_pc_location(0x01, 0x10));
 }
 
 #[test]

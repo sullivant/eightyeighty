@@ -1,13 +1,12 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 mod constants;
-mod cpu;
 mod disassembler;
-mod utils;
+mod cpu;
 
 pub use crate::constants::*;
-pub use crate::cpu::*; //Cpu;
-pub use crate::utils::*;
+pub use crate::cpu::common::*;
+pub use crate::cpu::Cpu;
 
 use clap::{App, Arg};
 use sdl2::event::Event;
@@ -182,6 +181,7 @@ impl Emu {
         }
 
         // Register Pairs
+        
         for (i, r) in [cpu::Registers::BC, cpu::Registers::DE, cpu::Registers::HL]
             .iter()
             .enumerate()

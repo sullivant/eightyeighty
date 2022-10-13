@@ -1,11 +1,13 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::unused_self, clippy::cast_possible_truncation)]
+//pub mod cpu {
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 
+pub use crate::cpu::opcodes::*;
+pub use crate::cpu::common::*;
 pub use crate::constants::*;
-pub use crate::utils::*;
 
 pub enum ProgramCounter {
     Next,        // The operation does not use any data
@@ -124,13 +126,7 @@ impl Cpu {
     pub fn get_addr_pointer(&mut self) -> usize {
         usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
-
-    // Creates a new PC location from two data bytes
-    pub fn create_pc_location(&mut self, dl: u8, dh: u8) -> usize {
-        let ys: u16 = u16::from(dh) << 8;
-        usize::from(ys | u16::from(dl))
-    }
-
+    
     #[must_use]
     pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
         (&self.pc, &self.sp, &self.h, &self.l, &self.b)
@@ -206,18 +202,18 @@ impl Cpu {
 
     // Sets the carry flag
     pub fn op_stc(&mut self) -> ProgramCounter {
-        self.set_flag(super::FLAG_CARRY);
+        self.set_flag(FLAG_CARRY);
         ProgramCounter::Next
     }
 
     // Sets the carry flag to the compliment of itself
     pub fn op_cmc(&mut self) -> ProgramCounter {
-        if self.test_flag(super::FLAG_CARRY) {
+        if self.test_flag(FLAG_CARRY) {
             // Flag needs to be reset
-            self.reset_flag(super::FLAG_CARRY);
+            self.reset_flag(FLAG_CARRY);
         } else {
             // Flag needs to be set
-            self.set_flag(super::FLAG_CARRY);
+            self.set_flag(FLAG_CARRY);
         }
         ProgramCounter::Next
     }
@@ -227,36 +223,36 @@ impl Cpu {
     // If provided, it will also set Overflow and Aux_Carry, resetting them otherwise
     pub fn update_flags(&mut self, val: u8, overflow: Option<bool>, aux_carry: Option<bool>) {
         if val == 0 {
-            self.set_flag(super::FLAG_ZERO);
+            self.set_flag(FLAG_ZERO);
         } else {
-            self.reset_flag(super::FLAG_ZERO);
+            self.reset_flag(FLAG_ZERO);
         }
 
         if get_sign(val) {
-            self.set_flag(super::FLAG_SIGN); // A negative number
+            self.set_flag(FLAG_SIGN); // A negative number
         } else {
-            self.reset_flag(super::FLAG_SIGN); // A positive number
+            self.reset_flag(FLAG_SIGN); // A positive number
         }
 
         if get_parity(val.into()) {
-            self.set_flag(super::FLAG_PARITY);
+            self.set_flag(FLAG_PARITY);
         } else {
-            self.reset_flag(super::FLAG_PARITY);
+            self.reset_flag(FLAG_PARITY);
         }
 
         if let Some(of) = overflow {
             if of {
-                self.set_flag(super::FLAG_CARRY);
+                self.set_flag(FLAG_CARRY);
             } else {
-                self.reset_flag(super::FLAG_CARRY);
+                self.reset_flag(FLAG_CARRY);
             }
         };
 
         if let Some(ac) = aux_carry {
             if ac {
-                self.set_flag(super::FLAG_AUXCARRY);
+                self.set_flag(FLAG_AUXCARRY);
             } else {
-                self.reset_flag(super::FLAG_AUXCARRY);
+                self.reset_flag(FLAG_AUXCARRY);
             }
         };
     }
@@ -320,6 +316,7 @@ impl Cpu {
             }
             Err(e) => Err(e),
         }
+
     }
 
     // Reads an instruction at ProgramCounter
@@ -350,14 +347,14 @@ impl Cpu {
         let dh = opcode.2; // Potential data points for usage by an instruction
 
         let i = match opcode.0 {
-            0x00 => self.op_00(),                       // NOP
+            0x00 => ProgramCounter::Next,               // NOP
             0x01 => self.op_lxi(Registers::BC, dl, dh), // LXI B,D16
             0x02 => self.op_stax(Registers::BC),        // STAX (BC)
             0x03 => self.op_inx(Registers::BC),         // INX B
             0x04 => self.op_inr(Registers::B),          // INR B
             0x05 => self.op_dcr(Registers::B),          // DCR B
             0x06 => self.op_mvi(Registers::B, dl),      // MVI B, D8
-            0x07 => self.op_rotl(false),                // RLC (Rotate left)
+            0x07 => self.op_rlc_ral(false),                // RLC (Rotate left)
             //0x08
             0x09 => self.op_dad(Registers::B),     // DAD BC
             0x0A => self.op_ldax(Registers::BC),   // LDAX BC
@@ -365,7 +362,7 @@ impl Cpu {
             0x0C => self.op_inr(Registers::C),     // INR C
             0x0D => self.op_dcr(Registers::C),     // DCR D
             0x0E => self.op_mvi(Registers::C, dl), // MVI C, D8
-            0x0F => self.op_rotr(false),           // RRC
+            0x0F => self.op_rrc_rar(false),           // RRC
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -393,14 +390,14 @@ impl Cpu {
             0x14 => self.op_inr(Registers::D),          // INR D
             0x15 => self.op_dcr(Registers::D),          // DCR D
             0x16 => self.op_mvi(Registers::D, dl),      // MVI D
-            0x17 => self.op_rotl(true),                 // RAL (Rotate left through carry)
+            0x17 => self.op_rlc_ral(true),                 // RAL (Rotate left through carry)
             0x19 => self.op_dad(Registers::D),          // DAD D
             0x1A => self.op_ldax(Registers::DE),        // LDAX DE
             0x1B => self.op_dcx(Registers::DE),         // DCX DE
             0x1C => self.op_inr(Registers::E),          // INR E
             0x1D => self.op_dcr(Registers::E),          // DCR E
             0x1E => self.op_mvi(Registers::E, dl),      // MVI E
-            0x1F => self.op_rotr(true),                 // RAR
+            0x1F => self.op_rrc_rar(true),                 // RAR
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -649,7 +646,7 @@ impl Cpu {
     /// # Errors
     /// Will return ERROR if opcode was not recognized
     pub fn opcodes_9x(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
-        let sub = self.get_flag(super::FLAG_CARRY);
+        let sub = self.get_flag(FLAG_CARRY);
         let i = match opcode.0 {
             0x90 => self.op_sub(Registers::B, 0),    // SUB B
             0x91 => self.op_sub(Registers::C, 0),    // SUB C
@@ -751,25 +748,25 @@ impl Cpu {
     pub fn opcodes_cx(&mut self, opcode: (u8, u8, u8)) -> Result<ProgramCounter, String> {
         let dl = opcode.1; // Potential data points for usage by an instruction
         let dh = opcode.2; // Potential data points for usage by an instruction
-        let flag_carry = self.test_flag(super::FLAG_CARRY);
+        let flag_carry = self.test_flag(FLAG_CARRY);
 
         let i = match opcode.0 {
-            0xC0 => self.op_rets(super::FLAG_ZERO, false), // RNZ
-            0xC1 => self.op_pop(Registers::B),             // POP B
-            0xC2 => self.op_jnz(dl, dh),                   // JNZ
-            0xC3 => self.op_jmp(dl, dh),                   // JMP
-            0xC4 => self.op_call_if(super::FLAG_ZERO, false, dl, dh), // CNZ
-            0xC5 => self.op_push(Registers::B),            // PUSH B
-            0xC6 => self.op_adi_aci(dl, false),            // ADI
-            0xC7 => self.op_rst(0b000),                    // RST 0
-            0xC8 => self.op_rets(super::FLAG_CARRY, true), // RC
-            0xC9 => self.op_ret(),                         // RET
-            0xCA => self.op_jz(dl, dh),                    // JZ
+            0xC0 => self.op_rets(FLAG_ZERO, false),            // RNZ
+            0xC1 => self.op_pop(Registers::B),                 // POP B
+            0xC2 => self.op_jnz(dl, dh),                       // JNZ
+            0xC3 => Cpu::op_jmp(dl, dh),                       // JMP
+            0xC4 => self.op_call_if(FLAG_ZERO, false, dl, dh), // CNZ
+            0xC5 => self.op_push(Registers::B),                // PUSH B
+            0xC6 => self.op_adi_aci(dl, false),                // ADI
+            0xC7 => self.op_rst(0b000),                        // RST 0
+            0xC8 => self.op_rets(FLAG_CARRY, true),            // RC
+            0xC9 => self.op_ret(),                             // RET
+            0xCA => self.op_jz(dl, dh),                        // JZ
             // 0xCB
-            0xCC => self.op_call_if(super::FLAG_ZERO, true, dl, dh), // CZ
-            0xCD => self.op_call(dl, dh),                            // CALL Addr
-            0xCE => self.op_adi_aci(dl, flag_carry),                 // ACI
-            0xCF => self.op_rst(0b001),                              // RST 1
+            0xCC => self.op_call_if(FLAG_ZERO, true, dl, dh), // CZ
+            0xCD => self.op_call(dl, dh),                     // CALL Addr
+            0xCE => self.op_adi_aci(dl, flag_carry),          // ACI
+            0xCF => self.op_rst(0b001),                       // RST 1
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -790,15 +787,15 @@ impl Cpu {
         let dh = opcode.2; // Potential data points for usage by an instruction
 
         let i = match opcode.0 {
-            0xD0 => self.op_rets(super::FLAG_CARRY, false), // RNC
-            0xD1 => self.op_pop(Registers::D),              // POP D
-            0xD2 => self.op_jnc(dl, dh),                    // JNC
-            0xD3 => self.op_out(dl),                        // OUT
-            0xD4 => self.op_call_if(super::FLAG_CARRY, false, dl, dh), // CNC
-            0xD5 => self.op_push(Registers::D),             // PUSH D
-            0xD7 => self.op_rst(0b010),                     // RST 2
-            0xDC => self.op_call_if(super::FLAG_CARRY, true, dl, dh), // CC
-            0xDF => self.op_rst(0b011),                     // RST 3
+            0xD0 => self.op_rets(FLAG_CARRY, false),            // RNC
+            0xD1 => self.op_pop(Registers::D),                  // POP D
+            0xD2 => self.op_jnc(dl, dh),                        // JNC
+            0xD3 => self.op_out(dl),                            // OUT
+            0xD4 => self.op_call_if(FLAG_CARRY, false, dl, dh), // CNC
+            0xD5 => self.op_push(Registers::D),                 // PUSH D
+            0xD7 => self.op_rst(0b010),                         // RST 2
+            0xDC => self.op_call_if(FLAG_CARRY, true, dl, dh),  // CC
+            0xDF => self.op_rst(0b011),                         // RST 3
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -819,16 +816,16 @@ impl Cpu {
         let dh = opcode.2; // Potential data points for usage by an instruction
 
         let i = match opcode.0 {
-            0xE0 => self.op_rets(super::FLAG_PARITY, false), // RPO
-            0xE1 => self.op_pop(Registers::H),               // POP H
-            0xE4 => self.op_call_if(super::FLAG_PARITY, false, dl, dh), // CPO
-            0xE5 => self.op_push(Registers::H),              // PUSH H
-            0xE6 => self.op_ani(dl),                         // ANI (And with Accum, Immediate)
-            0xE7 => self.op_rst(0b100),                      // RST 4
-            0xE8 => self.op_rets(super::FLAG_PARITY, true),  // RPE
-            0xEB => self.op_xchg(),                          // XCHG
-            0xEC => self.op_call_if(super::FLAG_PARITY, true, dl, dh), // CPE
-            0xEF => self.op_rst(0b101),                      // RST 5
+            0xE0 => self.op_rets(FLAG_PARITY, false),            // RPO
+            0xE1 => self.op_pop(Registers::H),                   // POP H
+            0xE4 => self.op_call_if(FLAG_PARITY, false, dl, dh), // CPO
+            0xE5 => self.op_push(Registers::H),                  // PUSH H
+            0xE6 => self.op_ani(dl),                             // ANI (And with Accum, Immediate)
+            0xE7 => self.op_rst(0b100),                          // RST 4
+            0xE8 => self.op_rets(FLAG_PARITY, true),             // RPE
+            0xEB => self.op_xchg(),                              // XCHG
+            0xEC => self.op_call_if(FLAG_PARITY, true, dl, dh),  // CPE
+            0xEF => self.op_rst(0b101),                          // RST 5
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -849,24 +846,24 @@ impl Cpu {
         let dh = opcode.2; // Potential data points for usage by an instruction
 
         let i = match opcode.0 {
-            0xF0 => self.op_rets(super::FLAG_SIGN, false), // RP
-            0xF1 => self.op_pop(Registers::SW),            // POP SW
+            0xF0 => self.op_rets(FLAG_SIGN, false), // RP
+            0xF1 => self.op_pop(Registers::SW),     // POP SW
             0xF3 => {
                 self.interrupts = false;
                 ProgramCounter::Next
             } // Disable interrupts
-            0xF4 => self.op_call_if(super::FLAG_SIGN, false, dl, dh), // CP
-            0xF5 => self.op_push(Registers::SW),           // Push SW
-            0xFE => self.op_fe(dl),                        // CPI
-            0xF7 => self.op_rst(0b110),                    // RST 6
-            0xF8 => self.op_rets(super::FLAG_SIGN, true),  // RM
-            0xFA => self.op_jump_if(super::FLAG_SIGN, true, dl, dh), // JM
+            0xF4 => self.op_call_if(FLAG_SIGN, false, dl, dh), // CP
+            0xF5 => self.op_push(Registers::SW),    // Push SW
+            0xFE => self.op_cpi(dl),                 // CPI
+            0xF7 => self.op_rst(0b110),             // RST 6
+            0xF8 => self.op_rets(FLAG_SIGN, true),  // RM
+            0xFA => self.op_jump_if(FLAG_SIGN, true, dl, dh), // JM
             0xFB => {
                 self.interrupts = true;
                 ProgramCounter::Next
             } // Enable interrupts
-            0xFC => self.op_call_if(super::FLAG_SIGN, true, dl, dh), // CM
-            0xFF => self.op_rst(0b111),                    // RST 7
+            0xFC => self.op_call_if(FLAG_SIGN, true, dl, dh), // CM
+            0xFF => self.op_rst(0b111),             // RST 7
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -909,9 +906,9 @@ impl Cpu {
         };
 
         match i {
-            Ok(ProgramCounter::Next) => self.pc += super::OPCODE_SIZE,
-            Ok(ProgramCounter::Two) => self.pc += super::OPCODE_SIZE * 2,
-            Ok(ProgramCounter::Three) => self.pc += super::OPCODE_SIZE * 3,
+            Ok(ProgramCounter::Next) => self.pc += OPCODE_SIZE,
+            Ok(ProgramCounter::Two) => self.pc += OPCODE_SIZE * 2,
+            Ok(ProgramCounter::Three) => self.pc += OPCODE_SIZE * 3,
             Ok(ProgramCounter::Jump(d)) => self.pc = d,
             Err(e) => return Err(e),
         }
@@ -919,53 +916,6 @@ impl Cpu {
         Ok(())
     }
 
-    // LHLD
-    pub fn lhld(&mut self, dl: u8, dh: u8) -> ProgramCounter {
-        let mut addr: u16 = u16::from(dh) << 8 | u16::from(dl);
-        self.l = match self.memory.get(addr as usize) {
-            Some(&v) => v,
-            None => 0,
-        };
-        addr = addr.overflowing_add(0x01).0;
-        self.h = match self.memory.get(addr as usize) {
-            Some(&v) => v,
-            None => 0,
-        };
-
-        ProgramCounter::Three
-    }
-
-    // OUT D8
-    // Would send the contents of accumulator to the device sent
-    // as the data portion of this command
-    #[must_use]
-    #[allow(clippy::unused_self)]
-    pub fn op_out(&self, _data: u8) -> ProgramCounter {
-        ProgramCounter::Two
-    }
-
-    #[must_use]
-    #[allow(clippy::unused_self)]
-    pub fn op_00(&self) -> ProgramCounter {
-        ProgramCounter::Next
-    }
-
-    // Store accumulator direct to location in memory specified
-    // by address dhdl
-    pub fn op_sta(&mut self, dl: u8, dh: u8) -> ProgramCounter {
-        let addr: u16 = u16::from(dh) << 8 | u16::from(dl);
-        self.memory[addr as usize] = self.a;
-
-        ProgramCounter::Three
-    }
-
-    // Returns true if an addition will case an aux carry
-    // value: the value we are trying to add to source
-    // source: the source that value is added to
-    #[allow(clippy::unused_self)]
-    pub fn will_ac(&mut self, value: u8, source: u8) -> bool {
-        ((value & 0x0F) + (source & 0x0F)) & 0x10 == 0x10
-    }
 
     // Sets a register to the compliment of itself
     pub fn op_comp(&mut self, register: Registers) -> ProgramCounter {
@@ -982,50 +932,50 @@ impl Cpu {
         match reg {
             Registers::B => {
                 let (res, of) = self.b.overflowing_add(1);
-                let ac = self.will_ac(1, self.b);
+                let ac = will_ac(1, self.b);
                 self.update_flags(res, Some(of), Some(ac));
                 self.b = res;
             }
             Registers::C => {
                 let (res, of) = self.c.overflowing_add(1);
-                let ac = self.will_ac(1, self.c);
+                let ac = will_ac(1, self.c);
                 self.update_flags(res, Some(of), Some(ac));
                 self.c = res;
             }
             Registers::D => {
                 let (res, of) = self.d.overflowing_add(1);
-                let ac = self.will_ac(1, self.d);
+                let ac = will_ac(1, self.d);
                 self.update_flags(res, Some(of), Some(ac));
                 self.d = res;
             }
             Registers::E => {
                 let (res, of) = self.e.overflowing_add(1);
-                let ac = self.will_ac(1, self.d);
+                let ac = will_ac(1, self.d);
                 self.update_flags(res, Some(of), Some(ac));
                 self.e = res;
             }
             Registers::H => {
                 let (res, of) = self.h.overflowing_add(1);
-                let ac = self.will_ac(1, self.h);
+                let ac = will_ac(1, self.h);
                 self.update_flags(res, Some(of), Some(ac));
                 self.h = res;
             }
             Registers::L => {
                 let (res, of) = self.l.overflowing_add(1);
-                let ac = self.will_ac(1, self.l);
+                let ac = will_ac(1, self.l);
                 self.update_flags(res, Some(of), Some(ac));
                 self.l = res;
             }
             Registers::HL => {
                 let val = self.memory[self.get_addr_pointer()];
-                let ac = self.will_ac(1, val);
+                let ac = will_ac(1, val);
                 let (res, of) = val.overflowing_add(1);
                 self.update_flags(res, Some(of), Some(ac));
                 self.memory[self.get_addr_pointer()] = res;
             }
             Registers::A => {
                 let (res, of) = self.a.overflowing_add(1);
-                let ac = self.will_ac(1, self.a);
+                let ac = will_ac(1, self.a);
                 self.update_flags(res, Some(of), Some(ac));
                 self.a = res;
             }
@@ -1055,7 +1005,7 @@ impl Cpu {
             _ => (0_u8, false),
         };
 
-        let ac = self.will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
+        let ac = will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
 
         //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
         self.update_flags(o.0, Some(o.1), Some(ac));
@@ -1235,527 +1185,12 @@ impl Cpu {
         self.l = (new & 0xFF) as u8;
 
         if of {
-            self.set_flag(super::FLAG_CARRY);
+            self.set_flag(FLAG_CARRY);
         }
 
         ProgramCounter::Next
     }
-
-    // LXI (target pair), D16
-    pub fn op_lxi(&mut self, target: Registers, x: u8, y: u8) -> ProgramCounter {
-        match target {
-            Registers::BC => {
-                self.b = y;
-                self.e = x;
-            }
-            Registers::DE => {
-                self.d = y;
-                self.e = x;
-            }
-            Registers::HL => {
-                self.h = y;
-                self.l = x;
-            }
-            Registers::SP => {
-                self.sp = u16::from(y) << 8 | u16::from(x);
-            }
-            _ => (),
-        }
-        ProgramCounter::Three
-    }
-
-    pub fn op_inx(&mut self, target: Registers) -> ProgramCounter {
-        match target {
-            Registers::SP | Registers::BC | Registers::DE | Registers::HL => {
-                let mut pair: u16 = self.get_register_pair(target);
-                pair = pair.overflowing_add(0x01).0;
-                self.set_register_pair(target, pair);
-            }
-            _ => (),
-        }
-
-        ProgramCounter::Next
-    }
-
-    // LDAX
-    // Loads A with value from memory location specified by register pair
-    pub fn op_ldax(&mut self, reg: Registers) -> ProgramCounter {
-        let loc: u16 = match reg {
-            Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
-            Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
-            _ => {
-                return ProgramCounter::Next;
-            }
-        };
-
-        self.a = match self.memory.get(loc as usize) {
-            Some(&v) => v,
-            None => 0,
-        };
-
-        ProgramCounter::Next
-    }
-
-    // DCX
-    pub fn op_dcx(&mut self, reg: Registers) -> ProgramCounter {
-        let mut val = self.get_register_pair(reg);
-        val = val.overflowing_sub(1).0;
-        self.set_register_pair(reg, val);
-
-        ProgramCounter::Next
-    }
-
-    // INX SP
-    pub fn op_33(&mut self) -> ProgramCounter {
-        self.sp = self.sp.overflowing_add(0x01).0; // overflowing_add returns (v, t/f for overflow);
-
-        ProgramCounter::Next
-    }
-
-    // MOV T(arget), Registers::X
-    // Moves into T(arget) the value in register specified by the enum Registers
-    fn op_mov(&mut self, target: Registers, source: Registers) -> ProgramCounter {
-        let val = match source {
-            Registers::A => self.a,
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::L => self.l,
-            Registers::H => self.h,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            _ => {
-                return ProgramCounter::Next;
-            } // Ignored
-        };
-
-        match target {
-            Registers::A => self.a = val,
-            Registers::B => self.b = val,
-            Registers::C => self.c = val,
-            Registers::D => self.d = val,
-            Registers::E => self.e = val,
-            Registers::L => self.l = val,
-            Registers::H => self.h = val,
-            Registers::HL => self.memory[self.get_addr_pointer()] = val,
-            _ => (), // Do nothing
-        };
-
-        ProgramCounter::Next
-    }
-
-    // The contents of the program counter (16bit)
-    // are pushed onto the stack, providing a return address for
-    // later use by a RETURN instruction.
-    // Program execution continues at memory address:
-    // OOOOOOOOOOEXPOOOB
-    pub fn op_rst(&mut self, loc: u8) -> ProgramCounter {
-        self.memory[usize::from(self.sp - 2)] = (self.pc as u16 >> 8) as u8;
-        self.memory[usize::from(self.sp - 1)] = (self.pc as u16 & 0xFF) as u8;
-        self.sp -= 2;
-
-        ProgramCounter::Jump((loc << 3) as usize)
-    }
-
-    // JNC (Jump if No Carry)
-    pub fn op_jnc(&mut self, x: u8, y: u8) -> ProgramCounter {
-        let ys: u16 = u16::from(y) << 8;
-        let dest: u16 = ys | u16::from(x);
-
-        if self.test_flag(super::FLAG_CARRY) {
-            ProgramCounter::Three
-        } else {
-            ProgramCounter::Jump(dest.into())
-        }
-    }
-
-    // JZ (Jump if zero)
-    pub fn op_jz(&mut self, x: u8, y: u8) -> ProgramCounter {
-        let ys: u16 = u16::from(y) << 8;
-        let dest: u16 = ys | u16::from(x);
-        if self.test_flag(super::FLAG_ZERO) {
-            ProgramCounter::Jump(dest.into())
-        } else {
-            ProgramCounter::Three
-        }
-    }
-
-    // JNZ (Jump if nonzero)
-    pub fn op_jnz(&mut self, x: u8, y: u8) -> ProgramCounter {
-        let ys: u16 = u16::from(y) << 8;
-        let dest: u16 = ys | u16::from(x);
-        if self.test_flag(super::FLAG_ZERO) {
-            ProgramCounter::Three
-        } else {
-            ProgramCounter::Jump(dest.into())
-        }
-    }
-
-    // Jump to a given location as provided by (y<<8 | x)
-    #[must_use]
-    pub fn op_jmp(&self, x: u8, y: u8) -> ProgramCounter {
-        let ys: u16 = u16::from(y) << 8;
-        let dest: u16 = ys | u16::from(x);
-        ProgramCounter::Jump(dest.into())
-    }
-
-    // RET (PC.lo <- (sp); PC.hi<-(sp+1); SP <- SP+2)
-    pub fn op_ret(&mut self) -> ProgramCounter {
-        let pc_lo = match self.memory.get(usize::from(self.sp)) {
-            Some(&v) => v,
-            None => 0,
-        };
-        let pc_hi = match self.memory.get(usize::from(self.sp + 1)) {
-            Some(&v) => v,
-            None => 0,
-        };
-        let dest: u16 = u16::from(pc_hi) << 8 | u16::from(pc_lo);
-        self.pc = dest as usize; // Set our PC back to where we were
-        self.sp += 2;
-
-        //ProgramCounter::Jump(dest.into())
-        ProgramCounter::Three // And go to the next op
-    }
-
-    // Returns if the flag supplied's value matches the supplied sign
-    pub fn op_rets(&mut self, flag: u8, sign: bool) -> ProgramCounter {
-        if sign == self.test_flag(flag) {
-            return self.op_ret();
-        }
-
-        ProgramCounter::Next
-    }
-
-    // Jumps if the flag's supplied value matches the supplied sign
-    pub fn op_jump_if(&mut self, flag: u8, sign: bool, x: u8, y: u8) -> ProgramCounter {
-        if sign == self.test_flag(flag) {
-            self.pc = self.create_pc_location(x, y);
-
-            ProgramCounter::Jump(self.pc)
-        } else {
-            ProgramCounter::Three
-        }
-    }
-
-    // Calls if the flag's supplied value matches the supplied sign
-    pub fn op_call_if(&mut self, flag: u8, sign: bool, x: u8, y: u8) -> ProgramCounter {
-        if sign == self.test_flag(flag) {
-            return self.op_call(x, y);
-        }
-        ProgramCounter::Three
-    }
-
-    // Similar to a jump, but it saves the current PC to the stack
-    pub fn op_call(&mut self, x: u8, y: u8) -> ProgramCounter {
-        // Save away the current PC hi/lo into the stack
-        let pc_hi = self.pc >> 8;
-        let pc_lo = self.pc & 0xFF;
-        self.memory[usize::from(self.sp - 1)] = pc_hi as u8;
-        self.memory[usize::from(self.sp - 2)] = pc_lo as u8;
-        self.sp -= 2;
-
-        // Tell the program counter where we want to go next
-        let ys: u16 = u16::from(y) << 8;
-        self.pc = usize::from(ys | u16::from(x));
-
-        ProgramCounter::Jump(self.pc)
-    }
-
-    // CPI - Compare D16 to Accum, set flags accordingly
-    pub fn op_fe(&mut self, data: u8) -> ProgramCounter {
-        // Subtract the data from register A and set flags on the result
-        let (res, overflow) = self.a.overflowing_sub(data);
-        let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
-
-        self.update_flags(res, Some(overflow), Some(aux_carry));
-
-        ProgramCounter::Two
-    }
-
-    // Rotates left, if through_carry is true, it does that.
-    pub fn op_rotl(&mut self, through_carry: bool) -> ProgramCounter {
-        // Store off our current carry bit
-        let carry_bit = self.test_flag(super::FLAG_CARRY);
-
-        // Store off our current high order bit
-        let high_order = self.a >> 7;
-
-        // Shift one position to the left
-        let mut new_accum: u8 = self.a << 1;
-
-        if through_carry {
-            new_accum |= u8::from(carry_bit); // carry bit replaces low order
-        } else {
-            new_accum |= high_order as u8; // high order replaces low order
-        };
-
-        self.a = new_accum;
-
-        // Update the carry bit with the old high order bit
-        if high_order > 0 {
-            self.set_flag(super::FLAG_CARRY);
-        } else {
-            self.reset_flag(super::FLAG_CARRY);
-        }
-
-        ProgramCounter::Next
-    }
-
-    // Rotates right, if through_carry is true, it does that.
-    pub fn op_rotr(&mut self, through_carry: bool) -> ProgramCounter {
-        // Store off our current carry bit
-        let carry_bit = self.test_flag(super::FLAG_CARRY);
-        let low_order = self.a & 0x01; // Save off the low order bit so we can rotate it.
-
-        let mut new_accum: u8 = self.a >> 1;
-
-        if through_carry {
-            new_accum |= u8::from(carry_bit) << 7; // Carry bit replaces high order
-        } else {
-            // Normal carry
-            new_accum |= low_order << 7; // Low order replaces high order
-        };
-
-        self.a = new_accum;
-
-        if low_order > 0 {
-            self.set_flag(super::FLAG_CARRY);
-        } else {
-            self.reset_flag(super::FLAG_CARRY);
-        }
-
-        ProgramCounter::Next
-    }
-
-    // Add to the accumulator the supplied register
-    // as well as update flags
-    pub fn op_add(&mut self, register: Registers) -> ProgramCounter {
-        let to_add: u8 = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-
-        let (res, of) = self.a.overflowing_add(to_add);
-        let ac = self.will_ac(to_add, self.a);
-        self.a = res;
-        self.update_flags(res, Some(of), Some(ac));
-
-        ProgramCounter::Next
-    }
-
-    // Add to the accumulator the supplied register
-    // along with the CARRY flag's value
-    // as well as update flags
-    pub fn op_adc(&mut self, register: Registers) -> ProgramCounter {
-        let to_add: u8 = u8::from(self.test_flag(super::FLAG_CARRY))
-            + match register {
-                Registers::B => self.b,
-                Registers::C => self.c,
-                Registers::D => self.d,
-                Registers::E => self.e,
-                Registers::H => self.h,
-                Registers::L => self.l,
-                Registers::HL => self.memory[self.get_addr_pointer()],
-                Registers::A => self.a,
-                _ => 0_u8,
-            };
-
-        let (res, of) = self.a.overflowing_add(to_add);
-        let ac = self.will_ac(to_add, self.a);
-        self.a = res;
-        self.update_flags(res, Some(of), Some(ac));
-
-        ProgramCounter::Next
-    }
-
-    /// Add to the accumulator the supplied data byte after
-    /// the opcode byte.
-    ///
-    /// If the parmeter ``carry_bit`` is true this performs the function
-    /// of the opcode "ACI" by including the value of the carry bit in the
-    /// addition.
-    ///
-    /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
-    pub fn op_adi_aci(&mut self, dl: u8, carry_bit: bool) -> ProgramCounter {
-        let mut to_add = dl;
-
-        if carry_bit {
-            to_add = to_add.overflowing_add(1).0; // Do we need to care about overflow here?
-        };
-
-        let ac = self.will_ac(to_add, self.a);
-        let (res, of) = self.a.overflowing_add(to_add);
-        self.a = res;
-        self.update_flags(res, Some(of), Some(ac));
-
-        ProgramCounter::Two
-    }
-
-    /// Add to the accumulator the supplied byte after
-    /// the opcode byte, plus the contents of the carry bit
-    ///
-    /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
-
-    // Stores accumulator at memory location of supplied register
-    pub fn op_stax(&mut self, reg: Registers) -> ProgramCounter {
-        // Get our location first
-        let location = match reg {
-            Registers::BC => Some(self.get_register_pair(Registers::BC)),
-            Registers::DE => Some(self.get_register_pair(Registers::DE)),
-            _ => None,
-        };
-
-        // Update memory with the value of the accumulator
-        if let Some(l) = location {
-            self.memory[l as usize] = self.a;
-        }
-
-        ProgramCounter::Next
-    }
-
-    // Decimal Adjust Accumulator
-    // If the least significant four bits of the accumulator have a value greater than nine,
-    // or if the auxiliary carry flag is ON, DAA adds six to the accumulator.
-    //
-    // If the most significant four bits of the accumulator have a value greater than nine,
-    // or if the carry flag IS ON, DAA adds six to the most significant four bits of the accumulator.
-    pub fn op_daa(&mut self) -> ProgramCounter {
-        // Find the LS4B of the accumulator
-        let mut ac = false;
-        let mut carry = false;
-
-        if (self.a & 0b0000_1111) > 9 {
-            let res = self.a.overflowing_add(6).0;
-            ac = self.will_ac(6, self.a);
-            self.a = res;
-        }
-
-        if (self.a & 0b1111_0000) > 9 {
-            let (res, c) = self.a.overflowing_add(6 << 4);
-            self.a = res;
-            carry = c;
-        }
-
-        self.update_flags(self.a, Some(carry), Some(ac));
-
-        ProgramCounter::Next
-    }
-
-    // ProgramCounter is incremented and then the CPU enters a
-    // STOPPED state and no further activity takes place until
-    // an interrupt occurrs
-    pub fn op_hlt(&mut self) -> ProgramCounter {
-        self.set_nop(true);
-        ProgramCounter::Next
-    }
-
-    /// The specified byte is logically ``ANDed`` bit
-    /// by bit with the contents of the accumulator. The Carry bit
-    /// is reset to zero.
-    pub fn op_ana(&mut self, register: Registers) -> ProgramCounter {
-        self.a &= match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-
-        self.reset_flag(super::FLAG_CARRY);
-        self.update_flags(self.a, None, None);
-        ProgramCounter::Next
-    }
-
-    /// The byte of immediate data is logically ```ANDed``` with the contents of the
-    /// accumulator.  The carry bit is reset to zero.
-    /// Bits affected: Carry, Zero, Sign, Parity
-    pub fn op_ani(&mut self, dl: u8) -> ProgramCounter {
-        self.a &= dl;
-        self.reset_flag(super::FLAG_CARRY);
-        self.update_flags(self.a, None, None);
-
-        ProgramCounter::Two
-    }
-
-    /// The specified byte is locally ``XORed`` bit by bit with the contents
-    /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_xra(&mut self, register: Registers) -> ProgramCounter {
-        let orig_value = self.a;
-        let source_value = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-        let ac = self.will_ac(orig_value, source_value);
-        self.a ^= source_value;
-
-        self.reset_flag(super::FLAG_CARRY);
-        self.update_flags(self.a, None, Some(ac));
-        ProgramCounter::Next
-    }
-
-    /// The specified byte is localled ``ORed`` bit by bit with the contents
-    /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_ora(&mut self, register: Registers) -> ProgramCounter {
-        self.a |= match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-
-        self.reset_flag(super::FLAG_CARRY);
-        self.update_flags(self.a, None, None);
-
-        ProgramCounter::Next
-    }
-
-    /// The specified byte is compared to the contents of the accumulator.
-    /// The comparison is performed by internally subtracting the contents of REG from the accumulator
-    /// (leaving both unchanged) and setting the condition bits according to the result.
-    /// In particular, the Zero bit is set if the quantities are equal, and reset if they are unequal.
-    /// Since a subtract operation is performed, the Carry bit will be set if there is no
-    /// carry out of bit 7, indicating that the contents of REG are greater than the
-    /// contents of the accumulator, and reset otherwise.
-    pub fn op_cmp(&mut self, register: Registers) -> ProgramCounter {
-        let min = self.a;
-        let sub = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-        let res = min.overflowing_sub(sub).0;
-        let ac = self.will_ac(min.wrapping_neg(), sub.wrapping_neg()); // Because it's a subtraction
-        self.update_flags(res, Some(sub > min), Some(ac));
-
-        ProgramCounter::Next
-    }
+   
+    
 }
+//}
