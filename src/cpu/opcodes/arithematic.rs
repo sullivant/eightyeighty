@@ -1,7 +1,7 @@
-use crate::cpu::{ProgramCounter, Registers};
-use crate::Cpu;
 pub use crate::constants::*;
 pub use crate::cpu::common::*;
+use crate::cpu::{ProgramCounter, Registers};
+use crate::Cpu;
 
 /// This file contains all the functions necessary to support the Arithematic opcodes
 

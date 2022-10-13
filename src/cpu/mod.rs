@@ -1,6 +1,6 @@
 pub mod central;
-pub mod opcodes;
 pub mod common;
+pub mod opcodes;
 
 pub use central::*;
 pub use opcodes::general::*;

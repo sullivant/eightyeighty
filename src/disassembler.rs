@@ -1,6 +1,5 @@
-pub use crate::cpu::Cpu;
 pub use crate::cpu::common::*;
-
+pub use crate::cpu::Cpu;
 
 use std::fmt;
 

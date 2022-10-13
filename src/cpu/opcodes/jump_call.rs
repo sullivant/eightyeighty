@@ -1,6 +1,6 @@
-use crate::{cpu::ProgramCounter, Cpu};
-pub use crate::cpu::common::*;
 pub use crate::constants::*;
+pub use crate::cpu::common::*;
+use crate::{cpu::ProgramCounter, Cpu};
 
 /// This file contains the functions needed for the "General / Control" opcodes
 ///
@@ -122,5 +122,4 @@ impl Cpu {
 
         ProgramCounter::Jump((loc << 3) as usize)
     }
-
 }

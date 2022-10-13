@@ -1,8 +1,7 @@
-use crate::cpu::{ProgramCounter, Registers};
-use crate::Cpu;
 use crate::constants::FLAG_CARRY;
 use crate::cpu::common::make_pointer;
-
+use crate::cpu::{ProgramCounter, Registers};
+use crate::Cpu;
 
 /// This file contains the functions necessary to support the "Load / Store / Move" opcodes
 ///
@@ -87,7 +86,6 @@ impl Cpu {
 
         ProgramCounter::Three
     }
-
 
     // Stores accumulator at memory location of supplied register
     pub fn op_stax(&mut self, reg: Registers) -> ProgramCounter {
@@ -249,5 +247,4 @@ impl Cpu {
         self.sp -= 2;
         ProgramCounter::Next
     }
-
 }

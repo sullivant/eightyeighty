@@ -5,9 +5,9 @@ use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 
-pub use crate::cpu::opcodes::*;
-pub use crate::cpu::common::*;
 pub use crate::constants::*;
+pub use crate::cpu::common::*;
+pub use crate::cpu::opcodes::*;
 
 pub enum ProgramCounter {
     Next,        // The operation does not use any data
@@ -126,7 +126,7 @@ impl Cpu {
     pub fn get_addr_pointer(&mut self) -> usize {
         usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
-    
+
     #[must_use]
     pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
         (&self.pc, &self.sp, &self.h, &self.l, &self.b)
@@ -298,7 +298,6 @@ impl Cpu {
             }
             Err(e) => Err(e),
         }
-
     }
 
     // Reads an instruction at ProgramCounter
@@ -336,7 +335,7 @@ impl Cpu {
             0x04 => self.op_inr(Registers::B),          // INR B
             0x05 => self.op_dcr(Registers::B),          // DCR B
             0x06 => self.op_mvi(Registers::B, dl),      // MVI B, D8
-            0x07 => self.op_rlc_ral(false),                // RLC (Rotate left)
+            0x07 => self.op_rlc_ral(false),             // RLC (Rotate left)
             //0x08
             0x09 => self.op_dad(Registers::B),     // DAD BC
             0x0A => self.op_ldax(Registers::BC),   // LDAX BC
@@ -344,7 +343,7 @@ impl Cpu {
             0x0C => self.op_inr(Registers::C),     // INR C
             0x0D => self.op_dcr(Registers::C),     // DCR D
             0x0E => self.op_mvi(Registers::C, dl), // MVI C, D8
-            0x0F => self.op_rrc_rar(false),           // RRC
+            0x0F => self.op_rrc_rar(false),        // RRC
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -372,14 +371,14 @@ impl Cpu {
             0x14 => self.op_inr(Registers::D),          // INR D
             0x15 => self.op_dcr(Registers::D),          // DCR D
             0x16 => self.op_mvi(Registers::D, dl),      // MVI D
-            0x17 => self.op_rlc_ral(true),                 // RAL (Rotate left through carry)
+            0x17 => self.op_rlc_ral(true),              // RAL (Rotate left through carry)
             0x19 => self.op_dad(Registers::D),          // DAD D
             0x1A => self.op_ldax(Registers::DE),        // LDAX DE
             0x1B => self.op_dcx(Registers::DE),         // DCX DE
             0x1C => self.op_inr(Registers::E),          // INR E
             0x1D => self.op_dcr(Registers::E),          // DCR E
             0x1E => self.op_mvi(Registers::E, dl),      // MVI E
-            0x1F => self.op_rrc_rar(true),                 // RAR
+            0x1F => self.op_rrc_rar(true),              // RAR
             _ => {
                 return Err(format!(
                     "!! OPCODE: {:#04X} {:#010b} is unknown !!",
@@ -836,7 +835,7 @@ impl Cpu {
             } // Disable interrupts
             0xF4 => self.op_call_if(FLAG_SIGN, false, dl, dh), // CP
             0xF5 => self.op_push(Registers::SW),    // Push SW
-            0xFE => self.op_cpi(dl),                 // CPI
+            0xFE => self.op_cpi(dl),                // CPI
             0xF7 => self.op_rst(0b110),             // RST 6
             0xF8 => self.op_rets(FLAG_SIGN, true),  // RM
             0xFA => self.op_jump_if(FLAG_SIGN, true, dl, dh), // JM
@@ -897,5 +896,4 @@ impl Cpu {
 
         Ok(())
     }
-   
 }

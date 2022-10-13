@@ -1,8 +1,8 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 mod constants;
-mod disassembler;
 mod cpu;
+mod disassembler;
 
 pub use crate::constants::*;
 pub use crate::cpu::common::*;
@@ -181,7 +181,7 @@ impl Emu {
         }
 
         // Register Pairs
-        
+
         for (i, r) in [cpu::Registers::BC, cpu::Registers::DE, cpu::Registers::HL]
             .iter()
             .enumerate()

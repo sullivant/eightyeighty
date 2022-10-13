@@ -20,5 +20,4 @@ impl Cpu {
         self.set_nop(true);
         ProgramCounter::Next
     }
-
 }
