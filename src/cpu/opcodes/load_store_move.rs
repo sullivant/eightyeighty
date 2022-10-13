@@ -1,6 +1,8 @@
 use crate::cpu::{ProgramCounter, Registers};
 use crate::Cpu;
-pub use crate::constants::*;
+use crate::constants::FLAG_CARRY;
+use crate::cpu::common::make_pointer;
+
 
 /// This file contains the functions necessary to support the "Load / Store / Move" opcodes
 ///
@@ -151,5 +153,101 @@ impl Cpu {
 
         ProgramCounter::Next
     }
-    
+
+    // Performs the MVI functionality
+    pub fn op_mvi(&mut self, target: Registers, x: u8) -> ProgramCounter {
+        match target {
+            Registers::A => self.a = x,                                // 0x3E
+            Registers::B => self.b = x,                                // 0x06
+            Registers::C => self.c = x,                                // 0x0E
+            Registers::D => self.d = x,                                // 0x16
+            Registers::E => self.e = x,                                // 0x1E
+            Registers::H => self.h = x,                                // 0x26
+            Registers::L => self.l = x,                                // 0x2E
+            Registers::HL => self.memory[self.get_addr_pointer()] = x, // 0x36
+            _ => (),                                                   // Do nothing
+        };
+        ProgramCounter::Two
+    }
+
+    // Pops from the stack according to the register pair requested
+    // 	L <- (sp); H <- (sp+1); sp <- sp+2
+    pub fn op_pop(&mut self, reg: Registers) -> ProgramCounter {
+        match reg {
+            Registers::B => {
+                // BC Pair 0xC1
+                self.c = self.memory[usize::from(self.sp)];
+                self.b = self.memory[usize::from(self.sp + 1)];
+            }
+            Registers::D => {
+                // DE Pair 0xD1
+                self.e = self.memory[usize::from(self.sp)];
+                self.d = self.memory[usize::from(self.sp + 1)];
+            }
+            Registers::H => {
+                // HL Pair 0xE1
+                self.l = self.memory[usize::from(self.sp)];
+                self.h = self.memory[usize::from(self.sp + 1)];
+            }
+            Registers::SW => {
+                // SW 0xF1
+                self.flags = self.memory[usize::from(self.sp)];
+                self.a = self.memory[usize::from(self.sp + 1)];
+            }
+            _ => (),
+        };
+        self.sp += 2;
+
+        ProgramCounter::Next
+    }
+
+    // Loads the byte located at dhdl into the accumulator
+    pub fn op_lda(&mut self, dl: u8, dh: u8) -> ProgramCounter {
+        self.a = self.memory[make_pointer(dl, dh)];
+        ProgramCounter::Three
+    }
+
+    // Exchanges registers DE with HL
+    pub fn op_xchg(&mut self) -> ProgramCounter {
+        let d = self.d;
+        let e = self.e;
+
+        self.d = self.h;
+        self.e = self.l;
+        self.h = d;
+        self.l = e;
+
+        ProgramCounter::Next
+    }
+
+    // Pushes onto stack according to the register pair requested
+    // (sp-2)<-P2; (sp-1)<-P1; sp <- sp - 2
+    pub fn op_push(&mut self, reg: Registers) -> ProgramCounter {
+        match reg {
+            Registers::B => {
+                // BC Pair 0xC5
+                self.memory[usize::from(self.sp - 2)] = self.c;
+                self.memory[usize::from(self.sp - 1)] = self.b;
+            }
+            Registers::D => {
+                // DE Pair 0xD5
+                self.memory[usize::from(self.sp - 2)] = self.e;
+                self.memory[usize::from(self.sp - 1)] = self.d;
+            }
+            Registers::H => {
+                // HL Pair 0xE5
+                self.memory[usize::from(self.sp - 2)] = self.l;
+                self.memory[usize::from(self.sp - 1)] = self.h;
+            }
+            Registers::SW => {
+                // SW 0xF5
+                self.memory[usize::from(self.sp - 2)] = self.flags;
+                self.memory[usize::from(self.sp - 1)] = self.a;
+            }
+            _ => (),
+        };
+        self.sp -= 2;
+        ProgramCounter::Next
+    }
+
 }

@@ -28,26 +28,14 @@ An Intel 8080 Emulator, written in Rust.
 - LXI
 - SHLD
 - LHLD
-- POP
-- PUSH
 - XHTL
 - SPHL
-- XCHG
-### 16 Bit Arithmetic / Logic
-- DAD
 ### 8 Bit Load / Store / Move
 - STA
-- MVI
 - LDAX
-- LDA
 - MOV
 ### 8 Bit Arithmetic / Logic
 - INR
-- DCR
-- STC
-- CMA
-- CMC
-- SUB
 - SBB
 - SUI
 - SBI

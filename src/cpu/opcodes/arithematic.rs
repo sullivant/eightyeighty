@@ -265,4 +265,200 @@ impl Cpu {
 
         ProgramCounter::Two
     }
+
+    // Performs the Double Add (DAD) functionality
+    // Sets H to the value according to the supplied register
+    // Basically: HL = HL+<Selected register pair>
+    pub fn op_dad(&mut self, source: Registers) -> ProgramCounter {
+        //let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
+        let val = usize::from(self.get_register_pair(Registers::HL));
+
+        let src: usize = match source {
+            Registers::B | Registers::BC => usize::from(self.get_register_pair(Registers::BC)),
+            Registers::D | Registers::DE => usize::from(self.get_register_pair(Registers::DE)),
+            Registers::SP => usize::from(self.get_register_pair(Registers::SP)),
+            Registers::H | Registers::HL => val,
+            _ => 0,
+        };
+
+        let (new, of) = val.overflowing_add(src);
+
+        self.h = (new >> 8) as u8;
+        self.l = (new & 0xFF) as u8;
+
+        if of {
+            self.set_flag(FLAG_CARRY);
+        }
+
+        ProgramCounter::Next
+    }
+
+    // DCR Reg
+    // Flags affected: Z,S,P,AC
+    #[allow(clippy::similar_names)]
+    pub fn op_dcr(&mut self, reg: Registers) -> ProgramCounter {
+        //let new_val = self.b.wrapping_sub(1);
+
+        match reg {
+            Registers::A => {
+                let (res, of) = self.b.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.a & 0x0F)));
+                self.a = res;
+            }
+            Registers::B => {
+                let (res, of) = self.b.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.b & 0x0F)));
+                self.b = res;
+            }
+            Registers::C => {
+                let (res, of) = self.c.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.c & 0x0F)));
+                self.c = res;
+            }
+            Registers::D => {
+                let (res, of) = self.d.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.d & 0x0F)));
+                self.d = res;
+            }
+            Registers::E => {
+                let (res, of) = self.e.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.e & 0x0F)));
+                self.e = res;
+            }
+            Registers::H => {
+                let (res, of) = self.h.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.h & 0x0F)));
+                self.h = res;
+            }
+            Registers::L => {
+                let (res, of) = self.l.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.l & 0x0F)));
+                self.l = res;
+            }
+            Registers::HL => {
+                let mem = self.memory[self.get_addr_pointer()];
+                let (res, of) = mem.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
+                self.memory[self.get_addr_pointer()] = res;
+            }
+
+            _ => (),
+        }
+
+        ProgramCounter::Next
+    }
+
+    // SUB  / SBB (Subtract register param from A with borrow if necessary)
+    // Additionally, an optional subtrahend can be supplied, in the case of SBB
+    // and it will be included in the subtraction
+    //
+    // Flags affected: Z, S, P, CY, AC
+    pub fn op_sub(&mut self, reg: Registers, sub: u8) -> ProgramCounter {
+        let o: (u8, bool) = match reg {
+            Registers::A => self.a.overflowing_sub(self.a.overflowing_add(sub).0),
+            Registers::B => self.a.overflowing_sub(self.b.overflowing_add(sub).0),
+            Registers::C => self.a.overflowing_sub(self.c.overflowing_add(sub).0),
+            Registers::D => self.a.overflowing_sub(self.d.overflowing_add(sub).0),
+            Registers::E => self.a.overflowing_sub(self.e.overflowing_add(sub).0),
+            Registers::H => self.a.overflowing_sub(self.h.overflowing_add(sub).0),
+            Registers::L => self.a.overflowing_sub(self.l.overflowing_add(sub).0),
+            Registers::HL => self
+                .a
+                .overflowing_sub(self.memory[self.get_addr_pointer()].overflowing_add(sub).0),
+            _ => (0_u8, false),
+        };
+
+        let ac = will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
+
+        //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
+        self.update_flags(o.0, Some(o.1), Some(ac));
+        self.a = o.0;
+        ProgramCounter::Next
+    }
+
+    // INR Reg
+    // Flags affected: Z,S,P,AC
+    #[allow(clippy::similar_names)]
+    pub fn op_inr(&mut self, reg: Registers) -> ProgramCounter {
+        match reg {
+            Registers::B => {
+                let (res, of) = self.b.overflowing_add(1);
+                let ac = will_ac(1, self.b);
+                self.update_flags(res, Some(of), Some(ac));
+                self.b = res;
+            }
+            Registers::C => {
+                let (res, of) = self.c.overflowing_add(1);
+                let ac = will_ac(1, self.c);
+                self.update_flags(res, Some(of), Some(ac));
+                self.c = res;
+            }
+            Registers::D => {
+                let (res, of) = self.d.overflowing_add(1);
+                let ac = will_ac(1, self.d);
+                self.update_flags(res, Some(of), Some(ac));
+                self.d = res;
+            }
+            Registers::E => {
+                let (res, of) = self.e.overflowing_add(1);
+                let ac = will_ac(1, self.d);
+                self.update_flags(res, Some(of), Some(ac));
+                self.e = res;
+            }
+            Registers::H => {
+                let (res, of) = self.h.overflowing_add(1);
+                let ac = will_ac(1, self.h);
+                self.update_flags(res, Some(of), Some(ac));
+                self.h = res;
+            }
+            Registers::L => {
+                let (res, of) = self.l.overflowing_add(1);
+                let ac = will_ac(1, self.l);
+                self.update_flags(res, Some(of), Some(ac));
+                self.l = res;
+            }
+            Registers::HL => {
+                let val = self.memory[self.get_addr_pointer()];
+                let ac = will_ac(1, val);
+                let (res, of) = val.overflowing_add(1);
+                self.update_flags(res, Some(of), Some(ac));
+                self.memory[self.get_addr_pointer()] = res;
+            }
+            Registers::A => {
+                let (res, of) = self.a.overflowing_add(1);
+                let ac = will_ac(1, self.a);
+                self.update_flags(res, Some(of), Some(ac));
+                self.a = res;
+            }
+            _ => (),
+        }
+
+        ProgramCounter::Next
+    }
+
+    // Sets a register to the compliment of itself
+    pub fn op_comp(&mut self, register: Registers) -> ProgramCounter {
+        if let Registers::A = register {
+            self.a = !self.a;
+        }
+        ProgramCounter::Next
+    }
+
+    // Sets the carry flag to the compliment of itself
+    pub fn op_cmc(&mut self) -> ProgramCounter {
+        if self.test_flag(FLAG_CARRY) {
+            // Flag needs to be reset
+            self.reset_flag(FLAG_CARRY);
+        } else {
+            // Flag needs to be set
+            self.set_flag(FLAG_CARRY);
+        }
+        ProgramCounter::Next
+    }
+
+    // Sets the carry flag
+    pub fn op_stc(&mut self) -> ProgramCounter {
+        self.set_flag(FLAG_CARRY);
+        ProgramCounter::Next
+    }
 }
