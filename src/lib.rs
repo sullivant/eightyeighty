@@ -74,6 +74,9 @@ impl Emu {
             cpu.memory[0] = 0xC3;
             cpu.memory[1] = 0x00;
             cpu.memory[2] = 0x01;
+
+            // Change a stack pointer bug
+            cpu.memory[368] = 0x7;
         }
 
 
@@ -243,17 +246,6 @@ impl Emu {
                     return Err(e);
                 }
             }
-        }
-
-        // If needed/wanted, call off to the disassembler to print some pretty details
-        if self.cpu.disassemble && tick_happened {
-            if self.cpu.cycle_count == 1 || (self.cpu.cycle_count % 25 == 0) {
-                println!("{}", disassembler::HEADER);
-            }
-            // Get our disassembler message text as well as our "next" opcode description
-            let dt = disassembler::disassemble(&self.cpu, self.last_pc);
-            println!("{}", dt);
-            self.last_msg = dt;
         }
         Ok(())
     }

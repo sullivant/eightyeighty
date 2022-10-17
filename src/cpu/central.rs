@@ -8,6 +8,7 @@ use std::io::prelude::*;
 pub use crate::constants::*;
 pub use crate::cpu::common::*;
 pub use crate::cpu::opcodes::*;
+use crate::disassembler;
 
 pub enum ProgramCounter {
     Next,        // The operation does not use any data
@@ -78,7 +79,7 @@ pub struct Cpu {
     pub interrupts: bool, // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
 
     pub cycle_count: usize,        // Cycle count
-    pub last_opcode: (u8, u8, u8), // Just a record of the last opcode.
+    pub current_opcode: (u8, u8, u8), // Just a record of the last opcode.
     pub next_opcode: (u8, u8, u8), // Next opcode we are running.
 }
 
@@ -117,7 +118,7 @@ impl Cpu {
             nop: false,
             interrupts: false,
             cycle_count: 0x00,
-            last_opcode: (0, 0, 0),
+            current_opcode: (0, 0, 0),
             next_opcode: (0, 0, 0),
         }
     }
@@ -280,7 +281,8 @@ impl Cpu {
     /// Will panic if an error happens
     pub fn tick(&mut self) -> Result<usize, String> {
         let opcode = self.read_opcode();    // Gather the current opcode to run, based on PC's location
-        self.last_opcode = opcode;
+        self.current_opcode = opcode;
+        
         let this_pc = self.pc;
 
         // If we are in a STOPPED state, no action is necessary
@@ -865,6 +867,14 @@ impl Cpu {
     /// # Errors
     /// It will return ERROR if the opcode was not recognized
     pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
+
+        if self.disassemble {
+            // Get our disassembler message text 
+            let dt = disassembler::disassemble(self, opcode);
+            println!("{}", dt);
+    
+        }
+
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
