@@ -258,6 +258,7 @@ pub fn get_opcode_text(op: (u8, u8, u8)) -> Instr {
         0xF5 => cmd("PUSH PSW"),
         0xF7 => cmd("RST 6"),
         0xF8 => cmd("RM"),
+        0xFA => cmd("JMP IF"),
         0xFE => cmd("CPI"),
         0xFF => cmd("RST 7"),
         _ => cmd("UNK"), // UNK

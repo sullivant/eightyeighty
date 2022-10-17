@@ -65,6 +65,19 @@ impl Emu {
             dims.1 - 1
         );
 
+
+        // For testing the odd CPUDIAG ROM
+        if file_to_load.eq("./resources/roms/CPUDIAG.COM") {
+            println!("CPUDIAG loaded, making some debug changes");
+
+            // First, make a jump to 0x0100
+            cpu.memory[0] = 0xC3;
+            cpu.memory[1] = 0x00;
+            cpu.memory[2] = 0x01;
+        }
+
+
+
         // Return a good version of the app object
         Ok(Emu {
             cpu,

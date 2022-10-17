@@ -279,7 +279,7 @@ impl Cpu {
     /// # Panics
     /// Will panic if an error happens
     pub fn tick(&mut self) -> Result<usize, String> {
-        let opcode = self.read_opcode();
+        let opcode = self.read_opcode();    // Gather the current opcode to run, based on PC's location
         self.last_opcode = opcode;
         let this_pc = self.pc;
 
