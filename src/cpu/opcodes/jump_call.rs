@@ -11,6 +11,7 @@ impl Cpu {
         // Save away the current PC hi/lo into the stack
         let pc_hi = self.pc >> 8;
         let pc_lo = self.pc & 0xFF;
+
         self.memory[usize::from(self.sp - 1)] = pc_hi as u8;
         self.memory[usize::from(self.sp - 2)] = pc_lo as u8;
         self.sp -= 2;

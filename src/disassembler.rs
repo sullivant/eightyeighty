@@ -10,8 +10,8 @@ pub fn disassemble(cpu: &Cpu, current_opcode: (u8, u8, u8), next_opcode: (u8, u8
         println!("{}", HEADER);
     }
 
-    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X} {} : {} (Next: {},{:02X},{:02X})",
-        cpu.cycle_count, cpu.pc, cpu.current_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, current_opcode.1, cpu.current_opcode.2, cpu.b, cpu.nop, get_opcode_text(cpu.current_opcode), get_opcode_text(next_opcode), next_opcode.1, next_opcode.2)
+    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X} {} : {} (Next: {}({:2X}),{:02X},{:02X})",
+        cpu.cycle_count, cpu.pc, cpu.current_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, current_opcode.1, cpu.current_opcode.2, cpu.b, cpu.nop, get_opcode_text(cpu.current_opcode), get_opcode_text(next_opcode), next_opcode.0, next_opcode.1, next_opcode.2)
 }
 
 // Really this just prints stuff to the standard output so we can view details on what is

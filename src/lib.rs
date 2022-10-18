@@ -66,17 +66,15 @@ impl Emu {
         );
 
         // For testing the odd CPUDIAG ROM
-        if file_to_load.eq("./resources/roms/CPUDIAG.COM") {
-            println!("CPUDIAG loaded, making some debug changes");
+        // if file_to_load.eq("./resources/roms/TST8080.COM") {
+        //     println!("TS8080 loaded, making some debug changes");
 
-            // First, make a jump to 0x0100
-            cpu.memory[0] = 0xC3;
-            cpu.memory[1] = 0x00;
-            cpu.memory[2] = 0x01;
+        //     // First, make a jump to 0x0100
+        //     cpu.memory[0] = 0xC3;
+        //     cpu.memory[1] = 0x00;
+        //     cpu.memory[2] = 0x01;
 
-            // Change a stack pointer bug
-            cpu.memory[368] = 0x7;
-        }
+        // }
 
         // Return a good version of the app object
         Ok(Emu {
