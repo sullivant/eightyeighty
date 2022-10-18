@@ -78,9 +78,9 @@ pub struct Cpu {
 
     pub interrupts: bool, // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
 
-    pub cycle_count: usize,        // Cycle count
+    pub cycle_count: usize,           // Cycle count
     pub current_opcode: (u8, u8, u8), // Just a record of the last opcode.
-    pub next_opcode: (u8, u8, u8), // Next opcode we are running.
+    pub next_opcode: (u8, u8, u8),    // Next opcode we are running.
 }
 
 impl Default for Cpu {
@@ -280,9 +280,9 @@ impl Cpu {
     /// # Panics
     /// Will panic if an error happens
     pub fn tick(&mut self) -> Result<usize, String> {
-        let opcode = self.read_opcode();    // Gather the current opcode to run, based on PC's location
+        let opcode = self.read_opcode(); // Gather the current opcode to run, based on PC's location
         self.current_opcode = opcode;
-        
+
         let this_pc = self.pc;
 
         // If we are in a STOPPED state, no action is necessary
@@ -867,12 +867,10 @@ impl Cpu {
     /// # Errors
     /// It will return ERROR if the opcode was not recognized
     pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
-
         if self.disassemble {
-            // Get our disassembler message text 
+            // Get our disassembler message text
             let dt = disassembler::disassemble(self, opcode);
             println!("{}", dt);
-    
         }
 
         // D8 = 8 bits (1st byte = y)

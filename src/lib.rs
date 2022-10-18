@@ -65,7 +65,6 @@ impl Emu {
             dims.1 - 1
         );
 
-
         // For testing the odd CPUDIAG ROM
         if file_to_load.eq("./resources/roms/CPUDIAG.COM") {
             println!("CPUDIAG loaded, making some debug changes");
@@ -78,8 +77,6 @@ impl Emu {
             // Change a stack pointer bug
             cpu.memory[368] = 0x7;
         }
-
-
 
         // Return a good version of the app object
         Ok(Emu {
@@ -213,8 +210,6 @@ impl Emu {
     }
 
     fn update(&mut self) -> Result<(), String> {
-        let mut tick_happened: bool = false;
-
         if self.cpu.cycle_count > 0 && self.cpu.cycle_count == self.pause_on_count {
             self.pause_on_tick = true;
         }
@@ -226,7 +221,6 @@ impl Emu {
                 // Tick the cpu
                 match self.cpu.tick() {
                     Ok(n) => {
-                        tick_happened = true;
                         self.last_pc = n;
                     }
                     Err(e) => {
@@ -239,7 +233,6 @@ impl Emu {
             // Tick the cpu
             match self.cpu.tick() {
                 Ok(n) => {
-                    tick_happened = true;
                     self.last_pc = n;
                 }
                 Err(e) => {
