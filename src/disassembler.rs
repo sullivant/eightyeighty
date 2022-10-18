@@ -2,28 +2,16 @@ pub use crate::constants::*;
 pub use crate::cpu::common::*;
 pub use crate::cpu::Cpu;
 
-use std::fmt;
-
 pub const HEADER: &str =
     "CYCLE  PC       Ins  S  l,   h,   sp      SZ0A0P1C  data(l,h)  B    Halt? : Command";
 
-pub fn disassemble(cpu: &Cpu, current_opcode: (u8, u8, u8)) -> String {
+pub fn disassemble(cpu: &Cpu, current_opcode: (u8, u8, u8), next_opcode: (u8, u8, u8)) -> String {
     if cpu.cycle_count == 1 || (cpu.cycle_count % 25 == 0) {
         println!("{}", HEADER);
     }
 
-    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X} {} : {}",
-        cpu.cycle_count, cpu.pc, cpu.current_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, current_opcode.1, cpu.current_opcode.2, cpu.b, cpu.nop, get_opcode_text(cpu.current_opcode))
-}
-
-pub struct Instr {
-    code: String, // The string defining what this this instr is actually doing
-}
-
-impl fmt::Display for Instr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.code)
-    }
+    format!("{:#06X}:{:#06X}   {:#04X} 3  {:#04X},{:#04X},{:#06X}  {:08b}  {:#04X},{:#04X}  {:#04X} {} : {} (Next: {},{:02X},{:02X})",
+        cpu.cycle_count, cpu.pc, cpu.current_opcode.0, cpu.l, cpu.h, cpu.sp, cpu.flags, current_opcode.1, cpu.current_opcode.2, cpu.b, cpu.nop, get_opcode_text(cpu.current_opcode), get_opcode_text(next_opcode), next_opcode.1, next_opcode.2)
 }
 
 // Really this just prints stuff to the standard output so we can view details on what is

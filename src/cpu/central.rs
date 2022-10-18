@@ -296,6 +296,14 @@ impl Cpu {
         match self.run_opcode(opcode) {
             Ok(_) => {
                 self.next_opcode = self.read_opcode();
+
+                // Print what we just ran
+                if self.disassemble {
+                    // Get our disassembler message text
+                    let dt = disassembler::disassemble(self, opcode, self.next_opcode);
+                    println!("{}", dt);
+                }
+
                 Ok(this_pc)
             }
             Err(e) => Err(e),
@@ -310,15 +318,15 @@ impl Cpu {
             Some(&v) => v,
             None => 0,
         };
-        let x = match self.memory.get(self.pc + 1) {
+        let dl = match self.memory.get(self.pc + 1) {
             Some(&v) => v,
             None => 0,
         };
-        let y = match self.memory.get(self.pc + 2) {
+        let dh = match self.memory.get(self.pc + 2) {
             Some(&v) => v,
             None => 0,
         };
-        (o, x, y)
+        (o, dl, dh)
     }
 
     /// This processes the opcodes beginning with the pattern "0X"
@@ -867,12 +875,6 @@ impl Cpu {
     /// # Errors
     /// It will return ERROR if the opcode was not recognized
     pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
-        if self.disassemble {
-            // Get our disassembler message text
-            let dt = disassembler::disassemble(self, opcode);
-            println!("{}", dt);
-        }
-
         // D8 = 8 bits (1st byte = y)
         // D16 = 16 bits (1st (y) and 2nd byte (x))
         let i = match opcode.0 {
@@ -901,7 +903,6 @@ impl Cpu {
             Ok(ProgramCounter::Jump(d)) => self.pc = d,
             Err(e) => return Err(e),
         }
-
         Ok(())
     }
 }
