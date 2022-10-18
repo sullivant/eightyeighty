@@ -188,14 +188,14 @@ impl Cpu {
     }
 
     // Sets a flag using a bitwise OR operation
-    // Mask of 2 (00100) with a value of 1 = 00100
+    // Mask of 2 (00100)
     // if flags = 10010 new value will be 10110
     pub fn set_flag(&mut self, mask: u8) {
         self.flags |= mask;
     }
 
     // Resets a flag using bitwise AND operation
-    // Mask of 2 (00100) with a value of 0 = 11011
+    // Mask of 2 (00100) 
     // if flags = 11111 new value will be 11011
     pub fn reset_flag(&mut self, mask: u8) {
         self.flags &= !mask;
