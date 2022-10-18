@@ -5,7 +5,7 @@ pub use crate::cpu::Cpu;
 use std::fmt;
 
 pub const HEADER: &str =
-    "CYCLE :PC       Ins  S  l,   h,   sp      SZ0A0P1C  data(l,h)  B    Halt? : Command";
+    "CYCLE  PC       Ins  S  l,   h,   sp      SZ0A0P1C  data(l,h)  B    Halt? : Command";
 
 pub fn disassemble(cpu: &Cpu, current_opcode: (u8, u8, u8)) -> String {
     if cpu.cycle_count == 1 || (cpu.cycle_count % 25 == 0) {

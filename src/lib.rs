@@ -12,7 +12,8 @@ use clap::{App, Arg};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
+//use sdl2::rect::{Point, Rect};
+use sdl2::rect::Point;
 use std::i64;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -28,7 +29,6 @@ const BLACK: Color = Color::RGB(0, 0, 0);
 #[derive(Clone)]
 pub struct Emu {
     cpu: Cpu,
-    last_msg: String, // Contains last disassembler message
     last_pc: usize,
     pause_on_tick: bool,
     single_tick: bool,
@@ -81,7 +81,6 @@ impl Emu {
         // Return a good version of the app object
         Ok(Emu {
             cpu,
-            last_msg: "N/A".to_string(),
             last_pc: 0,
             pause_on_tick: false,
             single_tick: false,
@@ -103,110 +102,6 @@ impl Emu {
 
     fn set_pause_on_count(&mut self, v: usize) {
         self.pause_on_count = v;
-    }
-
-    // For the debugger and such will go through needed items and prep them for display
-    // on the output window located in the canvas reference
-    fn create_display_texts(&mut self, canvas: &mut sdl2::render::WindowCanvas) {
-        // Cycle count
-        add_display_text(
-            canvas,
-            &format!("Cycle:{:#06X}", self.cpu.cycle_count),
-            0,
-            (EMU_HEIGHT * CELL_SIZE).into(),
-        );
-
-        // Command issued
-        add_display_text(
-            canvas,
-            disassembler::HEADER,
-            0,
-            i32::from((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 3)),
-            //((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 3)) as i32,
-        );
-        add_display_text(
-            canvas,
-            &self.last_msg.to_string(),
-            0,
-            i32::from((EMU_HEIGHT * CELL_SIZE) + (LINE_SPACE * 4)),
-        );
-
-        // Flags
-        add_display_text(
-            canvas,
-            "SZ0A0P1C",
-            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
-            0,
-        );
-        add_display_text(
-            canvas,
-            &format!("{:08b}", self.cpu.get_flags()),
-            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
-            i32::from(LINE_SPACE),
-        );
-
-        // Stack
-        add_display_text(
-            canvas,
-            "---Stack---",
-            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
-            i32::from(LINE_SPACE * 2),
-        );
-
-        for i in 0..3 {
-            add_display_text(
-                canvas,
-                &format!(
-                    "$[{:04X}] = {:02X}",
-                    self.cpu.sp + i,
-                    self.cpu.memory[(self.cpu.sp + i) as usize]
-                ),
-                i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
-                i32::from(LINE_SPACE * (i + 3)),
-            );
-        }
-
-        // Registers
-        add_display_text(
-            canvas,
-            "---Registers---",
-            i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
-            i32::from(LINE_SPACE * 6),
-        );
-
-        for (i, r) in ["A", "B", "C", "D", "E", "H", "L"].iter().enumerate() {
-            let val = match *r {
-                "A" => self.cpu.a,
-                "B" => self.cpu.b,
-                "C" => self.cpu.c,
-                "D" => self.cpu.d,
-                "E" => self.cpu.e,
-                "H" => self.cpu.h,
-                "L" => self.cpu.l,
-                _ => 0,
-            };
-            add_display_text(
-                canvas,
-                &format!("{} = {:04X}", r, val),
-                i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE),
-                i32::from(LINE_SPACE * (i as u16 + 7)),
-            );
-        }
-
-        // Register Pairs
-
-        for (i, r) in [cpu::Registers::BC, cpu::Registers::DE, cpu::Registers::HL]
-            .iter()
-            .enumerate()
-        {
-            let val = self.cpu.get_register_pair(*r);
-            add_display_text(
-                canvas,
-                &format!("Pair: {} {:04X}", r, val),
-                i32::from((EMU_WIDTH * CELL_SIZE) + CELL_SIZE * 50),
-                i32::from(LINE_SPACE * (i as u16 + 7)),
-            );
-        }
     }
 
     fn update(&mut self) -> Result<(), String> {
@@ -381,8 +276,6 @@ pub fn go() -> Result<(), String> {
         // Clear the screen
         canvas.clear();
 
-        app_clone.lock().unwrap().create_display_texts(&mut canvas);
-
         // Draw the graphics portion of memory (TODO)
         canvas.set_draw_color(BLACK);
         // Bottom border of EMU display area
@@ -416,26 +309,26 @@ pub fn go() -> Result<(), String> {
     Ok(())
 }
 
-// Does what it says on the tin.
-fn add_display_text(canvas: &mut sdl2::render::WindowCanvas, to_display: &str, x: i32, y: i32) {
-    let texture_creator = canvas.texture_creator();
-    let ttf_context = sdl2::ttf::init().unwrap();
-    let font = ttf_context
-        .load_font("./resources/fonts/CamingoCode-Regular.ttf", 16)
-        //.load_font("./resources/fonts/OpenSans-Regular.ttf", 16)
-        //.load_font("./resources/fonts/xkcd-script.ttf", 20)
-        .unwrap();
+// // Does what it says on the tin.
+// fn add_display_text(canvas: &mut sdl2::render::WindowCanvas, to_display: &str, x: i32, y: i32) {
+//     let texture_creator = canvas.texture_creator();
+//     let ttf_context = sdl2::ttf::init().unwrap();
+//     let font = ttf_context
+//         .load_font("./resources/fonts/CamingoCode-Regular.ttf", 16)
+//         //.load_font("./resources/fonts/OpenSans-Regular.ttf", 16)
+//         //.load_font("./resources/fonts/xkcd-script.ttf", 20)
+//         .unwrap();
 
-    let surface = font.render(to_display).solid(BLACK).unwrap();
-    let texture = texture_creator
-        .create_texture_from_surface(&surface)
-        .unwrap();
+//     let surface = font.render(to_display).solid(BLACK).unwrap();
+//     let texture = texture_creator
+//         .create_texture_from_surface(&surface)
+//         .unwrap();
 
-    canvas
-        .copy(
-            &texture,
-            None,
-            Some(Rect::new(x, y, surface.width(), surface.height())),
-        )
-        .unwrap();
-}
+//     canvas
+//         .copy(
+//             &texture,
+//             None,
+//             Some(Rect::new(x, y, surface.width(), surface.height())),
+//         )
+//         .unwrap();
+// }
