@@ -2,6 +2,9 @@
 pub const OPCODE_SIZE: usize = 1;
 pub const RAM_SIZE: usize = 0xFFFF;
 
+pub const HEADER: &str =
+    "CYCLE  PC       Ins  S  l,   h,   sp      SZ0A0P1C  data(l,h)  B    Halt? : Command";
+
 // Flags and their order/bitmasks
 // S - Sign Flag
 // Z - Zero Flag
@@ -17,24 +20,17 @@ pub const FLAG_AUXCARRY: u8 = 0b0001_0000;
 pub const FLAG_PARITY: u8 = 0b0000_0100;
 pub const FLAG_CARRY: u8 = 0b0000_0001;
 
-// Window and display concerns
-pub const DISP_WIDTH: u16 = 640; // Overall width/height
-pub const DISP_HEIGHT: u16 = 480;
-pub const EMU_WIDTH: u16 = 224; // Emulator display area width/height
-pub const EMU_HEIGHT: u16 = 256;
-pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
-pub const LINE_SPACE: u16 = 20; // Space between lines of text
-
 // OPCODE Descriptions
 pub const OP_NOP: &str = "NOP";
-pub const OP_UNK: &str = "UNK";
+pub const OP_RLC: &str = "RLC";
+pub const OP_RRC: &str = "RRC";
+pub const OP_SHLD: &str = "SHLD";
+pub const OP_STA: &str = "STA";
 pub const OP_RAL: &str = "RAL";
-pub const OP_LDAX: &str = "LDAX";
 pub const OP_RAR: &str = "RAR";
 pub const OP_DAA: &str = "DAA";
 pub const OP_LHLD: &str = "LHLD";
 pub const OP_CMA: &str = "CMA";
-pub const OP_STA: &str = "STA";
 pub const OP_STC: &str = "STC";
 pub const OP_LDA: &str = "LDA";
 pub const OP_CMC: &str = "CMC";
@@ -51,6 +47,7 @@ pub const OP_CALL: &str = "CALL";
 pub const OP_ACI: &str = "ACI";
 pub const OP_RNC: &str = "RNC";
 pub const OP_JNC: &str = "JNC";
+pub const OP_JC: &str = "JC";
 pub const OP_OUT: &str = "OUT";
 pub const OP_CNC: &str = "CNC";
 pub const OP_CC: &str = "CC";
@@ -63,6 +60,30 @@ pub const OP_RP: &str = "RP";
 pub const OP_CP: &str = "CP";
 pub const OP_RM: &str = "RM";
 pub const OP_CPI: &str = "CPI";
+pub const OP_RZ: &str = "RZ";
+pub const OP_SUI: &str = "SUI";
+pub const OP_IN: &str = "IN";
+pub const OP_SBI: &str = "SBI";
+pub const OP_JPO: &str = "JPO";
+pub const OP_XTHL: &str = "XTHL";
+pub const OP_PCHL: &str = "PCHL";
+pub const OP_ANI: &str = "ANI";
+pub const OP_JPE: &str = "JPE";
+pub const OP_XRI: &str = "XRI";
+pub const OP_JMP_16: &str = "JMP a16";
+pub const OP_JM_16: &str = "JM IF a16";
+pub const OP_JP_16: &str = "JM a16";
+pub const OP_DI: &str = "DI";
+pub const OP_ORI: &str = "ORI";
+pub const OP_SPHL: &str = "SPHL";
+pub const OP_EI: &str = "EI";
+pub const OP_CM: &str = "CM";
+
+pub const OP_STAX_B: &str = "STAX B";
+pub const OP_LDAX_B: &str = "LDAX B";
+
+pub const OP_STAX_D: &str = "STAX D";
+pub const OP_LDAX_D: &str = "LDAX D";
 
 pub const OP_LXI_B: &str = "LXI B";
 pub const OP_LXI_D: &str = "LXI D";
@@ -258,9 +279,6 @@ pub const OP_RST_4: &str = "RST 4";
 pub const OP_RST_5: &str = "RST 5";
 pub const OP_RST_6: &str = "RST 6";
 pub const OP_RST_7: &str = "RST 7";
-
-pub const OP_JMP_16: &str = "JMP a16";
-pub const OP_JM_16: &str = "JM IF a16";
 
 pub const OP_PUSH_B: &str = "PUSH B";
 pub const OP_PUSH_D: &str = "PUSH D";

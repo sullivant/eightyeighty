@@ -2,32 +2,41 @@
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 mod constants;
 mod cpu;
-mod disassembler;
 
-pub use crate::constants::*;
-pub use crate::cpu::common::*;
-pub use crate::cpu::Cpu;
-
+use crate::cpu::CPU;
 use clap::{App, Arg};
+use termion::event::Key;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+extern crate termion;
+
+use termion::raw::IntoRawMode;
+use termion::async_stdin;
+use std::io::{Read, Write, stdout};
+use std::time::Duration;
+
+
+
+// Our emulator contains a few key components:
+// * A CPU which itself contains: Memory, Instructions, Flags, Registers, and the ability to cycle/tick.
+// * A windowing environment which will display and provide interrupts for the video section of memory to
+// properly operate.
+// * I/O - to cover keyboard input, joysticks, sound, and other stuff.
 
 #[derive(Clone)]
 pub struct Emulator {
-    cpu: Cpu,
-    last_pc: usize
+    cpu: CPU,
 }
 
 impl Emulator {
     fn new(rom_file: &str) -> Result<Emulator, String> {
-        println!("Creating new Emu Object");
+        println!("Creating new Emulator Object");
 
         // Generate our CPU
-        let mut cpu = Cpu::new();
-        cpu.set_disassemble(true);
-        //cpu.set_nop(true);
+        let mut cpu = CPU::new();
+        cpu.disassemble(true);
 
         // The list of rom files to load for this particular collection/game
         let file_to_load = format!("./resources/roms/{}.COM", rom_file);
@@ -39,7 +48,6 @@ impl Emulator {
             }
             Err(err) => {
                 return Err(format!("Unable to load rom file {}: {}", file_to_load, err));
-                //panic!("Unable to load rom file {}: {}", file_to_load, err);
             }
         }
 
@@ -62,24 +70,13 @@ impl Emulator {
         // }
 
         // Return a good version of the app object
-        Ok(Emulator {
-            cpu,
-            last_pc: 0
-        })
+        Ok(Emulator { cpu })
     }
 
-
+    // This will be called via the thread, loaded below in go() somewhere...
     fn update(&mut self) -> Result<(), String> {
         // Tick the cpu
-        match self.cpu.tick() {
-            Ok(n) => {
-                self.last_pc = n;
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        }
-        Ok(())
+        self.cpu.tick()
     }
 }
 
@@ -95,6 +92,8 @@ impl Emulator {
 /// Will panic if necessary, sending up any of the aformentioned errors.
 #[allow(clippy::too_many_lines)]
 pub fn go() -> Result<(), String> {
+    let mut stdin = async_stdin().bytes();
+
     // Get some cli options from CLAP
     let matches = App::new("EightyEighty")
         .version("1.0")
@@ -120,7 +119,7 @@ pub fn go() -> Result<(), String> {
     }
 
     let app = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
-    // let app_clone = Arc::clone(&app);
+    let app_clone = Arc::clone(&app);
 
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
@@ -141,32 +140,21 @@ pub fn go() -> Result<(), String> {
         );
     });
 
+    loop {
+        let b = stdin.next();
+
+        // if let Some(Ok(b'q')) = b {
+        //     break;
+        // }
+
+        match b {
+            Some(Ok(b'q')) => {break},
+            Some(Ok(b's')) => {app_clone.lock().unwrap().cpu.single_step = false},
+            _ => break,
+        }
+    }
 
     handle.join().unwrap();
 
     Ok(())
 }
-
-// // Does what it says on the tin.
-// fn add_display_text(canvas: &mut sdl2::render::WindowCanvas, to_display: &str, x: i32, y: i32) {
-//     let texture_creator = canvas.texture_creator();
-//     let ttf_context = sdl2::ttf::init().unwrap();
-//     let font = ttf_context
-//         .load_font("./resources/fonts/CamingoCode-Regular.ttf", 16)
-//         //.load_font("./resources/fonts/OpenSans-Regular.ttf", 16)
-//         //.load_font("./resources/fonts/xkcd-script.ttf", 20)
-//         .unwrap();
-
-//     let surface = font.render(to_display).solid(BLACK).unwrap();
-//     let texture = texture_creator
-//         .create_texture_from_surface(&surface)
-//         .unwrap();
-
-//     canvas
-//         .copy(
-//             &texture,
-//             None,
-//             Some(Rect::new(x, y, surface.width(), surface.height())),
-//         )
-//         .unwrap();
-// }

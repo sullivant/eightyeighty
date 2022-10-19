@@ -10,128 +10,18 @@ pub use crate::cpu::common::*;
 pub use crate::cpu::opcodes::*;
 use crate::disassembler;
 
-pub enum ProgramCounter {
-    Next,        // The operation does not use any data
-    Two,         // The operation uses only 1 byte of data
-    Three,       // The operation uses the full 2 bytes of data
-    Jump(usize), // The operation jumps to a point in memory
-}
 
-#[derive(Clone, Copy)]
-pub enum Registers {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-    BC, // A register pair
-    DE, // A register pair
-    HL, // A register pair, used to reference memory locations
-    SP, // Stack pointer
-    SW, // Program Status Word
-}
 
-impl fmt::Display for Registers {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Registers::A => write!(f, "A"),
-            Registers::B => write!(f, "B"),
-            Registers::C => write!(f, "C"),
-            Registers::D => write!(f, "D"),
-            Registers::E => write!(f, "E"),
-            Registers::H => write!(f, "H"),
-            Registers::L => write!(f, "L"),
-            Registers::BC => write!(f, "BC"),
-            Registers::DE => write!(f, "DE"),
-            Registers::HL => write!(f, "HL"),
-            Registers::SP => write!(f, "SP"),
-            Registers::SW => write!(f, "SW"),
-        }
-    }
-}
 
-#[derive(Clone)]
-pub struct Cpu {
-    // Memory
-    pub memory: [u8; RAM_SIZE],
 
-    // Registers
-    pub pc: usize, // Program Counter
-    pub sp: u16,   // Stack Pointer
-    pub a: u8,
-    pub b: u8,
-    pub c: u8,
-    pub d: u8,
-    pub e: u8,
-    pub h: u8,
-    pub l: u8,
 
-    // Flags Z,S,P,AC
-    pub flags: u8,
 
-    // A flag that indicates we wish to print human readable command references
-    pub disassemble: bool,
-    // A flag to indicate that we do not wish to execute, probably just printing disassembly
-    pub nop: bool,
+ 
 
-    pub interrupts: bool, // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
 
-    pub cycle_count: usize,           // Cycle count
-    pub current_opcode: (u8, u8, u8), // Just a record of the last opcode.
-    pub next_opcode: (u8, u8, u8),    // Next opcode we are running.
-}
 
-impl Default for Cpu {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
-impl fmt::Display for Cpu {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X}\nA:{:#06X}\nB:{:#04X} C:{:#04X}\nD:{:#04X} E:{:#04X}\nH:{:#04X} L:{:#04X}\nsp $[{:#06X}]={:#04X} sp+1 $[{:06X}]={:#04X}",
-            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l,self.sp,self.memory[usize::from(self.sp)],self.sp+1,self.memory[usize::from(self.sp+1)]
-        )
-    }
-}
 
-impl Cpu {
-    #[must_use]
-    pub fn new() -> Cpu {
-        Cpu {
-            memory: [0; RAM_SIZE],
-            pc: 0x00,
-            sp: 0x00,
-            a: 0x00,
-            b: 0x00,
-            c: 0x00,
-            d: 0x00,
-            e: 0x00,
-            h: 0x00,
-            l: 0x00,
-            flags: 0x02, // 00000010 is the default starting point
-            disassemble: false,
-            nop: false,
-            interrupts: false,
-            cycle_count: 0x00,
-            current_opcode: (0, 0, 0),
-            next_opcode: (0, 0, 0),
-        }
-    }
-
-    // Returns a usize location in memory designed by the H and L registers
-    pub fn get_addr_pointer(&mut self) -> usize {
-        usize::from(u16::from(self.h) << 8 | u16::from(self.l))
-    }
-
-    #[must_use]
-    pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
-        (&self.pc, &self.sp, &self.h, &self.l, &self.b)
-    }
 
     // Returns a paired register such as HL or BC.
     // Pass to the function the beginning register for the pair
@@ -240,94 +130,16 @@ impl Cpu {
         };
     }
 
-    pub fn set_disassemble(&mut self, d: bool) {
-        self.disassemble = d;
-    }
-
+ 
     pub fn set_nop(&mut self, n: bool) {
         self.nop = n;
     }
 
-    /// Load the ROM file into memory, starting at ``start_index``
-    /// Returns a tuple containing the index we started at and where we
-    /// actually finished at.
-    ///
-    /// # Errors
-    /// Will return a standard io Error if necessary
-    /// # Panics
-    /// If the error happens, this will cause the function to panic
-    pub fn load_rom(
-        &mut self,
-        file: String,
-        start_index: usize,
-    ) -> Result<(usize, usize), std::io::Error> {
-        let rom = File::open(file)?;
-        let mut last_idx: usize = 0;
-        for (i, b) in rom.bytes().enumerate() {
-            self.memory[start_index + i] = b.unwrap();
-            last_idx = i;
-        }
-        Ok((start_index, start_index + last_idx + 1))
-    }
+    
 
-    /// Gathers a word from memory based on program counter location,
-    /// then passes it along to the ``run_opcode()`` function
-    /// On successful tick, returns the program counter value that was run
-    /// On unsuccessful tick, returns an error
-    ///
-    /// # Errors
-    /// Will return an error if necessary
-    /// # Panics
-    /// Will panic if an error happens
-    pub fn tick(&mut self) -> Result<usize, String> {
-        let opcode = self.read_opcode(); // Gather the current opcode to run, based on PC's location
-        self.current_opcode = opcode;
+    
 
-        let this_pc = self.pc;
-
-        // If we are in a STOPPED state, no action is necessary
-        // This will be "unstopped" when an interrupt occurs
-        if self.nop {
-            return Ok(this_pc);
-        }
-
-        self.cycle_count += 1;
-
-        match self.run_opcode(opcode) {
-            Ok(_) => {
-                self.next_opcode = self.read_opcode();
-
-                // Print what we just ran
-                if self.disassemble {
-                    // Get our disassembler message text
-                    let dt = disassembler::disassemble(self, opcode, self.next_opcode);
-                    println!("{}", dt);
-                }
-
-                Ok(this_pc)
-            }
-            Err(e) => Err(e),
-        }
-    }
-
-    // Reads an instruction at ProgramCounter
-    // Returns the following two bytes as potential "data" for the instruction.
-    // If the two bytes are out of range they will return 0x00
-    pub fn read_opcode(&mut self) -> (u8, u8, u8) {
-        let o = match self.memory.get(self.pc) {
-            Some(&v) => v,
-            None => 0,
-        };
-        let dl = match self.memory.get(self.pc + 1) {
-            Some(&v) => v,
-            None => 0,
-        };
-        let dh = match self.memory.get(self.pc + 2) {
-            Some(&v) => v,
-            None => 0,
-        };
-        (o, dl, dh)
-    }
+    
 
     /// This processes the opcodes beginning with the pattern "0X"
     ///
@@ -865,6 +677,16 @@ impl Cpu {
 
         Ok(i)
     }
+
+        // Returns a usize location in memory designed by the H and L registers
+        pub fn get_addr_pointer(&mut self) -> usize {
+            usize::from(u16::from(self.h) << 8 | u16::from(self.l))
+        }
+    
+        #[must_use]
+        pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
+            (&self.pc, &self.sp, &self.h, &self.l, &self.b)
+        }
 
     /// This will parse the opcode, printing a disassembly if asked
     ///

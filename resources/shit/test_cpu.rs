@@ -1,23 +1,9 @@
 //#![warn(clippy::all, clippy::pedantic)]
 
-pub use lib::*;
-
 // Lovely aux carry detection
 // (a & 0xf) + (b & 0xf) & 0x10 == 0x10
-#[test]
-fn test_will_ac() {
-    assert_eq!(will_ac(62, 34), true);
-    assert_eq!(will_ac(0b1111, 1), true);
-    assert_eq!(will_ac(2, 4), false);
-}
 
-#[test]
-fn test_cpu_default() {
-    let mut cpu = Cpu::new();
-    cpu.pc = 0x201;
-    cpu = Cpu::default();
-    assert_eq!(cpu.pc, 0x00);
-}
+
 
 #[test]
 fn test_set_flag() {
