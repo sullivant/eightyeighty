@@ -5,19 +5,14 @@ mod cpu;
 
 use crate::cpu::CPU;
 use clap::{App, Arg};
-use termion::event::Key;
+use constants::{CELL_SIZE, DISP_WIDTH, DISP_HEIGHT, WHITE};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-
-extern crate termion;
-
-use termion::raw::IntoRawMode;
-use termion::async_stdin;
-use std::io::{Read, Write, stdout};
 use std::time::Duration;
 
-
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 
 // Our emulator contains a few key components:
 // * A CPU which itself contains: Memory, Instructions, Flags, Registers, and the ability to cycle/tick.
@@ -92,8 +87,6 @@ impl Emulator {
 /// Will panic if necessary, sending up any of the aformentioned errors.
 #[allow(clippy::too_many_lines)]
 pub fn go() -> Result<(), String> {
-    let mut stdin = async_stdin().bytes();
-
     // Get some cli options from CLAP
     let matches = App::new("EightyEighty")
         .version("1.0")
@@ -108,8 +101,25 @@ pub fn go() -> Result<(), String> {
         .args_from_usage("<rom> 'The rom file to load and execute'")
         .get_matches();
 
-    let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
-    // let cpu_alive_clone = Arc::clone(&cpu_alive);
+    // Some basic stuff, to get our event pump
+    let sdl_context = sdl2::init()?;
+    let mut event_pump = sdl_context.event_pump()?;
+    let video_subsystem = sdl_context.video()?;
+    let window = video_subsystem
+        .window(
+            "8080",
+            (DISP_WIDTH * CELL_SIZE).into(),
+            (DISP_HEIGHT * CELL_SIZE).into(),
+        )
+        .position_centered()
+        .resizable()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // Reset to start
+    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+    canvas.clear();
+    canvas.present();
 
     // Gather from the command the rom to use; Clap won't let us skip this but we
     // load INVADERS by default just in case
@@ -117,15 +127,26 @@ pub fn go() -> Result<(), String> {
     if let Some(f) = matches.value_of("rom") {
         rom_file = String::from(f);
     }
-
+    
+    
+    let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
+    let cpu_alive_clone = Arc::clone(&cpu_alive);
+    
     let app = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
     let app_clone = Arc::clone(&app);
+
+    // If we are in debug mode, set that now
+    if matches.is_present("pause") {
+        println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
+        app_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
+        app_clone.lock().unwrap().cpu.single_step_mode = true;
+    }
 
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
     let handle = thread::spawn(move || {
-        while cpu_alive.load(Ordering::Relaxed) {
-            match app.lock().unwrap().update() {
+        while cpu_alive_clone.load(Ordering::Relaxed) {
+            match app_clone.lock().unwrap().update() {
                 Ok(_) => (),
                 Err(e) => {
                     println!("Unable to tick: {}", e);
@@ -136,23 +157,69 @@ pub fn go() -> Result<(), String> {
 
         println!(
             "Shutting down. Final CPU state:\n{}",
-            app.lock().unwrap().cpu
+            app_clone.lock().unwrap().cpu
         );
     });
 
-    loop {
-        let b = stdin.next();
+    // The main application loop that will handle the event pump
+    'running: loop {
+        let app_clone = Arc::clone(&app);
+        let cpu_alive_clone = Arc::clone(&cpu_alive);
 
-        // if let Some(Ok(b'q')) = b {
-        //     break;
-        // }
-
-        match b {
-            Some(Ok(b'q')) => {break},
-            Some(Ok(b's')) => {app_clone.lock().unwrap().cpu.single_step = false},
-            _ => break,
+        // If the cpu is not alive, we should just bail as well.
+        if !cpu_alive_clone.load(Ordering::Relaxed) {
+            println!("CPU is not alive.  Shutting application down.");
+            break 'running;
         }
+
+        // Hit up the event pump
+        for event in event_pump.poll_iter() {
+            // Read the keyboard
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => {
+                    // Tell the CPU to stop
+                    cpu_alive_clone.store(false, Ordering::Relaxed);
+                    break 'running;
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::F1),
+                    ..
+                } => app_clone.lock().unwrap().cpu.toggle_single_step_mode(),
+                Event::KeyDown {
+                    keycode: Some(Keycode::F2),
+                    ..
+                } => cpu_alive.store(false, Ordering::Relaxed),
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => app_clone.lock().unwrap().cpu.ok_to_step = true, // Setting to false will let it out of the while loop
+                _ => (),
+            };
+        }
+
+        // Clear the screen
+        canvas.clear();
+
+        // Not drawing shit right now...
+        // To Draw: 
+        // DISASM of entire loaded rom
+        // VRAM (Obviously)
+        // CPU Info (CPU has print format)
+        // Console output?
+
+        // Present the updated screen
+        canvas.set_draw_color(WHITE);
+        canvas.present();
+        
+        // Sleep a bit
+        //thread::sleep(Duration::from_millis(1));
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
+
 
     handle.join().unwrap();
 

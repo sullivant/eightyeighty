@@ -8,6 +8,7 @@ use crate::constants::{OPCODE_SIZE, RAM_SIZE};
 use instructions::Instruction;
 
 #[allow(clippy::upper_case_acronyms)]
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone)]
 pub struct CPU {
     // Memory
@@ -29,7 +30,13 @@ pub struct CPU {
 
     // A flag that indicates we wish to print human readable command references
     pub disassemble: bool,
-    pub single_step: bool, 
+    
+    // If we are in single step mode, we wait until "ok_to_step" is true
+    pub single_step_mode: bool,
+    pub ok_to_step: bool, 
+    pub print_status: bool,
+    pub tick_happened: bool, // Did we actually process a tick last time?  Used when single stepping
+
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
     pub nop: bool,
 
@@ -107,10 +114,15 @@ impl CPU {
             l: 0x00,
             flags: 0x02, // 00000010 is the default starting point
             disassemble: false,
-            single_step: false,
+            
+            single_step_mode: false,
+            ok_to_step: true,
+            print_status: true,
+            tick_happened: false,
+
             nop: false,
             interrupts: false,
-            cycle_count: 0x00,
+            cycle_count: 1,
             current_instruction: Instruction::new(0x00),
         }
     }
@@ -166,6 +178,27 @@ impl CPU {
             return Ok(());
         }
 
+        // TODO: Make this respect "disassemble mode"
+
+        // Print the opcode we are going to run with the current CPU state alongside.
+        // TODO: Have this also gather potential DL,DH values
+        if self.print_status {
+            println!("{} @ {}", self.current_instruction, self);
+        }
+
+        // While we are in single step mode, let's just return, 
+        // changing nothing about the PC, etc.  
+        if self.single_step_mode && !self.ok_to_step {
+            self.print_status = false;
+            return Ok(());
+        }
+
+        // If we get this far, we need to reset "ok_to_step" to false for next run!
+        if self.single_step_mode {
+            self.print_status = true;
+            self.ok_to_step = false;
+        }
+
         self.cycle_count += 1;
 
         // If we are "Ok()" after running the opcode, let's move the PC
@@ -194,17 +227,6 @@ impl CPU {
             None => 0,
         };
 
-        // TODO: Make this respect "disassemble mode"
-
-        // Print the opcode we are going to run with the current CPU state alongside.
-        println!("{} @ {}", self.current_instruction, self);
-
-        // While we are in single step mode, let's just wait, until we aren't.
-        while self.single_step {
-            // Sleeping
-            thread::sleep(time::Duration::from_millis(10));
-        }
-
         // Do the actual run of the opcode and return the result
         match self.current_instruction.opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
@@ -213,6 +235,10 @@ impl CPU {
                 self.current_instruction
             )),
         }
+    }
+
+    pub fn toggle_single_step_mode(&mut self) {
+        self.single_step_mode = !self.single_step_mode;
     }
 
     // Just a setter
