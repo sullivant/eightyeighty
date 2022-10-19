@@ -5,7 +5,7 @@ mod cpu;
 
 use crate::cpu::CPU;
 use clap::{App, Arg};
-use constants::{CELL_SIZE, DISP_WIDTH, DISP_HEIGHT, WHITE};
+use constants::{CELL_SIZE, DISP_HEIGHT, DISP_WIDTH, WHITE};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -127,11 +127,10 @@ pub fn go() -> Result<(), String> {
     if let Some(f) = matches.value_of("rom") {
         rom_file = String::from(f);
     }
-    
-    
+
     let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let cpu_alive_clone = Arc::clone(&cpu_alive);
-    
+
     let app = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
     let app_clone = Arc::clone(&app);
 
@@ -205,7 +204,7 @@ pub fn go() -> Result<(), String> {
         canvas.clear();
 
         // Not drawing shit right now...
-        // To Draw: 
+        // To Draw:
         // DISASM of entire loaded rom
         // VRAM (Obviously)
         // CPU Info (CPU has print format)
@@ -214,12 +213,11 @@ pub fn go() -> Result<(), String> {
         // Present the updated screen
         canvas.set_draw_color(WHITE);
         canvas.present();
-        
+
         // Sleep a bit
         //thread::sleep(Duration::from_millis(1));
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
-
 
     handle.join().unwrap();
 

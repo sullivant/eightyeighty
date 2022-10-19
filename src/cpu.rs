@@ -30,10 +30,10 @@ pub struct CPU {
 
     // A flag that indicates we wish to print human readable command references
     pub disassemble: bool,
-    
+
     // If we are in single step mode, we wait until "ok_to_step" is true
     pub single_step_mode: bool,
-    pub ok_to_step: bool, 
+    pub ok_to_step: bool,
     pub ok_to_print: bool,
     pub tick_happened: bool, // Did we actually process a tick last time?  Used when single stepping
 
@@ -114,7 +114,7 @@ impl CPU {
             l: 0x00,
             flags: 0x02, // 00000010 is the default starting point
             disassemble: false,
-            
+
             single_step_mode: false,
             ok_to_step: true,
             ok_to_print: true,
@@ -186,8 +186,8 @@ impl CPU {
             println!("{} @ {}", self.current_instruction, self);
         }
 
-        // While we are in single step mode, let's just return, 
-        // changing nothing about the PC, etc.  
+        // While we are in single step mode, let's just return,
+        // changing nothing about the PC, etc.
         if self.single_step_mode && !self.ok_to_step {
             self.ok_to_print = false;
             return Ok(());
@@ -240,8 +240,7 @@ impl CPU {
     pub fn toggle_single_step_mode(&mut self) {
         self.single_step_mode = !self.single_step_mode;
 
-        self.ok_to_print = true;    
-
+        self.ok_to_print = true;
     }
 
     // Just a setter

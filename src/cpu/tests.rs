@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 use crate::cpu::{will_ac, CPU};
 
