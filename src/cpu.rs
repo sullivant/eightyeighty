@@ -34,7 +34,7 @@ pub struct CPU {
     // If we are in single step mode, we wait until "ok_to_step" is true
     pub single_step_mode: bool,
     pub ok_to_step: bool, 
-    pub print_status: bool,
+    pub ok_to_print: bool,
     pub tick_happened: bool, // Did we actually process a tick last time?  Used when single stepping
 
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
@@ -117,7 +117,7 @@ impl CPU {
             
             single_step_mode: false,
             ok_to_step: true,
-            print_status: true,
+            ok_to_print: true,
             tick_happened: false,
 
             nop: false,
@@ -182,20 +182,20 @@ impl CPU {
 
         // Print the opcode we are going to run with the current CPU state alongside.
         // TODO: Have this also gather potential DL,DH values
-        if self.print_status {
+        if self.ok_to_print {
             println!("{} @ {}", self.current_instruction, self);
         }
 
         // While we are in single step mode, let's just return, 
         // changing nothing about the PC, etc.  
         if self.single_step_mode && !self.ok_to_step {
-            self.print_status = false;
+            self.ok_to_print = false;
             return Ok(());
         }
 
         // If we get this far, we need to reset "ok_to_step" to false for next run!
         if self.single_step_mode {
-            self.print_status = true;
+            self.ok_to_print = true;
             self.ok_to_step = false;
         }
 
@@ -239,6 +239,9 @@ impl CPU {
 
     pub fn toggle_single_step_mode(&mut self) {
         self.single_step_mode = !self.single_step_mode;
+
+        self.ok_to_print = true;    
+
     }
 
     // Just a setter
