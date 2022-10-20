@@ -222,11 +222,82 @@ impl CPU {
         let opcode_result = match self.current_instruction.opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
 
-            0x01 => self.lxi(Registers::B, dl, dh),
+            0x01 => self.lxi(Registers::BC, dl, dh),
 
+            0x11 => self.lxi(Registers::DE, dl, dh),
+
+            0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
 
+            0x31 => self.lxi(Registers::SP, dl, dh),
+
+            0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
+            0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C
+            0x42 => self.mov(Registers::B, Registers::D), // MOV B <- D
+            0x43 => self.mov(Registers::B, Registers::E), // MOV B <- E
+            0x44 => self.mov(Registers::B, Registers::H), // MOV B <- H
+            0x45 => self.mov(Registers::B, Registers::L), // MOV B <- L
+            0x46 => self.mov(Registers::B, Registers::HL), // MOV B <- (HL)
+            0x47 => self.mov(Registers::B, Registers::A), // MOV B <- A
+            0x48 => self.mov(Registers::C, Registers::B), // MOV C <- B
+            0x49 => self.mov(Registers::C, Registers::C), // MOV C <- C
+            0x4A => self.mov(Registers::C, Registers::D), // MOV C <- D
+            0x4B => self.mov(Registers::C, Registers::E), // MOV C <- E
+            0x4C => self.mov(Registers::C, Registers::H), // MOV C <- H
+            0x4D => self.mov(Registers::C, Registers::L), // MOV C <- L
+            0x4E => self.mov(Registers::C, Registers::HL), // MOV C <- HL
+            0x4F => self.mov(Registers::C, Registers::A), // MOV C <- A
+
+            0x50 => self.mov(Registers::D, Registers::B), // MOV D <- B
+            0x51 => self.mov(Registers::D, Registers::C), // MOV D <- C
+            0x52 => self.mov(Registers::D, Registers::D), // MOV D <- D
+            0x53 => self.mov(Registers::D, Registers::E), // MOV D <- E
+            0x54 => self.mov(Registers::D, Registers::H), // MOV D <- H
+            0x55 => self.mov(Registers::D, Registers::L), // MOV D <- L
+            0x56 => self.mov(Registers::D, Registers::HL), // MOV D <- (HL)
+            0x57 => self.mov(Registers::D, Registers::A), // MOV D <- A
+            0x58 => self.mov(Registers::E, Registers::B), // MOV E <- B
+            0x59 => self.mov(Registers::E, Registers::C), // MOV E <- C
+            0x5A => self.mov(Registers::E, Registers::D), // MOV E <- D
+            0x5B => self.mov(Registers::E, Registers::E), // MOV E <- E
+            0x5C => self.mov(Registers::E, Registers::H), // MOV E <- H
+            0x5D => self.mov(Registers::E, Registers::L), // MOV E <- L
+            0x5E => self.mov(Registers::E, Registers::HL), // MOV E <- HL
+            0x5F => self.mov(Registers::E, Registers::A), // MOV E <- A
+
+            0x60 => self.mov(Registers::H, Registers::B), // MOV H <- B
+            0x61 => self.mov(Registers::H, Registers::C), // MOV H <- C
+            0x62 => self.mov(Registers::H, Registers::D), // MOV H <- D
+            0x63 => self.mov(Registers::H, Registers::E), // MOV H <- E
+            0x64 => self.mov(Registers::H, Registers::H), // MOV H <- H
+            0x65 => self.mov(Registers::H, Registers::L), // MOV H <- L
+            0x66 => self.mov(Registers::H, Registers::HL), // MOV H <- (HL)
+            0x67 => self.mov(Registers::H, Registers::A), // MOV H <- A
+            0x68 => self.mov(Registers::L, Registers::B), // MOV L <- B
+            0x69 => self.mov(Registers::L, Registers::C), // MOV L <- C
+            0x6A => self.mov(Registers::L, Registers::D), // MOV L <- D
+            0x6B => self.mov(Registers::L, Registers::E), // MOV L <- E
+            0x6C => self.mov(Registers::L, Registers::H), // MOV L <- H
+            0x6D => self.mov(Registers::L, Registers::L), // MOV L <- L
+            0x6E => self.mov(Registers::L, Registers::HL), // MOV L <- HL
+            0x6F => self.mov(Registers::L, Registers::A), // MOV L <- A
+
+            0x70 => self.mov(Registers::HL, Registers::B), // MOV M,B	1		(HL) <- B
+            0x71 => self.mov(Registers::HL, Registers::C), // MOV M,C	1		(HL) <- C
+            0x72 => self.mov(Registers::HL, Registers::D), // MOV M,D	1		(HL) <- D
+            0x73 => self.mov(Registers::HL, Registers::E), // MOV M,E	1		(HL) <- E
+            0x74 => self.mov(Registers::HL, Registers::H), // MOV M,H	1		(HL) <- H
+            0x75 => self.mov(Registers::HL, Registers::L), // MOV M,L	1		(HL) <- L
             0x76 => self.hlt(),
+            0x77 => self.mov(Registers::HL, Registers::A), // MOV M,A
+            0x78 => self.mov(Registers::A, Registers::B),  // MOV A,B
+            0x79 => self.mov(Registers::A, Registers::C),  // MOV A,C
+            0x7A => self.mov(Registers::A, Registers::D),  // MOV A,D
+            0x7B => self.mov(Registers::A, Registers::E),  // MOV A,E
+            0x7C => self.mov(Registers::A, Registers::H),  // MOV A,H
+            0x7D => self.mov(Registers::A, Registers::L),  // MOV A,L
+            0x7E => self.mov(Registers::A, Registers::HL), // MOV A,(HL)
+            0x7F => self.mov(Registers::A, Registers::A),  // MOV A,A
 
             0xD3 => self.data_out(dl),
 
@@ -243,6 +314,11 @@ impl CPU {
             }
             Err(e) => Err(e),
         }
+    }
+
+    // Returns a usize location in memory designed by the H and L registers
+    pub fn get_addr_pointer(&mut self) -> usize {
+        usize::from(u16::from(self.h) << 8 | u16::from(self.l))
     }
 
     // Returns a tuple with dl and dh populated, if able to.  Uses the values
@@ -290,8 +366,8 @@ impl CPU {
 // Makes a memory pointer by simply concatenating the two values
 #[must_use]
 #[allow(unused)]
-pub fn make_pointer(dl: u8, dh: u8) -> usize {
-    usize::from(u16::from(dh) << 8 | u16::from(dl))
+pub fn make_pointer(dl: u8, dh: u8) -> u16 {
+    (u16::from(dh) << 8 | u16::from(dl))
 }
 
 // If number of ones in a number's binary representation is even,

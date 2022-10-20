@@ -11,37 +11,7 @@ impl Cpu {
 
     
 
-    // MOV T(arget), Registers::X
-    // Moves into T(arget) the value in register specified by the enum Registers
-    pub fn op_mov(&mut self, target: Registers, source: Registers) -> ProgramCounter {
-        let val = match source {
-            Registers::A => self.a,
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::L => self.l,
-            Registers::H => self.h,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            _ => {
-                return ProgramCounter::Next;
-            } // Ignored
-        };
-
-        match target {
-            Registers::A => self.a = val,
-            Registers::B => self.b = val,
-            Registers::C => self.c = val,
-            Registers::D => self.d = val,
-            Registers::E => self.e = val,
-            Registers::L => self.l = val,
-            Registers::H => self.h = val,
-            Registers::HL => self.memory[self.get_addr_pointer()] = val,
-            _ => (), // Do nothing
-        };
-
-        ProgramCounter::Next
-    }
+    
 
     // Store accumulator direct to location in memory specified
     // by address dhdl

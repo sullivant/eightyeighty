@@ -1,4 +1,4 @@
-use crate::cpu::{Registers, CPU};
+use crate::cpu::{make_pointer, Registers, CPU};
 
 /// This contains any instructions of the LOAD / STORE / MOVE category
 /// that need to be implemented within the CPU
@@ -9,7 +9,7 @@ impl CPU {
         match target {
             Registers::BC => {
                 self.b = dh;
-                self.e = dl;
+                self.c = dl;
                 Ok(())
             }
             Registers::DE => {
@@ -23,7 +23,7 @@ impl CPU {
                 Ok(())
             }
             Registers::SP => {
-                self.sp = u16::from(dh) << 8 | u16::from(dl);
+                self.sp = make_pointer(dl, dh);
                 Ok(())
             }
             _ => Err(format!(
@@ -58,6 +58,53 @@ impl CPU {
 
         Ok(())
     }
+
+    // MOV T(arget), Registers::X
+    // Moves into T(arget) the value in register specified by the enum Registers
+    pub fn mov(&mut self, target: Registers, source: Registers) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+        let val = match source {
+            Registers::A => self.a,
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::L => self.l,
+            Registers::H => self.h,
+            Registers::HL => match self.memory.read(addr) {
+                Ok(v) => v,
+                Err(e) => return Err(e),
+            },
+            _ => {
+                return Err(format!(
+                    "Cannot MOV from unimplemented register: {}",
+                    source
+                ));
+            }
+        };
+
+        match target {
+            Registers::A => self.a = val,
+            Registers::B => self.b = val,
+            Registers::C => self.c = val,
+            Registers::D => self.d = val,
+            Registers::E => self.e = val,
+            Registers::L => self.l = val,
+            Registers::H => self.h = val,
+            Registers::HL => match self.memory.write(addr, val) {
+                Ok(()) => (),
+                Err(e) => return Err(e),
+            },
+            _ => {
+                return Err(format!(
+                    "Cannot MOV into unimplemented register: {}",
+                    source
+                ));
+            }
+        };
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -83,5 +130,55 @@ mod tests {
         assert_eq!(cpu.l, 0xFF);
         assert_eq!(cpu.h, 0x03);
         assert_eq!(cpu.pc, op + (OPCODE_SIZE * 3));
+    }
+
+    #[test]
+    fn test_mov() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // Test a register to register move (E into B)
+        cpu.b = 0x00; cpu.e = 0x10;
+        cpu.prep_instr_and_data(0x43, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.b, cpu.e);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+
+        // Test a register to memory addr move (move B into the memory address located at HL)
+        cpu.h = 0x10;
+        cpu.l = 0xFF;
+        cpu.prep_instr_and_data(0x70, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.memory.read(0x10FF).unwrap(),0x10);
+
+        // Test a memory addr to register move (move into C the value located in memory at HL)
+        cpu.c = 0x00;
+        cpu.prep_instr_and_data(0x4E, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.c, 0x10);
+
+
+    }
+
+    #[test]
+    fn test_lxi() {
+        // This will test a load into the BC pair
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+        cpu.prep_instr_and_data(0x01, 0x01, 0x02);
+
+        cpu.run_opcode().unwrap();
+
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
+        assert_eq!(cpu.b, 0x02);
+        assert_eq!(cpu.c, 0x01);
+
+        // This will test a load into memory
+        cpu.pc = 0;
+        cpu.prep_instr_and_data(0x31, 0x01, 0x02);
+        cpu.run_opcode().unwrap();
+
+        // SP should be 0x0201
+        assert_eq!(cpu.sp, 0x0201);
     }
 }
