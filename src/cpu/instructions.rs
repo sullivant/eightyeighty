@@ -1,5 +1,7 @@
 use std::fmt;
 
+mod load_store_move;
+mod misc;
 #[allow(clippy::wildcard_imports)]
 use crate::constants::*;
 
@@ -301,10 +303,3 @@ impl Instruction {
         }
     }
 }
-
-// This where the meat of the instructions are implemented, when called by CPU::run_opcode
-// impl CPU {
-//     pub fn hello() -> usize {
-//         69
-//     }
-// }

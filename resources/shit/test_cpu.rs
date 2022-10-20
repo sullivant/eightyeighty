@@ -1245,23 +1245,6 @@ fn test_op_mov() {
     assert_eq!(cpu.c, 0x11);
 }
 
-#[test]
-fn test_op_hlt() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-
-    cpu.run_opcode((0x76, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    // Try to run a tick, PC should not move
-    cpu.tick().unwrap();
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    // "unhalt" and see if pc moves next tick
-    cpu.set_nop(false);
-    cpu.tick().unwrap();
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
-}
 
 #[test]
 fn test_get_flag() {

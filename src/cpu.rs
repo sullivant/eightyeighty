@@ -1,5 +1,4 @@
-use core::time;
-use std::{fmt, fs::File, io::Read, thread};
+use std::{fmt, fs::File, io::Read};
 
 mod instructions;
 mod tests;
@@ -12,7 +11,7 @@ use instructions::Instruction;
 #[derive(Clone)]
 pub struct CPU {
     // Memory
-    pub memory: [u8; RAM_SIZE],
+    pub memory: [u8; RAM_SIZE], // TODO: Make memory its own mod, able to get/set by range
 
     // Registers
     pub pc: usize, // Program Counter
@@ -201,13 +200,9 @@ impl CPU {
 
         self.cycle_count += 1;
 
-        // If we are "Ok()" after running the opcode, let's move the PC
-        // according to the instruction's needs, if not, we will error
+        // If we are not ok after running the opcode, we will error
         match self.run_opcode() {
-            Ok(_) => {
-                self.pc += self.current_instruction.size * OPCODE_SIZE;
-                Ok(())
-            }
+            Ok(_) => Ok(()),
             Err(e) => Err(e),
         }
     }
@@ -228,12 +223,27 @@ impl CPU {
         };
 
         // Do the actual run of the opcode and return the result
-        match self.current_instruction.opcode {
+        let opcode_result = match self.current_instruction.opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
+
+            0x01 => self.op_lxi(Registers::B, dl, dh),
+
+            0x76 => self.op_hlt(),
+
+            0xD3 => self.op_out(dl),
+
             _ => Err(format!(
                 "Unable to process UNKNOWN OPCODE: {}",
                 self.current_instruction
             )),
+        };
+
+        match opcode_result {
+            Ok(()) => {
+                self.pc += self.current_instruction.size * OPCODE_SIZE;
+                Ok(())
+            }
+            Err(e) => Err(e),
         }
     }
 
@@ -243,10 +253,13 @@ impl CPU {
         self.ok_to_print = true;
     }
 
-    // Just a setter
     pub fn disassemble(&mut self, val: bool) -> bool {
         self.disassemble = val;
         self.disassemble
+    }
+
+    pub fn nop(&mut self, val: bool) {
+        self.nop = val;
     }
 }
 

@@ -7,28 +7,7 @@ use crate::Cpu;
 ///
 
 impl Cpu {
-    // LXI (target pair), D16
-    pub fn op_lxi(&mut self, target: Registers, x: u8, y: u8) -> ProgramCounter {
-        match target {
-            Registers::BC => {
-                self.b = y;
-                self.e = x;
-            }
-            Registers::DE => {
-                self.d = y;
-                self.e = x;
-            }
-            Registers::HL => {
-                self.h = y;
-                self.l = x;
-            }
-            Registers::SP => {
-                self.sp = u16::from(y) << 8 | u16::from(x);
-            }
-            _ => (),
-        }
-        ProgramCounter::Three
-    }
+    
 
     // LHLD
     pub fn lhld(&mut self, dl: u8, dh: u8) -> ProgramCounter {
