@@ -23,9 +23,13 @@ fn test_prep_instr_and_data() {
 
     // our initial PC will be 0x00, so after this test, our DL and DH values will
     // be stored at PC+1 and PC+2, respectively.
-    assert_eq!(cpu.memory[cpu.pc+1],0x10);
-    assert_eq!(cpu.memory[cpu.pc+2],0x01);
-    
+    assert_eq!(cpu.memory.read(cpu.pc + 1).unwrap(), 0x10);
+    assert_eq!(cpu.memory.read(cpu.pc + 2).unwrap(), 0x01);
+
     // This will also setup current_instruction's value to be of the opcode specified
-    assert_eq!(cpu.current_instruction.opcode,0x76);
+    assert_eq!(cpu.current_instruction.opcode, 0x76);
+}
+
+fn test_get_data_pair() {
+    assert_eq!(1, 2);
 }

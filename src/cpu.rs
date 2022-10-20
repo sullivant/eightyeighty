@@ -3,7 +3,10 @@ use std::{fmt, fs::File, io::Read};
 mod instructions;
 mod tests;
 
-use crate::constants::{OPCODE_SIZE, RAM_SIZE};
+use crate::{
+    constants::{OPCODE_SIZE, RAM_SIZE},
+    memory::Memory,
+};
 use instructions::Instruction;
 
 #[allow(clippy::upper_case_acronyms)]
@@ -11,7 +14,7 @@ use instructions::Instruction;
 #[derive(Clone)]
 pub struct CPU {
     // Memory
-    pub memory: [u8; RAM_SIZE], // TODO: Make memory its own mod, able to get/set by range
+    pub memory: Memory,
 
     // Registers
     pub pc: usize, // Program Counter
@@ -86,7 +89,7 @@ impl fmt::Display for CPU {
         write!(
             f,
             "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X} A:{:#06X} B:{:#04X} C:{:#04X} D:{:#04X} E:{:#04X} H:{:#04X} L:{:#04X} sp $[{:#06X}]={:#04X} sp+1 $[{:06X}]={:#04X} sp+2 $[{:06X}]={:#04X}",
-            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l,self.sp,self.memory[usize::from(self.sp)],self.sp+1,self.memory[usize::from(self.sp+1)],self.sp+2,self.memory[usize::from(self.sp+2)]
+            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l,self.sp,self.memory.read(usize::from(self.sp)).unwrap(),self.sp+1,self.memory.read(usize::from(self.sp+1)).unwrap(),self.sp+2,self.memory.read(usize::from(self.sp+2)).unwrap()
         )
     }
 }
@@ -101,7 +104,8 @@ impl CPU {
     #[must_use]
     pub fn new() -> CPU {
         CPU {
-            memory: [0; RAM_SIZE],
+            //memory: [0; RAM_SIZE],
+            memory: Memory::new(),
             pc: 0x00,
             sp: 0x00,
             a: 0x00,
@@ -135,6 +139,7 @@ impl CPU {
     /// # Panics
     /// If the error happens, this will cause the function to panic
     pub fn load_rom(
+        // TODO: Make load_rom return Ok or Err..
         &mut self,
         file: String,
         start_index: usize,
@@ -142,7 +147,7 @@ impl CPU {
         let rom = File::open(file)?;
         let mut last_idx: usize = 0;
         for (i, b) in rom.bytes().enumerate() {
-            self.memory[start_index + i] = b.unwrap();
+            self.memory.write(start_index + i, b.unwrap()).unwrap();
             last_idx = i;
         }
         Ok((start_index, start_index + last_idx + 1))
@@ -150,10 +155,7 @@ impl CPU {
 
     // Reads an instruction at ProgramCounter
     pub fn read_instruction(&mut self) -> Instruction {
-        let opcode = match self.memory.get(self.pc) {
-            Some(&v) => v,
-            None => 0,
-        };
+        let opcode = self.memory.read(self.pc).unwrap_or(0);
 
         Instruction::new(opcode) // new() will fill in the rest..
     }
@@ -211,15 +213,9 @@ impl CPU {
     // calls out to the appropriate instruction operation to
     // perform the thing...
     pub fn run_opcode(&mut self) -> Result<(), String> {
-        // Gather our data bytes - up to two, if necessary
-        // We may not use both of these, though
-        let dl = match self.memory.get(self.pc + 1) {
-            Some(&v) => v,
-            None => 0,
-        };
-        let dh = match self.memory.get(self.pc + 2) {
-            Some(&v) => v,
-            None => 0,
+        let (dl, dh) = match self.get_data_pair() {
+            Ok(value) => value,
+            Err(value) => return value,
         };
 
         // Do the actual run of the opcode and return the result
@@ -249,6 +245,20 @@ impl CPU {
         }
     }
 
+    // Returns a tuple with dl and dh populated, if able to.  Uses the values
+    // located in memory at PC+1 and PC+2
+    fn get_data_pair(&mut self) -> Result<(u8, u8), Result<(), String>> {
+        let dl = match self.memory.read(self.pc + 1) {
+            Ok(v) => v,
+            Err(e) => return Err(Err(e)),
+        };
+        let dh = match self.memory.read(self.pc + 2) {
+            Ok(v) => v,
+            Err(e) => return Err(Err(e)),
+        };
+        Ok((dl, dh))
+    }
+
     pub fn toggle_single_step_mode(&mut self) {
         self.single_step_mode = !self.single_step_mode;
 
@@ -264,17 +274,17 @@ impl CPU {
         self.nop = val;
     }
 
-    // This function simply provides convenience when testing and we need to 
+    // This function simply provides convenience when testing and we need to
     // execute an instruction along with its DL and DH values, which will be read
     // when the cpu gets to the whole "run opcode" ...thing.
     // This will overwrite what is in PC, etc.
+    #[allow(unused)] // It's used in testing...
     pub fn prep_instr_and_data(&mut self, opcode: u8, dl: u8, dh: u8) {
         // TODO: Make this use memory as a module with ability to write by range, and freakout.
         self.current_instruction = Instruction::new(opcode);
-        self.memory[self.pc+1] = dl;
-        self.memory[self.pc+2] = dh;
+        self.memory.write(self.pc + 1, dl);
+        self.memory.write(self.pc + 2, dh);
     }
-
 }
 
 // Makes a memory pointer by simply concatenating the two values
@@ -307,4 +317,3 @@ pub fn get_sign(x: u8) -> bool {
 pub fn will_ac(value: u8, source: u8) -> bool {
     ((value & 0x0F) + (source & 0x0F)) & 0x10 == 0x10
 }
-

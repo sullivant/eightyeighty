@@ -24,7 +24,7 @@ impl CPU {
 }
 
 #[cfg(test)]
-mod test_misc {
+mod tests {
     use crate::constants::OPCODE_SIZE;
     use crate::cpu::{instructions::Instruction, CPU};
 

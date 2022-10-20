@@ -2,6 +2,7 @@
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 mod constants;
 mod cpu;
+mod memory;
 
 use crate::cpu::CPU;
 use clap::{App, Arg};
