@@ -9,21 +9,7 @@ use crate::Cpu;
 impl Cpu {
     
 
-    // LHLD
-    pub fn lhld(&mut self, dl: u8, dh: u8) -> ProgramCounter {
-        let mut addr: u16 = u16::from(dh) << 8 | u16::from(dl);
-        self.l = match self.memory.get(addr as usize) {
-            Some(&v) => v,
-            None => 0,
-        };
-        addr = addr.overflowing_add(0x01).0;
-        self.h = match self.memory.get(addr as usize) {
-            Some(&v) => v,
-            None => 0,
-        };
-
-        ProgramCounter::Three
-    }
+    
 
     // MOV T(arget), Registers::X
     // Moves into T(arget) the value in register specified by the enum Registers

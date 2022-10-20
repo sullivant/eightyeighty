@@ -10,14 +10,14 @@ impl CPU {
     // as the data portion of this command
     // TODO: If data out is needed, this needs to be finished
     #[allow(clippy::unused_self)]
-    pub fn op_out(&self, data: u8) -> Result<(), String> {
+    pub fn data_out(&self, data: u8) -> Result<(), String> {
         println!("Setting Data Out: {:#04X}", data);
         Ok(())
     }
     // ProgramCounter is incremented and then the CPU enters a
     // STOPPED state and no further activity takes place until
     // an interrupt occurrs
-    pub fn op_hlt(&mut self) -> Result<(), String> {
+    pub fn hlt(&mut self) -> Result<(), String> {
         self.nop(true);
         Ok(())
     }

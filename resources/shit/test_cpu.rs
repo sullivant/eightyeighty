@@ -1017,19 +1017,6 @@ fn test_sbb() {
 }
 
 #[test]
-fn test_lhld() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-
-    cpu.memory[0x25B] = 0xFF;
-    cpu.memory[0x25C] = 0x03;
-    cpu.run_opcode((0x2A, 0x5B, 0x02)).unwrap();
-    assert_eq!(cpu.l, 0xFF);
-    assert_eq!(cpu.h, 0x03);
-    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
-}
-
-#[test]
 fn test_dcx() {
     let mut cpu = Cpu::new();
     let op = cpu.pc;

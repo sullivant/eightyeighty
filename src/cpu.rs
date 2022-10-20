@@ -226,11 +226,13 @@ impl CPU {
         let opcode_result = match self.current_instruction.opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
 
-            0x01 => self.op_lxi(Registers::B, dl, dh),
+            0x01 => self.lxi(Registers::B, dl, dh),
 
-            0x76 => self.op_hlt(),
+            0x2A => self.lhld(dl, dh),
 
-            0xD3 => self.op_out(dl),
+            0x76 => self.hlt(),
+
+            0xD3 => self.data_out(dl),
 
             _ => Err(format!(
                 "Unable to process UNKNOWN OPCODE: {}",
@@ -261,6 +263,18 @@ impl CPU {
     pub fn nop(&mut self, val: bool) {
         self.nop = val;
     }
+
+    // This function simply provides convenience when testing and we need to 
+    // execute an instruction along with its DL and DH values, which will be read
+    // when the cpu gets to the whole "run opcode" ...thing.
+    // This will overwrite what is in PC, etc.
+    pub fn prep_instr_and_data(&mut self, opcode: u8, dl: u8, dh: u8) {
+        // TODO: Make this use memory as a module with ability to write by range, and freakout.
+        self.current_instruction = Instruction::new(opcode);
+        self.memory[self.pc+1] = dl;
+        self.memory[self.pc+2] = dh;
+    }
+
 }
 
 // Makes a memory pointer by simply concatenating the two values
@@ -293,3 +307,4 @@ pub fn get_sign(x: u8) -> bool {
 pub fn will_ac(value: u8, source: u8) -> bool {
     ((value & 0x0F) + (source & 0x0F)) & 0x10 == 0x10
 }
+
