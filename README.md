@@ -8,5 +8,6 @@ An Intel 8080 Emulator, written in Rust.
 - Ensure lib sdl2 installed
 - `cargo build`
 - Acquire ROMs and place into ./resources/roms/
+- Acquire fonts and place into ./resources/fonts/
 - `cargo run -- ROMNAME`
 - Laugh as it fails because I messed up an opcode.  
