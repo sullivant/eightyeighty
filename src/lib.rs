@@ -132,8 +132,8 @@ pub fn go() -> Result<(), String> {
     // Some basic stuff, to get our event pump
     let sdl_context = sdl2::init()?;
     let mut event_pump = sdl_context.event_pump()?;
-    let video_subsystem = sdl_context.video()?;
-    let window = video_subsystem
+    let sdl_video_subsystem = sdl_context.video()?;
+    let window_main = sdl_video_subsystem
         .window(
             "8080",
             (DISP_WIDTH * CELL_SIZE).into(),
@@ -144,10 +144,25 @@ pub fn go() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
+    let window_memory = sdl_video_subsystem
+    .window(
+        "Memory",
+        (DISP_WIDTH * CELL_SIZE).into(),
+        (DISP_HEIGHT * CELL_SIZE).into(),
+    )
+    .position_centered()
+    .resizable()
+    .build()
+    .map_err(|e| e.to_string())?;
+
     // Reset to start
-    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    canvas.clear();
-    canvas.present();
+    let mut canvas_main = window_main.into_canvas().build().map_err(|e| e.to_string())?;
+    let mut canvas_video = window_memory.into_canvas().build().map_err(|e| e.to_string())?;
+    canvas_main.clear();
+    canvas_video.clear();
+    canvas_main.present();
+    canvas_video.present();
+
 
     // Gather from the command the rom to use; Clap won't let us skip this but we
     // load INVADERS by default just in case
@@ -156,32 +171,31 @@ pub fn go() -> Result<(), String> {
         rom_file = String::from(f);
     }
 
+    // Thread status flags
     let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let cpu_alive_clone = Arc::clone(&cpu_alive);
-
-    let app = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
-    let app_clone = Arc::clone(&app);
-
     let video_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
     let video_alive_clone = Arc::clone(&video_alive);
     
-    let video_subsystem = Arc::new(Mutex::new(Video::new()));
-    let video_subsystem_clone = Arc::clone(&video_subsystem);
-
-
+    // Actual threaded bits
+    let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
+    let cpu_clone = Arc::clone(&cpu);
+    
+    let video = Arc::new(Mutex::new(Video::new()));
+    let video_clone = Arc::clone(&video);
 
     // If we are in debug mode, set that now
     if matches.is_present("pause") {
         println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
-        app_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
-        app_clone.lock().unwrap().cpu.single_step_mode = true;
+        cpu_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
+        cpu_clone.lock().unwrap().cpu.single_step_mode = true;
     }
 
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
     let cpu_thread_handle = thread::spawn(move || {
         while cpu_alive_clone.load(Ordering::Relaxed) {
-            match app_clone.lock().unwrap().update() {
+            match cpu_clone.lock().unwrap().update() {
                 Ok(_) => (),
                 Err(e) => {
                     println!("Unable to tick: {}", e);
@@ -194,15 +208,15 @@ pub fn go() -> Result<(), String> {
 
         println!(
             "Shutting down. Final CPU state:\n{}",
-            app_clone.lock().unwrap().cpu
+            cpu_clone.lock().unwrap().cpu
         );
     });
 
     // Create a thread that will be our video processing engine
     let video_thread_handle = thread::spawn(move || {
         while video_alive_clone.load(Ordering::Relaxed) {
-            video_subsystem_clone.lock().unwrap().tick();
-            if video_subsystem_clone.lock().unwrap().tick_count > 5 {
+            video_clone.lock().unwrap().tick();
+            if video_clone.lock().unwrap().tick_count > 5 {
                 video_alive_clone.store(false, Ordering::Relaxed);
             }
         }
@@ -210,7 +224,7 @@ pub fn go() -> Result<(), String> {
 
     // The main application loop that will handle the event pump
     'running: loop {
-        let app_clone = Arc::clone(&app);
+        let app_clone = Arc::clone(&cpu);
         let cpu_alive_clone = Arc::clone(&cpu_alive);
 
         // If the cpu is not alive, we should just bail as well.
@@ -249,7 +263,8 @@ pub fn go() -> Result<(), String> {
         }
 
         // Clear the screen
-        canvas.clear();
+        canvas_main.clear();
+        canvas_video.clear();
 
         // Not drawing shit right now...
         // To Draw:
@@ -259,8 +274,11 @@ pub fn go() -> Result<(), String> {
         // Console output?
 
         // Present the updated screen
-        canvas.set_draw_color(WHITE);
-        canvas.present();
+        canvas_main.set_draw_color(WHITE);
+        canvas_main.present();
+
+        canvas_video.set_draw_color(WHITE);
+        canvas_video.present();
 
         // Sleep a bit
         //thread::sleep(Duration::from_millis(1));
