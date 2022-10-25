@@ -17,7 +17,27 @@
 /// communication like that.  
 /// 
 
-
-pub fn hello() -> usize {
-    42
+pub struct Video {
+    pub tick_count: usize,
 }
+
+impl Default for Video {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Video {
+    pub fn new() -> Video {
+        Video {
+            tick_count:0
+        }
+    }
+
+    pub fn tick(&mut self) {
+        println!("video ticked.");
+        self.tick_count += 1;
+    }
+}
+
+

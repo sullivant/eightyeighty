@@ -8,6 +8,7 @@ mod video;
 use crate::cpu::CPU;
 use clap::{App, Arg};
 use constants::{CELL_SIZE, DISP_HEIGHT, DISP_WIDTH, WHITE};
+use crate::video::Video;
 use std::fs::File;
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -161,6 +162,14 @@ pub fn go() -> Result<(), String> {
     let app = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
     let app_clone = Arc::clone(&app);
 
+    let video_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
+    let video_alive_clone = Arc::clone(&video_alive);
+    
+    let video_subsystem = Arc::new(Mutex::new(Video::new()));
+    let video_subsystem_clone = Arc::clone(&video_subsystem);
+
+
+
     // If we are in debug mode, set that now
     if matches.is_present("pause") {
         println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
@@ -170,7 +179,7 @@ pub fn go() -> Result<(), String> {
 
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
-    let handle = thread::spawn(move || {
+    let cpu_thread_handle = thread::spawn(move || {
         while cpu_alive_clone.load(Ordering::Relaxed) {
             match app_clone.lock().unwrap().update() {
                 Ok(_) => (),
@@ -179,12 +188,24 @@ pub fn go() -> Result<(), String> {
                     break;
                 }
             }
+
+            // TODO: Make some form of cycle based speed regulation
         }
 
         println!(
             "Shutting down. Final CPU state:\n{}",
             app_clone.lock().unwrap().cpu
         );
+    });
+
+    // Create a thread that will be our video processing engine
+    let video_thread_handle = thread::spawn(move || {
+        while video_alive_clone.load(Ordering::Relaxed) {
+            video_subsystem_clone.lock().unwrap().tick();
+            if video_subsystem_clone.lock().unwrap().tick_count > 5 {
+                video_alive_clone.store(false, Ordering::Relaxed);
+            }
+        }
     });
 
     // The main application loop that will handle the event pump
@@ -246,7 +267,8 @@ pub fn go() -> Result<(), String> {
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
-    handle.join().unwrap();
+    cpu_thread_handle.join().unwrap();
+    video_thread_handle.join().unwrap();
 
     Ok(())
 }
