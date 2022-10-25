@@ -130,29 +130,6 @@ impl CPU {
         }
     }
 
-    /// Load the ROM file into memory, starting at ``start_index``
-    /// Returns a tuple containing the index we started at and where we
-    /// actually finished at.
-    ///
-    /// # Errors
-    /// Will return a standard io Error if necessary
-    /// # Panics
-    /// If the error happens, this will cause the function to panic
-    pub fn load_rom(
-        // TODO: Make load_rom return Ok or Err..
-        &mut self,
-        file: String,
-        start_index: usize,
-    ) -> Result<(usize, usize), std::io::Error> {
-        let rom = File::open(file)?;
-        let mut last_idx: usize = 0;
-        for (i, b) in rom.bytes().enumerate() {
-            self.memory.write(start_index + i, b.unwrap()).unwrap();
-            last_idx = i;
-        }
-        Ok((start_index, start_index + last_idx + 1))
-    }
-
     // Reads an instruction at ProgramCounter
     pub fn read_instruction(&mut self) -> Instruction {
         let opcode = self.memory.read(self.pc).unwrap_or(0);
@@ -360,6 +337,12 @@ impl CPU {
         self.current_instruction = Instruction::new(opcode);
         self.memory.write(self.pc + 1, dl);
         self.memory.write(self.pc + 2, dh);
+    }
+
+
+    // This allows for access to memory, by reference, from outside of the CPU 
+    pub fn memory(&mut self) -> &mut Memory {
+        &mut self.memory
     }
 }
 

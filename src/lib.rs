@@ -3,10 +3,13 @@
 mod constants;
 mod cpu;
 mod memory;
+mod video;
 
 use crate::cpu::CPU;
 use clap::{App, Arg};
 use constants::{CELL_SIZE, DISP_HEIGHT, DISP_WIDTH, WHITE};
+use std::fs::File;
+use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -38,7 +41,7 @@ impl Emulator {
         let file_to_load = format!("./resources/roms/{}.COM", rom_file);
         let mut dims: (usize, usize) = (0, 0);
 
-        match cpu.load_rom(file_to_load.clone(), dims.1) {
+        match load_rom(&mut cpu,file_to_load.clone(), dims.1) {
             Ok(i) => {
                 dims = i;
             }
@@ -75,6 +78,29 @@ impl Emulator {
         self.cpu.tick()
     }
 }
+
+/// Load the ROM file into memory, starting at ``start_index``
+/// Returns a tuple containing the index we started at and where we
+/// actually finished at.
+///
+/// # Errors
+/// Will return a standard io Error if necessary
+/// # Panics
+/// If the error happens, this will cause the function to panic
+pub fn load_rom(
+    cpu: &mut CPU,
+    file: String,
+    start_index: usize,
+) -> Result<(usize, usize), std::io::Error> {
+    let rom = File::open(file)?;
+    let mut last_idx: usize = 0;
+    for (i, b) in rom.bytes().enumerate() {
+        cpu.memory().write(start_index + i, b.unwrap()).unwrap();
+        last_idx = i;
+    }
+    Ok((start_index, start_index + last_idx + 1))
+}
+
 
 /// go()
 ///
