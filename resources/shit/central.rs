@@ -23,19 +23,7 @@ use crate::disassembler;
 
 
 
-    // Returns a paired register such as HL or BC.
-    // Pass to the function the beginning register for the pair
-    // Returned value will be a u16 value
-    #[must_use]
-    pub fn get_register_pair(&self, register: Registers) -> u16 {
-        match register {
-            Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
-            Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
-            Registers::HL => u16::from(self.h) << 8 | u16::from(self.l),
-            Registers::SP => self.sp,
-            _ => 0_u16,
-        }
-    }
+    
 
     // Sets a register pair if appropriate
     pub fn set_register_pair(&mut self, register: Registers, val: u16) {

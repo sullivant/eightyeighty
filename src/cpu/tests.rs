@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::cpu::{make_pointer, will_ac, CPU};
+    use crate::cpu::{make_pointer, will_ac, CPU, Registers};
 
     #[test]
     fn test_cpu_default() {
@@ -44,5 +44,23 @@ mod tests {
         cpu.memory.write(cpu.pc + 2, 0x01).unwrap(); // DH
 
         assert_eq!(cpu.get_data_pair().unwrap(), (0x10, 0x01));
+    }
+
+    #[test]
+    fn test_get_register_pair() {
+        let mut cpu = CPU::new();
+        cpu.b = 0x10;
+        cpu.c = 0x01;
+        cpu.d = 0xff;
+        cpu.e = 0xaa;
+        cpu.h = 0x20;
+        cpu.l = 0x10;
+        cpu.sp = 0x1011;
+
+        assert_eq!(cpu.get_register_pair(Registers::BC), 0x1001);
+        assert_eq!(cpu.get_register_pair(Registers::DE), 0xffaa);
+        assert_eq!(cpu.get_register_pair(Registers::HL), 0x2010);
+        assert_eq!(cpu.get_register_pair(Registers::SP), 0x1011);
+        assert_eq!(cpu.get_register_pair(Registers::A), 0x00);
     }
 }
