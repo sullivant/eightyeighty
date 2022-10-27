@@ -1,5 +1,6 @@
 [package]
 name = "eightyeighty"
+homepage = "https://github.com/sullivant/eightyeighty"
 version = "0.1.0"
 edition = "2021"
 

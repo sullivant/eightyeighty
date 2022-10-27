@@ -235,16 +235,25 @@ fn main() -> Result<(), String> {
         egui_ctx.begin_frame(egui_state.input.take());
 
 
-        egui::TopBottomPanel::bottom("footer_panel").show(&egui_ctx, |ui| {
-            ui.horizontal(|ui| {
+        egui::TopBottomPanel::top("wrap_app_top_bar").show(&egui_ctx, |ui| {
+            egui::trace!(ui);
+            ui.horizontal_wrapped(|ui| {
+                ui.visuals_mut().button_frame = false;
+                if ui.button("Quit").clicked() {
+                    quit = true;
+                    cpu_alive_clone.store(false, Ordering::Relaxed);
+                }
+                ui.separator();
+                egui::widgets::global_dark_light_mode_switch(ui);
+                ui.separator();
                 ui.label(format!("v{}", &env!("CARGO_PKG_VERSION")));
                 egui::warn_if_debug_build(ui);
-                ui.hyperlink_to("Project homepage", env!("CARGO_PKG_HOMEPAGE"));
             });
         });
 
         egui::SidePanel::right("right_panel").default_width(300.0).show(&egui_ctx, |ui| {
             let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
+            
             if ui.button("Toggle Pause").clicked() {
                 loop_cpu.toggle_single_step_mode();
                 //cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
@@ -263,12 +272,6 @@ fn main() -> Result<(), String> {
             ui.label(format!("E: {:#06X}", loop_cpu.e));
             ui.label(format!("H: {:#06X}", loop_cpu.h));
             ui.label(format!("L: {:#06X}", loop_cpu.l));
-
-            ui.separator();
-            if ui.button("Quit").clicked() {
-                quit = true;
-                cpu_alive_clone.store(false, Ordering::Relaxed);
-            }
             
         });
 
