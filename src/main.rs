@@ -200,11 +200,8 @@ fn main() -> Result<(), String> {
         }
     });
 
-    // Just some horseshit to display in the window temporarily
-    let mut test_str: String = "This is a test string.".to_owned();
-    let mut enable_vsync = false;
+    let enable_vsync = false;
     let mut quit = false;
-    let mut slider = 0.0;
 
     let start_time = Instant::now();
 
@@ -243,7 +240,7 @@ fn main() -> Result<(), String> {
         // This is the layout of our UI, using egui things
         egui::SidePanel::left("my_left_panel").show(&egui_ctx, |ui| {
             if ui.button("Toggle Pause").clicked() {
-                cpu_clone.lock().unwrap().cpu.toggle_single_step_mode()
+                cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
             }
             if ui.button("Quit").clicked() {
                 quit = true;
