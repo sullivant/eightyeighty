@@ -1,6 +1,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-use egui::Checkbox;
+use egui::{Checkbox, Align2};
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, gl, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
@@ -128,7 +128,7 @@ fn main() -> Result<(), String> {
     gl_attr.set_multisample_samples(4);
 
     let window = video_subsystem
-        .window("Window title", DISP_WIDTH, DISP_HEIGHT)
+        .window("Eighty Eighty", DISP_WIDTH, DISP_HEIGHT)
         .opengl()
         .resizable()
         .build()
@@ -150,18 +150,20 @@ fn main() -> Result<(), String> {
     }
 
     // Thread status flags
-    let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
-    let cpu_alive_clone = Arc::clone(&cpu_alive);
-    let video_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true));
-    let video_alive_clone = Arc::clone(&video_alive);
+    let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // Used to bail out of the threads if needed
+    let cpu_alive_clone = Arc::clone(&cpu_alive); // Cloned to control the bail from within the main loop
+    let video_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // Used to bail out of the thread if needed
+    let video_alive_clone = Arc::clone(&video_alive); // Clone to control the bail from within the main loop
 
     // Actual threaded bits
-    let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?));
-    let cpu_clone = Arc::clone(&cpu);
-    let video = Arc::new(Mutex::new(Video::new()));
-    let video_clone = Arc::clone(&video);
+    let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?)); // A threadable version of our emulator
+    let cpu_clone = Arc::clone(&cpu); // Used to tickle various settings
+    let cpu_thread = Arc::clone(&cpu); // Used from within the main loop
 
-    // If we are in debug mode, set that now
+    let video = Arc::new(Mutex::new(Video::new())); // The video processing code
+    let video_thread = Arc::clone(&video); // Used from within the main loop
+
+    // If we are in debug mode, set that now, before we start
     if matches.is_present("pause") {
         println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
         cpu_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
@@ -171,8 +173,8 @@ fn main() -> Result<(), String> {
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
     let cpu_thread_handle = thread::spawn(move || {
-        while cpu_alive_clone.load(Ordering::Relaxed) {
-            match cpu_clone.lock().unwrap().update() {
+        while cpu_alive.load(Ordering::Relaxed) {
+            match cpu_thread.lock().unwrap().update() {
                 Ok(_) => (),
                 Err(e) => {
                     println!("Unable to tick: {}", e);
@@ -185,7 +187,7 @@ fn main() -> Result<(), String> {
 
         println!(
             "Shutting down. Final CPU state:\n{}",
-            cpu_clone.lock().unwrap().cpu
+            cpu_thread.lock().unwrap().cpu
         );
     });
 
@@ -193,26 +195,21 @@ fn main() -> Result<(), String> {
     // Right now this will just tick a few times and then kill itself.
     let video_thread_handle = thread::spawn(move || {
         while video_alive_clone.load(Ordering::Relaxed) {
-            video_clone.lock().unwrap().tick();
-            if video_clone.lock().unwrap().tick_count > 5 {
+            video_thread.lock().unwrap().tick();
+            if video_thread.lock().unwrap().tick_count > 5 {
                 video_alive_clone.store(false, Ordering::Relaxed);
             }
         }
     });
 
-    let enable_vsync = false;
+    let mut enable_vsync = false;
     let mut quit = false;
-
     let start_time = Instant::now();
-
-    let cpu_clone = Arc::clone(&cpu);
-    let cpu_alive_clone = Arc::clone(&cpu_alive);
 
     'running: loop {
         // TODO: Should these be outside the loop?
         // let app_clone = Arc::clone(&cpu);
         // let this_cpu = &app_clone.lock().unwrap().cpu;
-        
 
         // If the cpu is not alive, we should just bail as well.
         if !cpu_alive_clone.load(Ordering::Relaxed) {
@@ -237,13 +234,15 @@ fn main() -> Result<(), String> {
         egui_ctx.begin_frame(egui_state.input.take());
 
 
-        // This is the layout of our UI, using egui things
-        egui::SidePanel::left("my_left_panel").show(&egui_ctx, |ui| {
+        egui::SidePanel::right("right_panel").show(&egui_ctx, |ui| {
             if ui.button("Toggle Pause").clicked() {
                 cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
             }
+            ui.add(Checkbox::new(&mut enable_vsync, "Reduce CPU Usage?"));
+            ui.separator();
             if ui.button("Quit").clicked() {
                 quit = true;
+                cpu_alive_clone.store(false, Ordering::Relaxed);
             }
         });
 
@@ -253,7 +252,6 @@ fn main() -> Result<(), String> {
             ui.label("Instruction Running Next:");
             ui.label(format!("{} @ {}", loop_cpu.current_instruction, loop_cpu));
         });
-
 
         egui::CentralPanel::default().show(&egui_ctx, |ui| {
             let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
@@ -289,9 +287,9 @@ fn main() -> Result<(), String> {
                     ..
                 } => cpu_clone.lock().unwrap().cpu.toggle_single_step_mode(),
                 Event::KeyDown {
-                    keycode: Some(Keycode::F2), 
+                    keycode: Some(Keycode::F2),
                     ..
-                } => cpu_alive.store(false, Ordering::Relaxed),
+                } => cpu_alive_clone.store(false, Ordering::Relaxed),
                 Event::KeyDown {
                     keycode: Some(Keycode::Space),
                     ..

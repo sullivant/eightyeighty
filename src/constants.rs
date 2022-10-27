@@ -5,8 +5,8 @@ pub const OPCODE_SIZE: usize = 1;
 pub const RAM_SIZE: usize = 0xFFFF;
 
 // Window and display concerns
-pub const DISP_WIDTH: u32 = 800; // Overall width/height
-pub const DISP_HEIGHT: u32 = 600;
+pub const DISP_WIDTH: u32 = 1024; // Overall width/height
+pub const DISP_HEIGHT: u32 = 768;
 // pub const EMU_WIDTH: u16 = 224; // Emulator display area width/height
 // pub const EMU_HEIGHT: u16 = 256;
 pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
