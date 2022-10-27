@@ -138,7 +138,8 @@ mod tests {
         let op = cpu.pc;
 
         // Test a register to register move (E into B)
-        cpu.b = 0x00; cpu.e = 0x10;
+        cpu.b = 0x00;
+        cpu.e = 0x10;
         cpu.prep_instr_and_data(0x43, 0x00, 0x00);
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.b, cpu.e);
@@ -149,15 +150,13 @@ mod tests {
         cpu.l = 0xFF;
         cpu.prep_instr_and_data(0x70, 0x00, 0x00);
         cpu.run_opcode().unwrap();
-        assert_eq!(cpu.memory.read(0x10FF).unwrap(),0x10);
+        assert_eq!(cpu.memory.read(0x10FF).unwrap(), 0x10);
 
         // Test a memory addr to register move (move into C the value located in memory at HL)
         cpu.c = 0x00;
         cpu.prep_instr_and_data(0x4E, 0x00, 0x00);
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.c, 0x10);
-
-
     }
 
     #[test]

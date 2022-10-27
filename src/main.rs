@@ -1,10 +1,10 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 use egui::Checkbox;
-use egui_sdl2_gl as egui_backend;
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, gl, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
+use egui_sdl2_gl as egui_backend;
 use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
 use std::time::Instant;
@@ -15,9 +15,9 @@ mod memory;
 mod video;
 
 use crate::cpu::CPU;
+use crate::video::Video;
 use clap::{App, Arg};
 use constants::{CELL_SIZE, DISP_HEIGHT, DISP_WIDTH, WHITE};
-use crate::video::Video;
 use std::fs::File;
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -42,7 +42,7 @@ impl Emulator {
         let file_to_load = format!("./resources/roms/{}.COM", rom_file);
         let mut dims: (usize, usize) = (0, 0);
 
-        match load_rom(&mut cpu,file_to_load.clone(), dims.1) {
+        match load_rom(&mut cpu, file_to_load.clone(), dims.1) {
             Ok(i) => {
                 dims = i;
             }
@@ -80,7 +80,6 @@ impl Emulator {
     }
 }
 
-
 /// Load the ROM file into memory, starting at ``start_index``
 /// Returns a tuple containing the index we started at and where we
 /// actually finished at.
@@ -103,37 +102,41 @@ pub fn load_rom(
     Ok((start_index, start_index + last_idx + 1))
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<(), String> {
     // Get some cli options from CLAP
     let matches = App::new("EightyEighty")
-    .version("1.0")
-    .author("Thomas Sullivan <sullivan.t@gmail.com>")
-    .about("An 8080 emulator")
-    .arg(Arg::from_usage(
-        "-p, --pause... 'initiates single step (pause on tick) mode'",
-    ))
-    .arg(Arg::from_usage(
-        "-c, --count=[COUNT] 'pauses and initiates single step mode on program count <count>'",
-    ))
-    .args_from_usage("<rom> 'The rom file to load and execute'")
-    .get_matches();
-    
+        .version("1.0")
+        .author("Thomas Sullivan <sullivan.t@gmail.com>")
+        .about("An 8080 emulator")
+        .arg(Arg::from_usage(
+            "-p, --pause... 'initiates single step (pause on tick) mode'",
+        ))
+        .arg(Arg::from_usage(
+            "-c, --count=[COUNT] 'pauses and initiates single step mode on program count <count>'",
+        ))
+        .args_from_usage("<rom> 'The rom file to load and execute'")
+        .get_matches();
+
     // Setup our windowing and display driving
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    
+
     let gl_attr = video_subsystem.gl_attr();
     gl_attr.set_context_profile(GLProfile::Core);
     gl_attr.set_double_buffer(true);
     gl_attr.set_multisample_samples(4);
 
-    let window = video_subsystem.window(
-        "Window title", 800, 600
-    ).opengl().resizable().build().unwrap();
+    let window = video_subsystem
+        .window("Window title", DISP_WIDTH, DISP_HEIGHT)
+        .opengl()
+        .resizable()
+        .build()
+        .unwrap();
 
     let _ctx = window.gl_create_context().unwrap();
     let shader_ver = ShaderVersion::Default;
-    let (mut painter, mut egui_state) = 
+    let (mut painter, mut egui_state) =
         egui_backend::with_sdl2(&window, shader_ver, DpiScaling::Custom(2.0));
 
     let mut egui_ctx = egui::CtxRef::default();
@@ -197,7 +200,6 @@ fn main() -> Result<(), String> {
         }
     });
 
-
     // Just some horseshit to display in the window temporarily
     let mut test_str: String = "This is a test string.".to_owned();
     let mut enable_vsync = false;
@@ -210,8 +212,7 @@ fn main() -> Result<(), String> {
         // TODO: Should these be outside the loop?
         let app_clone = Arc::clone(&cpu);
         let cpu_alive_clone = Arc::clone(&cpu_alive);
-    
-    
+
         // If the cpu is not alive, we should just bail as well.
         if !cpu_alive_clone.load(Ordering::Relaxed) {
             println!("CPU is not alive.  Shutting application down.");
@@ -220,9 +221,15 @@ fn main() -> Result<(), String> {
 
         // Update details in the windowing subsystem if needs be
         if enable_vsync {
-            window.subsystem().gl_set_swap_interval(SwapInterval::VSync).unwrap();
+            window
+                .subsystem()
+                .gl_set_swap_interval(SwapInterval::VSync)
+                .unwrap();
         } else {
-            window.subsystem().gl_set_swap_interval(SwapInterval::Immediate).unwrap();
+            window
+                .subsystem()
+                .gl_set_swap_interval(SwapInterval::Immediate)
+                .unwrap();
         }
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
@@ -232,7 +239,8 @@ fn main() -> Result<(), String> {
         egui::CentralPanel::default().show(&egui_ctx, |ui| {
             ui.label(" ");
             ui.text_edit_multiline(&mut test_str);
-            ui.label(" ");
+            ui.label(format!("PC:{:#06X}", app_clone.lock().unwrap().cpu.pc));
+
             ui.add(egui::Slider::new(&mut slider, 0.0..=50.0).text("Slider"));
             ui.label(" ");
             ui.add(Checkbox::new(&mut enable_vsync, "Enable VSync?"));
@@ -248,18 +256,22 @@ fn main() -> Result<(), String> {
 
         let paint_jobs = egui_ctx.tessellate(paint_cmds);
 
-
         // To determine if we need to repaint..
         // if !egui_output.needs_repaint { ... see example ...}
-        
+
         painter.paint_jobs(None, paint_jobs, &egui_ctx.font_image());
         window.gl_swap_window();
         if let Some(event) = event_pump.wait_event_timeout(5) {
             match event {
-                Event::Quit { .. } | Event::KeyDown {
+                Event::Quit { .. }
+                | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => {quit = true; cpu_alive_clone.store(false, Ordering::Relaxed); break 'running;},
+                } => {
+                    quit = true;
+                    cpu_alive_clone.store(false, Ordering::Relaxed);
+                    break 'running;
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::F1),
                     ..
@@ -282,7 +294,7 @@ fn main() -> Result<(), String> {
         // Sleep a bit
         //thread::sleep(Duration::from_millis(1));
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-    
+
         if quit {
             break;
         }

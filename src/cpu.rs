@@ -339,8 +339,7 @@ impl CPU {
         self.memory.write(self.pc + 2, dh);
     }
 
-
-    // This allows for access to memory, by reference, from outside of the CPU 
+    // This allows for access to memory, by reference, from outside of the CPU
     pub fn memory(&mut self) -> &mut Memory {
         &mut self.memory
     }

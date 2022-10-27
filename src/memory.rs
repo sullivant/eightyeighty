@@ -1,8 +1,8 @@
 use crate::constants::RAM_SIZE;
 
 /// Memory
-/// 
-/// TODO: Make this able to output a section of data by slice, for processing by the 
+///
+/// TODO: Make this able to output a section of data by slice, for processing by the
 /// memory display window.
 
 // Let's see how long we can last as full private?
