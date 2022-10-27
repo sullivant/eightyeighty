@@ -140,6 +140,7 @@ fn main() -> Result<(), String> {
         egui_backend::with_sdl2(&window, shader_ver, DpiScaling::Custom(3.0));
 
     let mut egui_ctx = egui::CtxRef::default();
+    egui_ctx.set_visuals(egui::Visuals::light()); 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     // Gather from the command the rom to use; Clap won't let us skip this but we
@@ -234,16 +235,41 @@ fn main() -> Result<(), String> {
         egui_ctx.begin_frame(egui_state.input.take());
 
 
-        egui::SidePanel::right("right_panel").show(&egui_ctx, |ui| {
+        egui::TopBottomPanel::bottom("footer_panel").show(&egui_ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(format!("v{}", &env!("CARGO_PKG_VERSION")));
+                egui::warn_if_debug_build(ui);
+                ui.hyperlink_to("Project homepage", env!("CARGO_PKG_HOMEPAGE"));
+            });
+        });
+
+        egui::SidePanel::right("right_panel").default_width(300.0).show(&egui_ctx, |ui| {
+            let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
             if ui.button("Toggle Pause").clicked() {
-                cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
+                loop_cpu.toggle_single_step_mode();
+                //cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
             }
             ui.add(Checkbox::new(&mut enable_vsync, "Reduce CPU Usage?"));
+            ui.separator();
+
+            ui.label(format!("PC: {:#06X}", loop_cpu.pc));
+            ui.label(format!("Next Instr: {}",loop_cpu.current_instruction));
+            ui.separator();
+            ui.label(format!("SP: {:#06X}", loop_cpu.sp));
+            ui.label(format!("A: {:#06X}", loop_cpu.a));
+            ui.label(format!("B: {:#06X}", loop_cpu.b));
+            ui.label(format!("C: {:#06X}", loop_cpu.c));
+            ui.label(format!("D: {:#06X}", loop_cpu.d));
+            ui.label(format!("E: {:#06X}", loop_cpu.e));
+            ui.label(format!("H: {:#06X}", loop_cpu.h));
+            ui.label(format!("L: {:#06X}", loop_cpu.l));
+
             ui.separator();
             if ui.button("Quit").clicked() {
                 quit = true;
                 cpu_alive_clone.store(false, Ordering::Relaxed);
             }
+            
         });
 
         // Bottom panel will hold current instructions run history
@@ -255,6 +281,7 @@ fn main() -> Result<(), String> {
 
         egui::CentralPanel::default().show(&egui_ctx, |ui| {
             let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
+
 
             ui.label("ROM Display Area");
             ui.separator();
