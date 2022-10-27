@@ -137,7 +137,7 @@ fn main() -> Result<(), String> {
     let _ctx = window.gl_create_context().unwrap();
     let shader_ver = ShaderVersion::Default;
     let (mut painter, mut egui_state) =
-        egui_backend::with_sdl2(&window, shader_ver, DpiScaling::Custom(2.0));
+        egui_backend::with_sdl2(&window, shader_ver, DpiScaling::Custom(3.0));
 
     let mut egui_ctx = egui::CtxRef::default();
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -208,10 +208,14 @@ fn main() -> Result<(), String> {
 
     let start_time = Instant::now();
 
+    let cpu_clone = Arc::clone(&cpu);
+    let cpu_alive_clone = Arc::clone(&cpu_alive);
+
     'running: loop {
         // TODO: Should these be outside the loop?
-        let app_clone = Arc::clone(&cpu);
-        let cpu_alive_clone = Arc::clone(&cpu_alive);
+        // let app_clone = Arc::clone(&cpu);
+        // let this_cpu = &app_clone.lock().unwrap().cpu;
+        
 
         // If the cpu is not alive, we should just bail as well.
         if !cpu_alive_clone.load(Ordering::Relaxed) {
@@ -235,19 +239,30 @@ fn main() -> Result<(), String> {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        // This is the layout of our UI, using egui things
-        egui::CentralPanel::default().show(&egui_ctx, |ui| {
-            ui.label(" ");
-            ui.text_edit_multiline(&mut test_str);
-            ui.label(format!("PC:{:#06X}", app_clone.lock().unwrap().cpu.pc));
 
-            ui.add(egui::Slider::new(&mut slider, 0.0..=50.0).text("Slider"));
-            ui.label(" ");
-            ui.add(Checkbox::new(&mut enable_vsync, "Enable VSync?"));
-            ui.separator();
-            if ui.button("Quit?").clicked() {
+        // This is the layout of our UI, using egui things
+        egui::SidePanel::left("my_left_panel").show(&egui_ctx, |ui| {
+            if ui.button("Toggle Pause").clicked() {
+                cpu_clone.lock().unwrap().cpu.toggle_single_step_mode()
+            }
+            if ui.button("Quit").clicked() {
                 quit = true;
             }
+        });
+
+        // Bottom panel will hold current instructions run history
+        egui::TopBottomPanel::bottom("bottom_panel").show(&egui_ctx, |ui| {
+            let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
+            ui.label("Instruction Running Next:");
+            ui.label(format!("{} @ {}", loop_cpu.current_instruction, loop_cpu));
+        });
+
+
+        egui::CentralPanel::default().show(&egui_ctx, |ui| {
+            let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
+
+            ui.label("ROM Display Area");
+            ui.separator();
         });
 
         let (egui_output, paint_cmds) = egui_ctx.end_frame();
@@ -275,15 +290,15 @@ fn main() -> Result<(), String> {
                 Event::KeyDown {
                     keycode: Some(Keycode::F1),
                     ..
-                } => app_clone.lock().unwrap().cpu.toggle_single_step_mode(),
+                } => cpu_clone.lock().unwrap().cpu.toggle_single_step_mode(),
                 Event::KeyDown {
-                    keycode: Some(Keycode::F2),
+                    keycode: Some(Keycode::F2), 
                     ..
                 } => cpu_alive.store(false, Ordering::Relaxed),
                 Event::KeyDown {
                     keycode: Some(Keycode::Space),
                     ..
-                } => app_clone.lock().unwrap().cpu.ok_to_step = true, // Setting to false will let it out of the while loop
+                } => cpu_clone.lock().unwrap().cpu.ok_to_step = true, // Setting to false will let it out of the while loop
                 _ => {
                     // Process input event
                     egui_state.process_input(&window, event, &mut painter);
