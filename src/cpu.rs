@@ -358,6 +358,30 @@ impl CPU {
         }
     }
 
+    // Sets a register pair if appropriate
+    pub fn set_register_pair(&mut self, register: Registers, val: u16) {
+        let h: u8 = (val >> 8) as u8;
+        let l: u8 = (val & 0xff) as u8;
+        match register {
+            Registers::BC => {
+                self.b = h;
+                self.c = l;
+            }
+            Registers::DE => {
+                self.d = h;
+                self.e = l;
+            }
+            Registers::HL => {
+                self.h = h;
+                self.l = l;
+            }
+            Registers::SP => {
+                self.sp = val;
+            }
+            _ => (),
+        };
+    }
+
 }
 
 // Makes a memory pointer by simply concatenating the two values

@@ -3,8 +3,16 @@ mod tests {
     use crate::cpu::{make_pointer, will_ac, CPU, Registers};
 
     #[test]
+    fn test_nop() {
+        let mut cpu = CPU::new();
+        cpu.nop = false;
+        cpu.nop(true);
+        assert!(cpu.nop);
+    }
+
+    #[test]
     fn test_cpu_default() {
-        let mut cpu = self::CPU::new();
+        let mut cpu = CPU::new();
         cpu.pc = 0x201;
         cpu = CPU::default();
         assert_eq!(cpu.pc, 0x00);
@@ -63,4 +71,24 @@ mod tests {
         assert_eq!(cpu.get_register_pair(Registers::SP), 0x1011);
         assert_eq!(cpu.get_register_pair(Registers::A), 0x00);
     }
+
+    #[test]
+    fn test_set_register_pair() {
+        let mut cpu: CPU = CPU::new();
+
+        cpu.set_register_pair(Registers::BC, 0x1001);
+        cpu.set_register_pair(Registers::DE, 0xffaa);
+        cpu.set_register_pair(Registers::HL, 0x2010);
+        cpu.set_register_pair(Registers::SP, 0x1001);
+        
+        assert_eq!(cpu.b,0x10);
+        assert_eq!(cpu.c,0x01);
+        assert_eq!(cpu.d,0xff);
+        assert_eq!(cpu.e,0xaa);
+        assert_eq!(cpu.h,0x20);
+        assert_eq!(cpu.l,0x10);
+        assert_eq!(cpu.sp, 0x1001);
+
+    }
+
 }
