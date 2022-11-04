@@ -22,22 +22,7 @@ fn test_set_flag() {
     assert_eq!(cpu.flags, 0b0000_0101);
 }
 
-#[test]
-fn test_reset_flag() {
-    let mut cpu = Cpu::new();
-    cpu.flags = 0b1111_1111;
-    cpu.reset_flag(lib::FLAG_SIGN);
-    assert_eq!(cpu.flags, 0b0111_1111);
 
-    // Test an already reset flag
-    cpu.flags = 0b01111111;
-    cpu.reset_flag(lib::FLAG_SIGN);
-    assert_eq!(cpu.flags, 0b01111111);
-
-    cpu.flags = 0b11111111;
-    cpu.reset_flag(lib::FLAG_SIGN | lib::FLAG_ZERO);
-    assert_eq!(cpu.flags, 0b00111111);
-}
 
 #[test]
 fn test_get_parity() {

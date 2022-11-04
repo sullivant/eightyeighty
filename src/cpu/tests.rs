@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::cpu::{make_pointer, will_ac, CPU, Registers};
+    use crate::{cpu::{make_pointer, will_ac, CPU, Registers}, constants::{FLAG_SIGN, FLAG_ZERO}};
 
     #[test]
     fn test_nop() {
@@ -89,6 +89,23 @@ mod tests {
         assert_eq!(cpu.l,0x10);
         assert_eq!(cpu.sp, 0x1001);
 
+    }
+
+    #[test]
+    fn test_reset_flag() {
+        let mut cpu = CPU::new();
+        cpu.flags = 0b1111_1111;
+        cpu.reset_flag(FLAG_SIGN);
+        assert_eq!(cpu.flags, 0b0111_1111);
+
+        // Test an already reset flag
+        cpu.flags = 0b01111111;
+        cpu.reset_flag(FLAG_SIGN);
+        assert_eq!(cpu.flags, 0b01111111);
+
+        cpu.flags = 0b11111111;
+        cpu.reset_flag(FLAG_SIGN | FLAG_ZERO);
+        assert_eq!(cpu.flags, 0b00111111);
     }
 
 }

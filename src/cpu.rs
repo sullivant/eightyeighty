@@ -382,6 +382,13 @@ impl CPU {
         };
     }
 
+    // Resets a flag using bitwise AND operation
+    // Mask of 2 (00100) 
+    // if flags = 11111 new value will be 11011
+    pub fn reset_flag(&mut self, mask: u8) {
+        self.flags &= !mask;
+    }
+
 }
 
 // Makes a memory pointer by simply concatenating the two values
