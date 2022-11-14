@@ -251,7 +251,7 @@ fn main() -> Result<(), String> {
             });
         });
 
-        egui::SidePanel::right("right_panel").default_width(300.0).show(&egui_ctx, |ui| {
+        egui::SidePanel::right("right_panel").default_width(200.0).show(&egui_ctx, |ui| {
             let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
             
             if ui.button("Toggle Pause").clicked() {
@@ -264,14 +264,26 @@ fn main() -> Result<(), String> {
             ui.label(format!("PC: {:#06X}", loop_cpu.pc));
             ui.label(format!("Next Instr: {}",loop_cpu.current_instruction));
             ui.separator();
-            ui.label(format!("SP: {:#06X}", loop_cpu.sp));
-            ui.label(format!("A: {:#06X}", loop_cpu.a));
-            ui.label(format!("B: {:#06X}", loop_cpu.b));
-            ui.label(format!("C: {:#06X}", loop_cpu.c));
-            ui.label(format!("D: {:#06X}", loop_cpu.d));
-            ui.label(format!("E: {:#06X}", loop_cpu.e));
-            ui.label(format!("H: {:#06X}", loop_cpu.h));
-            ui.label(format!("L: {:#06X}", loop_cpu.l));
+            egui::Grid::new("some_unique_id").show(ui, |ui| {
+                ui.label(format!("SP: {:#06X}", loop_cpu.sp));
+                ui.label(format!("D: {:#06X}", loop_cpu.d));
+                ui.end_row();
+            
+                ui.label(format!("A: {:#06X}", loop_cpu.a));
+                ui.label(format!("E: {:#06X}", loop_cpu.e));
+                ui.end_row();
+            
+                ui.label(format!("B: {:#06X}", loop_cpu.b));
+                ui.label(format!("H: {:#06X}", loop_cpu.h));
+                ui.end_row();
+
+                ui.label(format!("C: {:#06X}", loop_cpu.c));
+                ui.label(format!("L: {:#06X}", loop_cpu.l));
+                ui.end_row();
+            });
+            ui.separator();
+            
+            
             
         });
 
