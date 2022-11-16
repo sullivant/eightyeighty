@@ -58,15 +58,16 @@ impl Emulator {
             dims.1 - 1
         );
 
+        // TODO: Remove when done tinkering
+        cpu.memory.table(0, 0xFF);
+
         // For testing the odd CPUDIAG ROM
         // if file_to_load.eq("./resources/roms/TST8080.COM") {
         //     println!("TS8080 loaded, making some debug changes");
-
         //     // First, make a jump to 0x0100
         //     cpu.memory[0] = 0xC3;
         //     cpu.memory[1] = 0x00;
         //     cpu.memory[2] = 0x01;
-
         // }
 
         // Return a good version of the app object
@@ -281,9 +282,6 @@ fn main() -> Result<(), String> {
                 ui.label(format!("L: {:#06X}", loop_cpu.l));
                 ui.end_row();
             });
-            ui.separator();
-            
-            
             
         });
 
@@ -300,6 +298,10 @@ fn main() -> Result<(), String> {
 
             ui.label("ROM Display Area");
             ui.separator();
+            
+            // egui::ScrollArea::vertical().show(ui, |ui| {
+            //     ui.label(format!("{}","ABC"));
+            // });
         });
 
         let (egui_output, paint_cmds) = egui_ctx.end_frame();

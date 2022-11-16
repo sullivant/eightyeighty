@@ -1,4 +1,8 @@
+// use std::fmt;
+
 use crate::constants::RAM_SIZE;
+use tabled::{TableIteratorExt, Extract};
+use tabled::{Table, Style};
 
 /// Memory
 ///
@@ -10,6 +14,21 @@ use crate::constants::RAM_SIZE;
 pub struct Memory {
     data: [u8; RAM_SIZE],
 }
+
+// impl fmt::Display for Memory {
+    // fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    //     for (i,v) in self.data[0x00..=0x1F00].iter().enumerate() {
+    //         if i == 0 {
+    //             write!(f,"XXXX : 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n{:0>4X} : ",i)?;
+    //         }
+    //         if i > 1 && i % 16 == 0 { write!(f,"|\n{:0>4X} : ",i+1)?}
+
+    //         write!(f,"{:0>2X} ",v)?;
+    //     }
+
+    //     Ok(())
+    // }
+// }
 
 impl Default for Memory {
     fn default() -> Self {
@@ -44,6 +63,16 @@ impl Memory {
 
         Ok(())
     }
+
+    // Pretty prints a table of the memory from start to (and inclusive of) end
+    pub fn table(&mut self, start: usize, end: usize) {
+        let numbers = [1, 2, 3];
+        //self.data[0x00..=0xFF]
+        let mut table = Table::new(&self.data);
+        // println!("{}",table.with(Extract::segment(1..3, 1..)));
+
+    }
+
 }
 
 #[cfg(test)]
