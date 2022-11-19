@@ -16,7 +16,6 @@ clap = "2.33.3"
 gl = "0.14"
 egui = "0.16"
 egui_sdl2_gl = "0.16.0"
-tabled = "0.10.0"
 
 [dependencies.sdl2]
 version = "0.35.0" 

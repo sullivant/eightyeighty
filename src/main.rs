@@ -1,9 +1,8 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-use egui::{Checkbox, Align2};
+use egui::{Checkbox, FontDefinitions, TextStyle, FontFamily};
 use egui_backend::sdl2::video::GLProfile;
-use egui_backend::{egui, gl, sdl2};
-use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
+use egui_backend::{egui, sdl2::{self, event::Event}, DpiScaling, ShaderVersion};
 use egui_sdl2_gl as egui_backend;
 use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
@@ -59,7 +58,7 @@ impl Emulator {
         );
 
         // TODO: Remove when done tinkering
-        cpu.memory.table(0, 0xFF);
+        //println!("{}",cpu.memory());
 
         // For testing the odd CPUDIAG ROM
         // if file_to_load.eq("./resources/roms/TST8080.COM") {
@@ -142,6 +141,15 @@ fn main() -> Result<(), String> {
 
     let mut egui_ctx = egui::CtxRef::default();
     egui_ctx.set_visuals(egui::Visuals::light()); 
+
+    // Setup so monospaced text (like ram display) is somewhat small
+    let mut fonts = FontDefinitions::default();
+    fonts.family_and_size.insert(
+        TextStyle::Monospace,
+        (FontFamily::Monospace, 12.0)
+    );
+    egui_ctx.set_fonts(fonts);
+
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     // Gather from the command the rom to use; Clap won't let us skip this but we
@@ -171,6 +179,9 @@ fn main() -> Result<(), String> {
         cpu_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
         cpu_clone.lock().unwrap().cpu.single_step_mode = true;
     }
+
+    // Simply a slow-to-update (only once, then when F3 is hit) representation of the memory.
+    let mut memory_label: String = format!("{}", cpu_clone.lock().unwrap().cpu.memory);
 
     // Create a thread that will be our running cpu
     // It's just gonna tick like a boss, until it's told not to.
@@ -207,6 +218,7 @@ fn main() -> Result<(), String> {
     let mut enable_vsync = false;
     let mut quit = false;
     let start_time = Instant::now();
+
 
     'running: loop {
         // TODO: Should these be outside the loop?
@@ -293,15 +305,15 @@ fn main() -> Result<(), String> {
         });
 
         egui::CentralPanel::default().show(&egui_ctx, |ui| {
-            let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
-
-
             ui.label("ROM Display Area");
             ui.separator();
-            
-            // egui::ScrollArea::vertical().show(ui, |ui| {
-            //     ui.label(format!("{}","ABC"));
-            // });
+
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.style_mut().override_text_style = Some(egui::TextStyle::Monospace);
+                ui.label(&memory_label.to_string());
+                // ui.label(format!("{}", loop_cpu.memory));
+            });
+
         });
 
         let (egui_output, paint_cmds) = egui_ctx.end_frame();
@@ -322,7 +334,6 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => {
-                    quit = true;
                     cpu_alive_clone.store(false, Ordering::Relaxed);
                     break 'running;
                 }
@@ -334,6 +345,10 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::F2),
                     ..
                 } => cpu_alive_clone.store(false, Ordering::Relaxed),
+                Event::KeyDown {
+                    keycode: Some(Keycode::F3),
+                    ..
+                } => memory_label = format!("{}", cpu_clone.lock().unwrap().cpu.memory),
                 Event::KeyDown {
                     keycode: Some(Keycode::Space),
                     ..

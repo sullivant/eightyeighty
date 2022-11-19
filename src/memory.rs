@@ -1,34 +1,40 @@
 // use std::fmt;
 
+use std::fmt;
+
 use crate::constants::RAM_SIZE;
-use tabled::{TableIteratorExt, Extract};
-use tabled::{Table, Style};
 
 /// Memory
 ///
 /// TODO: Make this able to output a section of data by slice, for processing by the
 /// memory display window.
 
+const SLICE_SIZE: usize = 16;
+
 // Let's see how long we can last as full private?
 #[derive(Clone)]
 pub struct Memory {
     data: [u8; RAM_SIZE],
+    table_start: usize, // If set, will allow fmt::Display to be truncated/walked
+    table_stop: usize, // If set, will allow fmt::Display to be truncated/walked
 }
 
-// impl fmt::Display for Memory {
-    // fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    //     for (i,v) in self.data[0x00..=0x1F00].iter().enumerate() {
-    //         if i == 0 {
-    //             write!(f,"XXXX : 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n{:0>4X} : ",i)?;
-    //         }
-    //         if i > 1 && i % 16 == 0 { write!(f,"|\n{:0>4X} : ",i+1)?}
+impl fmt::Display for Memory {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let iter = &mut self.data[self.table_start..=self.table_stop].chunks(SLICE_SIZE);
+        let mut idx: usize = 0x00;
 
-    //         write!(f,"{:0>2X} ",v)?;
-    //     }
+        let mut out = format!("{}\n",table_header());
 
-    //     Ok(())
-    // }
-// }
+        for element in iter {
+            out = format!("{}{:04X} {:02X?}\n",out, idx, element);
+            idx+=SLICE_SIZE;
+        }
+
+        write!(f, "{}", out)?;
+        Ok(())
+    }
+}
 
 impl Default for Memory {
     fn default() -> Self {
@@ -40,6 +46,8 @@ impl Memory {
     pub fn new() -> Memory {
         Memory {
             data: [0; RAM_SIZE],
+            table_start: 0,
+            table_stop: RAM_SIZE-1,
         }
     }
 
@@ -64,15 +72,15 @@ impl Memory {
         Ok(())
     }
 
-    // Pretty prints a table of the memory from start to (and inclusive of) end
-    pub fn table(&mut self, start: usize, end: usize) {
-        let numbers = [1, 2, 3];
-        //self.data[0x00..=0xFF]
-        let mut table = Table::new(&self.data);
-        // println!("{}",table.with(Extract::segment(1..3, 1..)));
+}
 
+// Creates a simple table header used in displaying ram contents.
+pub fn table_header() -> String {
+    let mut header = [0; 16];
+    for (i,item) in header.iter_mut().enumerate() {
+        *item = i;
     }
-
+    format!("0000 {:02X?}", header)
 }
 
 #[cfg(test)]
