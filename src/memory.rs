@@ -16,7 +16,7 @@ const SLICE_SIZE: usize = 16;
 pub struct Memory {
     data: [u8; RAM_SIZE],
     table_start: usize, // If set, will allow fmt::Display to be truncated/walked
-    table_stop: usize, // If set, will allow fmt::Display to be truncated/walked
+    table_stop: usize,  // If set, will allow fmt::Display to be truncated/walked
 }
 
 impl fmt::Display for Memory {
@@ -24,11 +24,11 @@ impl fmt::Display for Memory {
         let iter = &mut self.data[self.table_start..=self.table_stop].chunks(SLICE_SIZE);
         let mut idx: usize = 0x00;
 
-        let mut out = format!("{}\n",table_header());
+        let mut out = format!("{}\n", table_header());
 
         for element in iter {
-            out = format!("{}{:04X} {:02X?}\n",out, idx, element);
-            idx+=SLICE_SIZE;
+            out = format!("{}{:04X} {:02X?}\n", out, idx, element);
+            idx += SLICE_SIZE;
         }
 
         write!(f, "{}", out)?;
@@ -47,7 +47,7 @@ impl Memory {
         Memory {
             data: [0; RAM_SIZE],
             table_start: 0,
-            table_stop: RAM_SIZE-1,
+            table_stop: RAM_SIZE - 1,
         }
     }
 
@@ -71,13 +71,12 @@ impl Memory {
 
         Ok(())
     }
-
 }
 
 // Creates a simple table header used in displaying ram contents.
 pub fn table_header() -> String {
     let mut header = [0; 16];
-    for (i,item) in header.iter_mut().enumerate() {
+    for (i, item) in header.iter_mut().enumerate() {
         *item = i;
     }
     format!("0000 {:02X?}", header)

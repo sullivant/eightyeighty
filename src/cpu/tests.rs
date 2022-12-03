@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::{cpu::{make_pointer, will_ac, CPU, Registers}, constants::{FLAG_SIGN, FLAG_ZERO}};
+    use crate::{
+        constants::{FLAG_SIGN, FLAG_ZERO},
+        cpu::{make_pointer, will_ac, Registers, CPU},
+    };
 
     #[test]
     fn test_nop() {
@@ -80,15 +83,14 @@ mod tests {
         cpu.set_register_pair(Registers::DE, 0xffaa);
         cpu.set_register_pair(Registers::HL, 0x2010);
         cpu.set_register_pair(Registers::SP, 0x1001);
-        
-        assert_eq!(cpu.b,0x10);
-        assert_eq!(cpu.c,0x01);
-        assert_eq!(cpu.d,0xff);
-        assert_eq!(cpu.e,0xaa);
-        assert_eq!(cpu.h,0x20);
-        assert_eq!(cpu.l,0x10);
-        assert_eq!(cpu.sp, 0x1001);
 
+        assert_eq!(cpu.b, 0x10);
+        assert_eq!(cpu.c, 0x01);
+        assert_eq!(cpu.d, 0xff);
+        assert_eq!(cpu.e, 0xaa);
+        assert_eq!(cpu.h, 0x20);
+        assert_eq!(cpu.l, 0x10);
+        assert_eq!(cpu.sp, 0x1001);
     }
 
     #[test]
@@ -107,5 +109,4 @@ mod tests {
         cpu.reset_flag(FLAG_SIGN | FLAG_ZERO);
         assert_eq!(cpu.flags, 0b00111111);
     }
-
 }

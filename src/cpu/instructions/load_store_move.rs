@@ -105,6 +105,33 @@ impl CPU {
 
         Ok(())
     }
+
+    // Store accumulator direct to location in memory specified
+    // by address dhdl
+    pub fn op_sta(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+        let addr: usize = usize::from(u16::from(dh) << 8 | u16::from(dl));
+        self.memory.write(addr, self.a)
+    }
+
+
+    // Stores accumulator at memory location of supplied register
+    pub fn op_stax(&mut self, reg: Registers) -> Result<(), String> {
+        // Get our location first
+        let location = match reg {
+            Registers::BC => Some(self.get_register_pair(Registers::BC)),
+            Registers::DE => Some(self.get_register_pair(Registers::DE)),
+            _ => None,
+        };
+
+        // Update memory with the value of the accumulator
+        if let Some(l) = location {
+            return self.memory.write(l as usize, self.a);
+        }
+
+        Err(format!("Cannot determine location from register pair provided {:#}", reg))
+    }
+
+
 }
 
 #[cfg(test)]

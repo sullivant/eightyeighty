@@ -9,36 +9,6 @@ use crate::Cpu;
 impl Cpu {
     
 
-    
-
-    
-
-    // Store accumulator direct to location in memory specified
-    // by address dhdl
-    pub fn op_sta(&mut self, dl: u8, dh: u8) -> ProgramCounter {
-        let addr: u16 = u16::from(dh) << 8 | u16::from(dl);
-        self.memory[addr as usize] = self.a;
-
-        ProgramCounter::Three
-    }
-
-    // Stores accumulator at memory location of supplied register
-    pub fn op_stax(&mut self, reg: Registers) -> ProgramCounter {
-        // Get our location first
-        let location = match reg {
-            Registers::BC => Some(self.get_register_pair(Registers::BC)),
-            Registers::DE => Some(self.get_register_pair(Registers::DE)),
-            _ => None,
-        };
-
-        // Update memory with the value of the accumulator
-        if let Some(l) = location {
-            self.memory[l as usize] = self.a;
-        }
-
-        ProgramCounter::Next
-    }
-
     // Rotates left, if through_carry is true, it does that.
     pub fn op_rlc_ral(&mut self, through_carry: bool) -> ProgramCounter {
         // Store off our current carry bit

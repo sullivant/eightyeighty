@@ -200,13 +200,16 @@ impl CPU {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
 
             0x01 => self.lxi(Registers::BC, dl, dh),
+            0x02 => self.op_stax(Registers::BC),        // STAX (BC)
 
             0x11 => self.lxi(Registers::DE, dl, dh),
+            0x12 => self.op_stax(Registers::DE),        // STAX (DE)
 
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
 
             0x31 => self.lxi(Registers::SP, dl, dh),
+            0x32 => self.op_sta(dl, dh), // STA (adr)<-A
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C
@@ -383,12 +386,11 @@ impl CPU {
     }
 
     // Resets a flag using bitwise AND operation
-    // Mask of 2 (00100) 
+    // Mask of 2 (00100)
     // if flags = 11111 new value will be 11011
     pub fn reset_flag(&mut self, mask: u8) {
         self.flags &= !mask;
     }
-
 }
 
 // Makes a memory pointer by simply concatenating the two values

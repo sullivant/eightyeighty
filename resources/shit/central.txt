@@ -116,7 +116,7 @@ use crate::disassembler;
         let i = match opcode.0 {
             0x00 => ProgramCounter::Next,               // NOP
             0x01 => self.op_lxi(Registers::BC, dl, dh), // LXI B,D16
-            0x02 => self.op_stax(Registers::BC),        // STAX (BC)
+            
             0x03 => self.op_inx(Registers::BC),         // INX B
             0x04 => self.op_inr(Registers::B),          // INR B
             0x05 => self.op_dcr(Registers::B),          // DCR B
@@ -219,7 +219,7 @@ use crate::disassembler;
 
         let i = match opcode.0 {
             0x31 => self.op_lxi(Registers::SP, dl, dh), // LXI SP, D16
-            0x32 => self.op_sta(dl, dh),                // STA (adr)<-A
+            
             0x33 => self.op_inx(Registers::SP),         // INX SP
             0x34 => self.op_inr(Registers::HL),         // INR (HL)
             0x35 => self.op_dcr(Registers::HL),         // DCR (HL)

@@ -1,8 +1,12 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-use egui::{Checkbox, FontDefinitions, TextStyle, FontFamily};
+use egui::{Checkbox, FontDefinitions, FontFamily, TextStyle};
 use egui_backend::sdl2::video::GLProfile;
-use egui_backend::{egui, sdl2::{self, event::Event}, DpiScaling, ShaderVersion};
+use egui_backend::{
+    egui,
+    sdl2::{self, event::Event},
+    DpiScaling, ShaderVersion,
+};
 use egui_sdl2_gl as egui_backend;
 use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
@@ -140,14 +144,13 @@ fn main() -> Result<(), String> {
         egui_backend::with_sdl2(&window, shader_ver, DpiScaling::Custom(3.0));
 
     let mut egui_ctx = egui::CtxRef::default();
-    egui_ctx.set_visuals(egui::Visuals::light()); 
+    egui_ctx.set_visuals(egui::Visuals::light());
 
     // Setup so monospaced text (like ram display) is somewhat small
     let mut fonts = FontDefinitions::default();
-    fonts.family_and_size.insert(
-        TextStyle::Monospace,
-        (FontFamily::Monospace, 12.0)
-    );
+    fonts
+        .family_and_size
+        .insert(TextStyle::Monospace, (FontFamily::Monospace, 12.0));
     egui_ctx.set_fonts(fonts);
 
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -219,7 +222,6 @@ fn main() -> Result<(), String> {
     let mut quit = false;
     let start_time = Instant::now();
 
-
     'running: loop {
         // TODO: Should these be outside the loop?
         // let app_clone = Arc::clone(&cpu);
@@ -247,7 +249,6 @@ fn main() -> Result<(), String> {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-
         egui::TopBottomPanel::top("wrap_app_top_bar").show(&egui_ctx, |ui| {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
@@ -264,38 +265,39 @@ fn main() -> Result<(), String> {
             });
         });
 
-        egui::SidePanel::right("right_panel").default_width(200.0).show(&egui_ctx, |ui| {
-            let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
-            
-            if ui.button("Toggle Pause").clicked() {
-                loop_cpu.toggle_single_step_mode();
-                //cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
-            }
-            ui.add(Checkbox::new(&mut enable_vsync, "Reduce CPU Usage?"));
-            ui.separator();
+        egui::SidePanel::right("right_panel")
+            .default_width(200.0)
+            .show(&egui_ctx, |ui| {
+                let loop_cpu: &mut CPU = &mut cpu_clone.lock().unwrap().cpu;
 
-            ui.label(format!("PC: {:#06X}", loop_cpu.pc));
-            ui.label(format!("Next Instr: {}",loop_cpu.current_instruction));
-            ui.separator();
-            egui::Grid::new("some_unique_id").show(ui, |ui| {
-                ui.label(format!("SP: {:#06X}", loop_cpu.sp));
-                ui.label(format!("D: {:#06X}", loop_cpu.d));
-                ui.end_row();
-            
-                ui.label(format!("A: {:#06X}", loop_cpu.a));
-                ui.label(format!("E: {:#06X}", loop_cpu.e));
-                ui.end_row();
-            
-                ui.label(format!("B: {:#06X}", loop_cpu.b));
-                ui.label(format!("H: {:#06X}", loop_cpu.h));
-                ui.end_row();
+                if ui.button("Toggle Pause").clicked() {
+                    loop_cpu.toggle_single_step_mode();
+                    //cpu_clone.lock().unwrap().cpu.toggle_single_step_mode();
+                }
+                ui.add(Checkbox::new(&mut enable_vsync, "Reduce CPU Usage?"));
+                ui.separator();
 
-                ui.label(format!("C: {:#06X}", loop_cpu.c));
-                ui.label(format!("L: {:#06X}", loop_cpu.l));
-                ui.end_row();
+                ui.label(format!("PC: {:#06X}", loop_cpu.pc));
+                ui.label(format!("Next Instr: {}", loop_cpu.current_instruction));
+                ui.separator();
+                egui::Grid::new("some_unique_id").show(ui, |ui| {
+                    ui.label(format!("SP: {:#06X}", loop_cpu.sp));
+                    ui.label(format!("D: {:#06X}", loop_cpu.d));
+                    ui.end_row();
+
+                    ui.label(format!("A: {:#06X}", loop_cpu.a));
+                    ui.label(format!("E: {:#06X}", loop_cpu.e));
+                    ui.end_row();
+
+                    ui.label(format!("B: {:#06X}", loop_cpu.b));
+                    ui.label(format!("H: {:#06X}", loop_cpu.h));
+                    ui.end_row();
+
+                    ui.label(format!("C: {:#06X}", loop_cpu.c));
+                    ui.label(format!("L: {:#06X}", loop_cpu.l));
+                    ui.end_row();
+                });
             });
-            
-        });
 
         // Bottom panel will hold current instructions run history
         egui::TopBottomPanel::bottom("bottom_panel").show(&egui_ctx, |ui| {
@@ -313,7 +315,6 @@ fn main() -> Result<(), String> {
                 ui.label(&memory_label.to_string());
                 // ui.label(format!("{}", loop_cpu.memory));
             });
-
         });
 
         let (egui_output, paint_cmds) = egui_ctx.end_frame();
