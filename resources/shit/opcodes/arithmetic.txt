@@ -6,17 +6,7 @@ use crate::Cpu;
 /// This file contains all the functions necessary to support the Arithematic opcodes
 
 impl Cpu {
-    pub fn op_inx(&mut self, target: Registers) -> ProgramCounter {
-        match target {
-            Registers::SP | Registers::BC | Registers::DE | Registers::HL => {
-                let mut pair: u16 = self.get_register_pair(target);
-                pair = pair.overflowing_add(0x01).0;
-                self.set_register_pair(target, pair);
-            }
-            _ => (),
-        }
-        ProgramCounter::Next
-    }
+
 
     // DCX
     pub fn op_dcx(&mut self, reg: Registers) -> ProgramCounter {

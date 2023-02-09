@@ -113,7 +113,6 @@ impl CPU {
         self.memory.write(addr, self.a)
     }
 
-
     // Stores accumulator at memory location of supplied register
     pub fn op_stax(&mut self, reg: Registers) -> Result<(), String> {
         // Get our location first
@@ -128,10 +127,11 @@ impl CPU {
             return self.memory.write(l as usize, self.a);
         }
 
-        Err(format!("Cannot determine location from register pair provided {:#}", reg))
+        Err(format!(
+            "Cannot determine location from register pair provided {:#}",
+            reg
+        ))
     }
-
-
 }
 
 #[cfg(test)]

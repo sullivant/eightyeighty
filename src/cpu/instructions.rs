@@ -1,6 +1,7 @@
 use std::fmt;
 
 mod load_store_move;
+mod artithmetic;
 mod misc;
 #[allow(clippy::wildcard_imports)]
 use crate::constants::*;
