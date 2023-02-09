@@ -8,14 +8,7 @@ use crate::Cpu;
 impl Cpu {
 
 
-    // DCX
-    pub fn op_dcx(&mut self, reg: Registers) -> ProgramCounter {
-        let mut val = self.get_register_pair(reg);
-        val = val.overflowing_sub(1).0;
-        self.set_register_pair(reg, val);
-
-        ProgramCounter::Next
-    }
+    
 
     /// The specified byte is compared to the contents of the accumulator.
     /// The comparison is performed by internally subtracting the contents of REG from the accumulator

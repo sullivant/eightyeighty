@@ -202,18 +202,22 @@ impl CPU {
             0x01 => self.lxi(Registers::BC, dl, dh),
             0x02 => self.op_stax(Registers::BC), // STAX (BC)
             0x03 => self.op_inx(Registers::BC),
+            0x0B => self.op_dcx(Registers::BC),
 
             0x11 => self.lxi(Registers::DE, dl, dh),
             0x12 => self.op_stax(Registers::DE), // STAX (DE)
             0x13 => self.op_inx(Registers::DE),
+            0x1B => self.op_dcx(Registers::DE),
 
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
             0x23 => self.op_inx(Registers::HL),
+            0x2B => self.op_dcx(Registers::HL),
 
             0x31 => self.lxi(Registers::SP, dl, dh),
             0x32 => self.op_sta(dl, dh), // STA (adr)<-A
             0x33 => self.op_inx(Registers::SP),
+            0x3B => self.op_dcx(Registers::SP),
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C

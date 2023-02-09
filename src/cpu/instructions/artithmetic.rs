@@ -14,6 +14,15 @@ impl CPU {
         
         Ok(())
     }
+
+    // DCX
+    pub fn op_dcx(&mut self, reg: Registers) -> Result<(), String> {
+        let mut val = self.get_register_pair(reg);
+        val = val.overflowing_sub(1).0;
+        self.set_register_pair(reg, val);
+
+        Ok(())
+    }
 }
 
 
@@ -44,6 +53,26 @@ mod tests {
 
         assert_eq!(cpu.b, 0x00);
         assert_eq!(cpu.c, 0x00);
+    }
+
+    #[test]
+    fn test_dcx() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.d = 0x20;
+        cpu.e = 0x00;
+        cpu.sp = 0x1234;
+
+        cpu.prep_instr_and_data(0x1B, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.d, 0x1F);
+        assert_eq!(cpu.e, 0xFF);
+        assert_eq!(cpu.pc, op + (OPCODE_SIZE));
+
+        cpu.prep_instr_and_data(0x3B,0x00,0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.sp, 0x1233);
     }
 
 }
