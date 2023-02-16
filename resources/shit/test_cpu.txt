@@ -5,22 +5,6 @@
 
 
 
-#[test]
-fn test_set_flag() {
-    let mut cpu = Cpu::new();
-    cpu.flags = 0b0;
-    cpu.set_flag(lib::FLAG_PARITY);
-    assert_eq!(cpu.flags, 0b0100);
-
-    // Test an already set flag
-    cpu.set_flag(lib::FLAG_PARITY);
-    assert_eq!(cpu.flags, 0b0100);
-    cpu.flags = 0b0;
-
-    // Test setting multiple at once
-    cpu.set_flag(lib::FLAG_PARITY | lib::FLAG_CARRY);
-    assert_eq!(cpu.flags, 0b0000_0101);
-}
 
 
 
@@ -140,16 +124,7 @@ fn test_op_dcr() {
     assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
 }
 
-#[test]
-fn test_op_inr() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
 
-    cpu.e = 0x99;
-    cpu.run_opcode((0x1C, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.e, 0x9A);
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-}
 
 #[test]
 fn test_op_35() {
@@ -1217,33 +1192,7 @@ fn test_op_ora() {
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }
 
-#[test]
-fn test_op_cmp() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
 
-    cpu.a = 0x0A;
-    cpu.e = 0x05;
-    cpu.set_flag(lib::FLAG_CARRY);
-
-    cpu.run_opcode((0xBB, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.a, 0x0A);
-    assert_eq!(cpu.e, 0x05);
-    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-
-    cpu.a = 0x02;
-    cpu.run_opcode((0xBB, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.a, 0x02);
-    assert_eq!(cpu.e, 0x05);
-    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
-
-    cpu.a = !0x1B;
-    cpu.run_opcode((0xBB, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.a, !0x1B);
-    assert_eq!(cpu.e, 0x05);
-    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
-}
 
 #[test]
 fn test_op_pop() {

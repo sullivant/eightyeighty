@@ -1,8 +1,7 @@
-use crate::cpu::{make_pointer, Registers, CPU};
-
+use crate::cpu::{make_pointer, will_ac, Registers, CPU};
 
 impl CPU {
-    pub fn op_inx(&mut self, target: Registers) -> Result<(), String> {
+    pub fn op_inx(&mut self, target: Registers) {
         match target {
             Registers::SP | Registers::BC | Registers::DE | Registers::HL => {
                 let mut pair: u16 = self.get_register_pair(target);
@@ -11,24 +10,120 @@ impl CPU {
             }
             _ => (),
         }
-        
-        Ok(())
     }
 
     // DCX
-    pub fn op_dcx(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn op_dcx(&mut self, reg: Registers) {
         let mut val = self.get_register_pair(reg);
         val = val.overflowing_sub(1).0;
         self.set_register_pair(reg, val);
+    }
 
+    /// The specified byte is compared to the contents of the accumulator.
+    /// The comparison is performed by internally subtracting the contents of REG from the accumulator
+    /// (leaving both unchanged) and setting the condition bits according to the result.
+    /// In particular, the Zero bit is set if the quantities are equal, and reset if they are unequal.
+    /// Since a subtract operation is performed, the Carry bit will be set if there is no
+    /// carry out of bit 7, indicating that the contents of REG are greater than the
+    /// contents of the accumulator, and reset otherwise.
+    pub fn op_cmp(&mut self, register: Registers) -> Result<(), String> {
+        let min = self.a;
+        let addr = self.get_addr_pointer();
+        let mem_value = match self.memory().read(addr) {
+            Ok(v) => v,
+            Err(_) => {
+                return Err("Invalid memory value at addr pointer".to_string());
+            }
+        };
+
+        let sub = match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => mem_value,
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+        let res = min.overflowing_sub(sub).0;
+        let ac = will_ac(min.wrapping_neg(), sub.wrapping_neg()); // Because it's a subtraction
+        self.update_flags(res, Some(sub > min), Some(ac));
+
+        Ok(())
+    }
+
+    // INR Reg
+    // Flags affected: Z,S,P,AC
+    #[allow(clippy::similar_names)]
+    pub fn op_inr(&mut self, reg: Registers) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+        let mem_value = match self.memory().read(addr) {
+            Ok(v) => v,
+            Err(_) => {
+                return Err("Invalid memory value at addr pointer".to_string());
+            }
+        };
+        match reg {
+            Registers::B => {
+                let (res, of) = self.b.overflowing_add(1);
+                let ac = will_ac(1, self.b);
+                self.update_flags(res, Some(of), Some(ac));
+                self.b = res;
+            }
+            Registers::C => {
+                let (res, of) = self.c.overflowing_add(1);
+                let ac = will_ac(1, self.c);
+                self.update_flags(res, Some(of), Some(ac));
+                self.c = res;
+            }
+            Registers::D => {
+                let (res, of) = self.d.overflowing_add(1);
+                let ac = will_ac(1, self.d);
+                self.update_flags(res, Some(of), Some(ac));
+                self.d = res;
+            }
+            Registers::E => {
+                let (res, of) = self.e.overflowing_add(1);
+                let ac = will_ac(1, self.d);
+                self.update_flags(res, Some(of), Some(ac));
+                self.e = res;
+            }
+            Registers::H => {
+                let (res, of) = self.h.overflowing_add(1);
+                let ac = will_ac(1, self.h);
+                self.update_flags(res, Some(of), Some(ac));
+                self.h = res;
+            }
+            Registers::L => {
+                let (res, of) = self.l.overflowing_add(1);
+                let ac = will_ac(1, self.l);
+                self.update_flags(res, Some(of), Some(ac));
+                self.l = res;
+            }
+            Registers::HL => {
+                let val = mem_value;
+                let ac = will_ac(1, val);
+                let (res, of) = val.overflowing_add(1);
+                self.update_flags(res, Some(of), Some(ac));
+                self.memory().write(mem_value.into(), res).unwrap();
+            }
+            Registers::A => {
+                let (res, of) = self.a.overflowing_add(1);
+                let ac = will_ac(1, self.a);
+                self.update_flags(res, Some(of), Some(ac));
+                self.a = res;
+            }
+            _ => (),
+        }
         Ok(())
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::constants::OPCODE_SIZE;
+    use crate::constants::{FLAG_CARRY, OPCODE_SIZE};
     use crate::cpu::CPU;
 
     #[test]
@@ -70,10 +165,51 @@ mod tests {
         assert_eq!(cpu.e, 0xFF);
         assert_eq!(cpu.pc, op + (OPCODE_SIZE));
 
-        cpu.prep_instr_and_data(0x3B,0x00,0x00);
+        cpu.prep_instr_and_data(0x3B, 0x00, 0x00);
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.sp, 0x1233);
     }
 
-}
+    #[test]
+    fn test_op_cmp() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
 
+        cpu.a = 0x0A;
+        cpu.e = 0x05;
+        cpu.set_flag(FLAG_CARRY);
+
+        cpu.prep_instr_and_data(0xBB, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x0A);
+        assert_eq!(cpu.e, 0x05);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+
+        cpu.a = 0x02;
+        cpu.prep_instr_and_data(0xBB, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x02);
+        assert_eq!(cpu.e, 0x05);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), true);
+
+        cpu.a = !0x1B;
+        cpu.prep_instr_and_data(0xBB, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, !0x1B);
+        assert_eq!(cpu.e, 0x05);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
+    }
+
+    #[test]
+    fn test_op_inr() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.e = 0x99;
+        cpu.prep_instr_and_data(0x1C, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.e, 0x9A);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    }
+}

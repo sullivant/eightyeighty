@@ -27,74 +27,7 @@ use crate::disassembler;
 
 
 
-    // Returns the current flag values
-    #[must_use]
-    pub fn get_flags(&self) -> u8 {
-        self.flags
-    }
-
-    // Returns true if a flag is set
-    pub fn test_flag(&mut self, mask: u8) -> bool {
-        self.flags & mask != 0
-    }
-
-    // Returns the binary value of a flag, as a u8 for various ops.
-    pub fn get_flag(&mut self, mask: u8) -> u8 {
-        u8::from(self.test_flag(mask))
-    }
-
-    // Sets a flag using a bitwise OR operation
-    // Mask of 2 (00100)
-    // if flags = 10010 new value will be 10110
-    pub fn set_flag(&mut self, mask: u8) {
-        self.flags |= mask;
-    }
-
-    // Resets a flag using bitwise AND operation
-    // Mask of 2 (00100) 
-    // if flags = 11111 new value will be 11011
-    pub fn reset_flag(&mut self, mask: u8) {
-        self.flags &= !mask;
-    }
-
-    // Computes and sets the mask of flags for a supplied value
-    // sets flags: Zero, Sign, Parity, Carry, and Auxiliary Carry
-    // If provided, it will also set Overflow and Aux_Carry, resetting them otherwise
-    pub fn update_flags(&mut self, val: u8, overflow: Option<bool>, aux_carry: Option<bool>) {
-        if val == 0 {
-            self.set_flag(FLAG_ZERO);
-        } else {
-            self.reset_flag(FLAG_ZERO);
-        }
-
-        if get_sign(val) {
-            self.set_flag(FLAG_SIGN); // A negative number
-        } else {
-            self.reset_flag(FLAG_SIGN); // A positive number
-        }
-
-        if get_parity(val.into()) {
-            self.set_flag(FLAG_PARITY);
-        } else {
-            self.reset_flag(FLAG_PARITY);
-        }
-
-        if let Some(of) = overflow {
-            if of {
-                self.set_flag(FLAG_CARRY);
-            } else {
-                self.reset_flag(FLAG_CARRY);
-            }
-        };
-
-        if let Some(ac) = aux_carry {
-            if ac {
-                self.set_flag(FLAG_AUXCARRY);
-            } else {
-                self.reset_flag(FLAG_AUXCARRY);
-            }
-        };
-    }
+    
 
  
     
@@ -530,48 +463,6 @@ use crate::disassembler;
 
         
     
-        #[must_use]
-        pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
-            (&self.pc, &self.sp, &self.h, &self.l, &self.b)
-        }
+        
 
-    /// This will parse the opcode, printing a disassembly if asked
-    ///
-    /// An opcode consists of:
-    ///  Instruction (1 byte)
-    ///  Data (1 or 2 bytes) depending on opcode.  Little endian.
-    ///
-    /// # Errors
-    /// It will return ERROR if the opcode was not recognized
-    pub fn run_opcode(&mut self, opcode: (u8, u8, u8)) -> Result<(), String> {
-        // D8 = 8 bits (1st byte = y)
-        // D16 = 16 bits (1st (y) and 2nd byte (x))
-        let i = match opcode.0 {
-            0x00..=0x0F => self.opcodes_0x(opcode),
-            0x10..=0x1F => self.opcodes_1x(opcode),
-            0x20..=0x2F => self.opcodes_2x(opcode),
-            0x30..=0x3F => self.opcodes_3x(opcode),
-            0x40..=0x4F => self.opcodes_4x(opcode),
-            0x50..=0x5F => self.opcodes_5x(opcode),
-            0x60..=0x6F => self.opcodes_6x(opcode),
-            0x70..=0x7F => self.opcodes_7x(opcode),
-            0x80..=0x8F => self.opcodes_8x(opcode),
-            0x90..=0x9F => self.opcodes_9x(opcode),
-            0xA0..=0xAF => self.opcodes_ax(opcode),
-            0xB0..=0xBF => self.opcodes_bx(opcode),
-            0xC0..=0xCF => self.opcodes_cx(opcode),
-            0xD0..=0xDF => self.opcodes_dx(opcode),
-            0xE0..=0xEF => self.opcodes_ex(opcode),
-            0xF0..=0xFF => self.opcodes_fx(opcode),
-        };
-
-        match i {
-            Ok(ProgramCounter::Next) => self.pc += OPCODE_SIZE,
-            Ok(ProgramCounter::Two) => self.pc += OPCODE_SIZE * 2,
-            Ok(ProgramCounter::Three) => self.pc += OPCODE_SIZE * 3,
-            Ok(ProgramCounter::Jump(d)) => self.pc = d,
-            Err(e) => return Err(e),
-        }
-        Ok(())
-    }
 }

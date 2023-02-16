@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        constants::{FLAG_SIGN, FLAG_ZERO},
+        constants::{FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO},
         cpu::{make_pointer, will_ac, Registers, CPU},
     };
 
@@ -108,5 +108,22 @@ mod tests {
         cpu.flags = 0b11111111;
         cpu.reset_flag(FLAG_SIGN | FLAG_ZERO);
         assert_eq!(cpu.flags, 0b00111111);
+    }
+
+    #[test]
+    fn test_set_flag() {
+        let mut cpu = CPU::new();
+        cpu.flags = 0b0;
+        cpu.set_flag(FLAG_PARITY);
+        assert_eq!(cpu.flags, 0b0100);
+
+        // Test an already set flag
+        cpu.set_flag(FLAG_PARITY);
+        assert_eq!(cpu.flags, 0b0100);
+        cpu.flags = 0b0;
+
+        // Test setting multiple at once
+        cpu.set_flag(FLAG_PARITY | FLAG_CARRY);
+        assert_eq!(cpu.flags, 0b0000_0101);
     }
 }

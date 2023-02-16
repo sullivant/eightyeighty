@@ -4,7 +4,7 @@ mod instructions;
 mod tests;
 
 use crate::{
-    constants::{OPCODE_SIZE, RAM_SIZE},
+    constants::{FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE},
     memory::Memory,
 };
 use instructions::Instruction;
@@ -189,6 +189,7 @@ impl CPU {
     // Gathers the data necessary for the instruction and
     // calls out to the appropriate instruction operation to
     // perform the thing...
+    #[allow(clippy::too_many_lines)]
     pub fn run_opcode(&mut self) -> Result<(), String> {
         let (dl, dh) = match self.get_data_pair() {
             Ok(value) => value,
@@ -201,23 +202,55 @@ impl CPU {
 
             0x01 => self.lxi(Registers::BC, dl, dh),
             0x02 => self.op_stax(Registers::BC), // STAX (BC)
-            0x03 => self.op_inx(Registers::BC),
-            0x0B => self.op_dcx(Registers::BC),
+            0x03 => {
+                self.op_inx(Registers::BC);
+                Ok(())
+            }
+            0x04 => self.op_inr(Registers::B),
+            0x0B => {
+                self.op_dcx(Registers::BC);
+                Ok(())
+            }
+            0x0C => self.op_inr(Registers::C),
 
             0x11 => self.lxi(Registers::DE, dl, dh),
             0x12 => self.op_stax(Registers::DE), // STAX (DE)
-            0x13 => self.op_inx(Registers::DE),
-            0x1B => self.op_dcx(Registers::DE),
+            0x13 => {
+                self.op_inx(Registers::DE);
+                Ok(())
+            }
+            0x14 => self.op_inr(Registers::D),
+            0x1B => {
+                self.op_dcx(Registers::DE);
+                Ok(())
+            }
+            0x1C => self.op_inr(Registers::E),
 
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
-            0x23 => self.op_inx(Registers::HL),
-            0x2B => self.op_dcx(Registers::HL),
+            0x23 => {
+                self.op_inx(Registers::HL);
+                Ok(())
+            }
+            0x24 => self.op_inr(Registers::H),
+            0x2B => {
+                self.op_dcx(Registers::HL);
+                Ok(())
+            }
+            0x2C => self.op_inr(Registers::L),
 
             0x31 => self.lxi(Registers::SP, dl, dh),
             0x32 => self.op_sta(dl, dh), // STA (adr)<-A
-            0x33 => self.op_inx(Registers::SP),
-            0x3B => self.op_dcx(Registers::SP),
+            0x33 => {
+                self.op_inx(Registers::SP);
+                Ok(())
+            }
+            0x34 => self.op_inr(Registers::HL),
+            0x3B => {
+                self.op_dcx(Registers::SP);
+                Ok(())
+            }
+            0x3C => self.op_inr(Registers::A),
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C
@@ -286,6 +319,15 @@ impl CPU {
             0x7D => self.mov(Registers::A, Registers::L),  // MOV A,L
             0x7E => self.mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.mov(Registers::A, Registers::A),  // MOV A,A
+
+            0xB8 => self.op_cmp(Registers::B),
+            0xB9 => self.op_cmp(Registers::C),
+            0xBA => self.op_cmp(Registers::D),
+            0xBB => self.op_cmp(Registers::E),
+            0xBC => self.op_cmp(Registers::H),
+            0xBD => self.op_cmp(Registers::L),
+            0xBE => self.op_cmp(Registers::HL),
+            0xBF => self.op_cmp(Registers::A),
 
             0xD3 => self.data_out(dl),
 
@@ -393,11 +435,78 @@ impl CPU {
         };
     }
 
+    // Sets a flag using a bitwise OR operation
+    // Mask of 2 (00100)
+    // if flags = 10010 new value will be 10110
+    pub fn set_flag(&mut self, mask: u8) {
+        self.flags |= mask;
+    }
+
     // Resets a flag using bitwise AND operation
     // Mask of 2 (00100)
     // if flags = 11111 new value will be 11011
     pub fn reset_flag(&mut self, mask: u8) {
         self.flags &= !mask;
+    }
+
+    // Returns the current flag values
+    #[must_use]
+    pub fn get_flags(&self) -> u8 {
+        self.flags
+    }
+
+    // Returns true if a flag is set
+    pub fn test_flag(&mut self, mask: u8) -> bool {
+        self.flags & mask != 0
+    }
+
+    // Returns the binary value of a flag, as a u8 for various ops.
+    pub fn get_flag(&mut self, mask: u8) -> u8 {
+        u8::from(self.test_flag(mask))
+    }
+
+    #[must_use]
+    pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
+        (&self.pc, &self.sp, &self.h, &self.l, &self.b)
+    }
+
+    // Computes and sets the mask of flags for a supplied value
+    // sets flags: Zero, Sign, Parity, Carry, and Auxiliary Carry
+    // If provided, it will also set Overflow and Aux_Carry, resetting them otherwise
+    pub fn update_flags(&mut self, val: u8, overflow: Option<bool>, aux_carry: Option<bool>) {
+        if val == 0 {
+            self.set_flag(FLAG_ZERO);
+        } else {
+            self.reset_flag(FLAG_ZERO);
+        }
+
+        if get_sign(val) {
+            self.set_flag(FLAG_SIGN); // A negative number
+        } else {
+            self.reset_flag(FLAG_SIGN); // A positive number
+        }
+
+        if get_parity(val.into()) {
+            self.set_flag(FLAG_PARITY);
+        } else {
+            self.reset_flag(FLAG_PARITY);
+        }
+
+        if let Some(of) = overflow {
+            if of {
+                self.set_flag(FLAG_CARRY);
+            } else {
+                self.reset_flag(FLAG_CARRY);
+            }
+        };
+
+        if let Some(ac) = aux_carry {
+            if ac {
+                self.set_flag(FLAG_AUXCARRY);
+            } else {
+                self.reset_flag(FLAG_AUXCARRY);
+            }
+        };
     }
 }
 

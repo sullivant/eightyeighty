@@ -10,32 +10,7 @@ impl Cpu {
 
     
 
-    /// The specified byte is compared to the contents of the accumulator.
-    /// The comparison is performed by internally subtracting the contents of REG from the accumulator
-    /// (leaving both unchanged) and setting the condition bits according to the result.
-    /// In particular, the Zero bit is set if the quantities are equal, and reset if they are unequal.
-    /// Since a subtract operation is performed, the Carry bit will be set if there is no
-    /// carry out of bit 7, indicating that the contents of REG are greater than the
-    /// contents of the accumulator, and reset otherwise.
-    pub fn op_cmp(&mut self, register: Registers) -> ProgramCounter {
-        let min = self.a;
-        let sub = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-        let res = min.overflowing_sub(sub).0;
-        let ac = will_ac(min.wrapping_neg(), sub.wrapping_neg()); // Because it's a subtraction
-        self.update_flags(res, Some(sub > min), Some(ac));
-
-        ProgramCounter::Next
-    }
+    
 
     /// The specified byte is localled ``ORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
@@ -359,65 +334,7 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // INR Reg
-    // Flags affected: Z,S,P,AC
-    #[allow(clippy::similar_names)]
-    pub fn op_inr(&mut self, reg: Registers) -> ProgramCounter {
-        match reg {
-            Registers::B => {
-                let (res, of) = self.b.overflowing_add(1);
-                let ac = will_ac(1, self.b);
-                self.update_flags(res, Some(of), Some(ac));
-                self.b = res;
-            }
-            Registers::C => {
-                let (res, of) = self.c.overflowing_add(1);
-                let ac = will_ac(1, self.c);
-                self.update_flags(res, Some(of), Some(ac));
-                self.c = res;
-            }
-            Registers::D => {
-                let (res, of) = self.d.overflowing_add(1);
-                let ac = will_ac(1, self.d);
-                self.update_flags(res, Some(of), Some(ac));
-                self.d = res;
-            }
-            Registers::E => {
-                let (res, of) = self.e.overflowing_add(1);
-                let ac = will_ac(1, self.d);
-                self.update_flags(res, Some(of), Some(ac));
-                self.e = res;
-            }
-            Registers::H => {
-                let (res, of) = self.h.overflowing_add(1);
-                let ac = will_ac(1, self.h);
-                self.update_flags(res, Some(of), Some(ac));
-                self.h = res;
-            }
-            Registers::L => {
-                let (res, of) = self.l.overflowing_add(1);
-                let ac = will_ac(1, self.l);
-                self.update_flags(res, Some(of), Some(ac));
-                self.l = res;
-            }
-            Registers::HL => {
-                let val = self.memory[self.get_addr_pointer()];
-                let ac = will_ac(1, val);
-                let (res, of) = val.overflowing_add(1);
-                self.update_flags(res, Some(of), Some(ac));
-                self.memory[self.get_addr_pointer()] = res;
-            }
-            Registers::A => {
-                let (res, of) = self.a.overflowing_add(1);
-                let ac = will_ac(1, self.a);
-                self.update_flags(res, Some(of), Some(ac));
-                self.a = res;
-            }
-            _ => (),
-        }
-
-        ProgramCounter::Next
-    }
+    
 
     // Sets a register to the compliment of itself
     pub fn op_comp(&mut self, register: Registers) -> ProgramCounter {
