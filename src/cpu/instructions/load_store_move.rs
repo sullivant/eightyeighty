@@ -122,6 +122,24 @@ impl CPU {
             "Cannot determine location from register pair provided {reg:#}"
         ))
     }
+
+    // Performs the MVI functionality
+    pub fn mvi(&mut self, target: Registers, x: u8) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+
+        match target {
+            Registers::A => self.a = x,                     // 0x3E
+            Registers::B => self.b = x,                     // 0x06
+            Registers::C => self.c = x,                     // 0x0E
+            Registers::D => self.d = x,                     // 0x16
+            Registers::E => self.e = x,                     // 0x1E
+            Registers::H => self.h = x,                     // 0x26
+            Registers::L => self.l = x,                     // 0x2E
+            Registers::HL => self.memory().write(addr, x)?, // 0x36
+            _ => (),                                        // Do nothing
+        };
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -196,5 +214,15 @@ mod tests {
 
         // SP should be 0x0201
         assert_eq!(cpu.sp, 0x0201);
+    }
+
+    #[test]
+    fn test_mvi() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+        cpu.prep_instr_and_data(0x3E, 0x01, 0x02);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
+        assert_eq!(cpu.a, 0x01);
     }
 }

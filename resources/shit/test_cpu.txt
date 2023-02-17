@@ -1096,17 +1096,6 @@ fn test_get_flag() {
     assert_eq!(cpu.get_flag(lib::FLAG_CARRY), 1);
 }
 
-#[test]
-fn test_op_ana() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-
-    cpu.a = 0xFC;
-    cpu.c = 0x0F;
-
-    cpu.run_opcode((0xA1, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-}
 
 
 
@@ -1190,21 +1179,7 @@ fn test_op_jnc() {
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 3);
 }
 
-#[test]
-fn test_op_ani() {
-    let mut cpu = Cpu::new();
 
-    // Setup the accumulator with 0x3A
-    cpu.run_opcode((0x3E, 0x3A, 0x00)).unwrap();
-    assert_eq!(cpu.a, 0x3A);
-    let op = cpu.pc;
-
-    // Try ANI with 0xFF for the data
-    cpu.run_opcode((0xE6, 0x0F, 0x00)).unwrap();
-    assert_eq!(cpu.a, 0x0A);
-
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
-}
 
 #[test]
 fn test_ei_di() {

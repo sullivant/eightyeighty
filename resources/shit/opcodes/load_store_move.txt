@@ -57,21 +57,7 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // Performs the MVI functionality
-    pub fn op_mvi(&mut self, target: Registers, x: u8) -> ProgramCounter {
-        match target {
-            Registers::A => self.a = x,                                // 0x3E
-            Registers::B => self.b = x,                                // 0x06
-            Registers::C => self.c = x,                                // 0x0E
-            Registers::D => self.d = x,                                // 0x16
-            Registers::E => self.e = x,                                // 0x1E
-            Registers::H => self.h = x,                                // 0x26
-            Registers::L => self.l = x,                                // 0x2E
-            Registers::HL => self.memory[self.get_addr_pointer()] = x, // 0x36
-            _ => (),                                                   // Do nothing
-        };
-        ProgramCounter::Two
-    }
+    
 
     // Pops from the stack according to the register pair requested
     // 	L <- (sp); H <- (sp+1); sp <- sp+2

@@ -14,37 +14,8 @@ impl Cpu {
 
     
 
-    /// The byte of immediate data is logically ```ANDed``` with the contents of the
-    /// accumulator.  The carry bit is reset to zero.
-    /// Bits affected: Carry, Zero, Sign, Parity
-    pub fn op_ani(&mut self, dl: u8) -> ProgramCounter {
-        self.a &= dl;
-        self.reset_flag(FLAG_CARRY);
-        self.update_flags(self.a, None, None);
-
-        ProgramCounter::Two
-    }
-
-    /// The specified byte is logically ``ANDed`` bit
-    /// by bit with the contents of the accumulator. The Carry bit
-    /// is reset to zero.
-    pub fn op_ana(&mut self, register: Registers) -> ProgramCounter {
-        self.a &= match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-
-        self.reset_flag(FLAG_CARRY);
-        self.update_flags(self.a, None, None);
-        ProgramCounter::Next
-    }
+    
+    
 
     // Decimal Adjust Accumulator
     // If the least significant four bits of the accumulator have a value greater than nine,

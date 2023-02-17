@@ -201,6 +201,39 @@ impl CPU {
         Ok(())
     }
 
+    /// The specified byte is logically ``ANDed`` bit
+    /// by bit with the contents of the accumulator. The Carry bit
+    /// is reset to zero.
+    pub fn op_ana(&mut self) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
+        self.a &= match self.current_instruction.opcode {
+            0xA0 => self.b,
+            0xA1 => self.c,
+            0xA2 => self.d,
+            0xA3 => self.e,
+            0xA4 => self.h,
+            0xA5 => self.l,
+            0xA6 => mem_value,
+            0xA7 => self.a,
+            _ => 0_u8,
+        };
+
+        self.reset_flag(FLAG_CARRY);
+        self.update_flags(self.a, None, None);
+        Ok(())
+    }
+
+    /// The byte of immediate data is logically ```ANDed``` with the contents of the
+    /// accumulator.  The carry bit is reset to zero.
+    /// Bits affected: Carry, Zero, Sign, Parity
+    pub fn op_ani(&mut self, dl: u8) {
+        self.a &= dl;
+        self.reset_flag(FLAG_CARRY);
+        self.update_flags(self.a, None, None);
+    }
+
     /// The specified byte is locally ``XORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
     pub fn op_xra(&mut self) -> Result<(), String> {
@@ -430,6 +463,37 @@ mod tests {
         assert_eq!(cpu.a, 0x3F);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    }
+
+    #[test]
+    fn test_op_ana() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.a = 0xFC;
+        cpu.c = 0x0F;
+
+        cpu.prep_instr_and_data(0xA1, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    }
+
+    #[test]
+    fn test_op_ani() {
+        let mut cpu = CPU::new();
+
+        // Setup the accumulator with 0x3A
+        cpu.prep_instr_and_data(0x3E, 0x3A, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x3A);
+        let op = cpu.pc;
+
+        // Try ANI with 0xFF for the data
+        cpu.prep_instr_and_data(0xE6, 0x0F, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x0A);
+
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
     }
 
     #[test]

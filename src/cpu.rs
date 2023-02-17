@@ -260,6 +260,8 @@ impl CPU {
             0x3C => self.op_inr(Registers::A),
             0x3D => self.op_dcr(Registers::A),
 
+            0x3E => self.mvi(Registers::A, dl),
+
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C
             0x42 => self.mov(Registers::B, Registers::D), // MOV B <- D
@@ -330,12 +332,18 @@ impl CPU {
 
             0x90..=0x9F => self.op_sub(), // This includes SUB and SBB (subtrahend included in fn)
 
+            0xA0..=0xA7 => self.op_ana(),
             0xA8..=0xAF => self.op_xra(),
 
             0xB0..=0xB7 => self.op_ora(),
             0xB8..=0xBF => self.op_cmp(),
 
             0xD3 => self.data_out(dl),
+
+            0xE6 => {
+                self.op_ani(dl);
+                Ok(())
+            }
 
             _ => Err(format!(
                 "Unable to process UNKNOWN OPCODE: {}",
