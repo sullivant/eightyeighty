@@ -211,33 +211,7 @@ impl Cpu {
 
     
 
-    // SUB  / SBB (Subtract register param from A with borrow if necessary)
-    // Additionally, an optional subtrahend can be supplied, in the case of SBB
-    // and it will be included in the subtraction
-    //
-    // Flags affected: Z, S, P, CY, AC
-    pub fn op_sub(&mut self, reg: Registers, sub: u8) -> ProgramCounter {
-        let o: (u8, bool) = match reg {
-            Registers::A => self.a.overflowing_sub(self.a.overflowing_add(sub).0),
-            Registers::B => self.a.overflowing_sub(self.b.overflowing_add(sub).0),
-            Registers::C => self.a.overflowing_sub(self.c.overflowing_add(sub).0),
-            Registers::D => self.a.overflowing_sub(self.d.overflowing_add(sub).0),
-            Registers::E => self.a.overflowing_sub(self.e.overflowing_add(sub).0),
-            Registers::H => self.a.overflowing_sub(self.h.overflowing_add(sub).0),
-            Registers::L => self.a.overflowing_sub(self.l.overflowing_add(sub).0),
-            Registers::HL => self
-                .a
-                .overflowing_sub(self.memory[self.get_addr_pointer()].overflowing_add(sub).0),
-            _ => (0_u8, false),
-        };
 
-        let ac = will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
-
-        //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
-        self.update_flags(o.0, Some(o.1), Some(ac));
-        self.a = o.0;
-        ProgramCounter::Next
-    }
 
     
 

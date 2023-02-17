@@ -29,21 +29,21 @@ impl CPU {
     /// Since a subtract operation is performed, the Carry bit will be set if there is no
     /// carry out of bit 7, indicating that the contents of REG are greater than the
     /// contents of the accumulator, and reset otherwise.
-    pub fn op_cmp(&mut self, register: Registers) -> Result<(), String> {
+    pub fn op_cmp(&mut self) -> Result<(), String> {
         let min = self.a;
         let addr = self.get_addr_pointer();
 
         let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
-        let sub = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => value,
-            Registers::A => self.a,
+        let sub = match self.current_instruction.opcode {
+            0xB8 => self.b,
+            0xB9 => self.c,
+            0xBA => self.d,
+            0xBB => self.e,
+            0xBC => self.h,
+            0xBD => self.l,
+            0xBE => value,
+            0xBF => self.a,
             _ => 0_u8,
         };
         let res = min.overflowing_sub(sub).0;
@@ -178,38 +178,45 @@ impl CPU {
 
     /// The specified byte is localled ``ORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_ora(&mut self, register: Registers) {
+    pub fn op_ora(&mut self) -> Result<(), String> {
+        let opcode = self.current_instruction.opcode;
         let addr = self.get_addr_pointer();
-        self.a |= match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory().read(addr).unwrap_or(0),
-            Registers::A => self.a,
+        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
+        self.a |= match opcode {
+            0xB0 => self.b,
+            0xB1 => self.c,
+            0xB2 => self.d,
+            0xB3 => self.e,
+            0xB4 => self.h,
+            0xB5 => self.l,
+            0xB6 => mem_value,
+            0xB7 => self.a,
             _ => 0_u8,
         };
 
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, None);
+
+        Ok(())
     }
 
     /// The specified byte is locally ``XORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_xra(&mut self, register: Registers) {
+    pub fn op_xra(&mut self) -> Result<(), String> {
         let orig_value = self.a;
         let addr = self.get_addr_pointer();
-        let source_value = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory().read(addr).unwrap_or(0),
-            Registers::A => self.a,
+        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
+        let source_value = match self.current_instruction.opcode {
+            0xA8 => self.b,
+            0xA9 => self.c,
+            0xAA => self.d,
+            0xAB => self.e,
+            0xAC => self.h,
+            0xAD => self.l,
+            0xAE => mem_value,
+            0xAF => self.a,
             _ => 0_u8,
         };
         let ac = will_ac(orig_value, source_value);
@@ -217,6 +224,51 @@ impl CPU {
 
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, Some(ac));
+
+        Ok(())
+    }
+
+    /// SUB  / SBB (Subtract register param from A with borrow if necessary)
+    /// Additionally, an optional subtrahend can be supplied, in the case of SBB
+    /// and it will be included in the subtraction
+    ///
+    /// This function will use the current instruction (opcode) to determine which
+    /// register to use.
+    ///
+    /// Flags affected: Z, S, P, CY, AC
+    pub fn op_sub(&mut self) -> Result<(), String> {
+        let opcode = self.current_instruction.opcode;
+        let sub = self.get_flag(FLAG_CARRY);
+
+        let addr = self.get_addr_pointer();
+        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
+        let o: (u8, bool) = match opcode {
+            0x90 => self.a.overflowing_sub(self.b.overflowing_add(0).0),
+            0x91 => self.a.overflowing_sub(self.c.overflowing_add(0).0),
+            0x92 => self.a.overflowing_sub(self.d.overflowing_add(0).0),
+            0x93 => self.a.overflowing_sub(self.e.overflowing_add(0).0),
+            0x94 => self.a.overflowing_sub(self.h.overflowing_add(0).0),
+            0x95 => self.a.overflowing_sub(self.l.overflowing_add(0).0),
+            0x96 => self.a.overflowing_sub(mem_value.overflowing_add(0).0),
+            0x97 => self.a.overflowing_sub(self.a.overflowing_add(0).0),
+            0x98 => self.a.overflowing_sub(self.b.overflowing_add(sub).0),
+            0x99 => self.a.overflowing_sub(self.c.overflowing_add(sub).0),
+            0x9A => self.a.overflowing_sub(self.d.overflowing_add(sub).0),
+            0x9B => self.a.overflowing_sub(self.e.overflowing_add(sub).0),
+            0x9C => self.a.overflowing_sub(self.h.overflowing_add(sub).0),
+            0x9D => self.a.overflowing_sub(self.l.overflowing_add(sub).0),
+            0x9E => self.a.overflowing_sub(mem_value.overflowing_add(sub).0),
+            0x9F => self.a.overflowing_sub(self.a.overflowing_add(sub).0),
+            _ => (0_u8, false),
+        };
+
+        let ac = will_ac(o.0.wrapping_neg(), self.a.wrapping_neg()); // Because it's a subtraction
+
+        //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
+        self.update_flags(o.0, Some(o.1), Some(ac));
+        self.a = o.0;
+        Ok(())
     }
 }
 
@@ -378,5 +430,33 @@ mod tests {
         assert_eq!(cpu.a, 0x3F);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    }
+
+    #[test]
+    fn test_sub() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+        cpu.a = 0x12;
+        cpu.c = 0x02;
+
+        cpu.prep_instr_and_data(0x91, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + (OPCODE_SIZE));
+        assert_eq!(cpu.a, 0x10);
+
+        cpu.a = 0x3E;
+        cpu.prep_instr_and_data(0x97, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x00);
+        assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+        assert_eq!(cpu.test_flag(FLAG_ZERO), true);
+
+        cpu.memory().write(0x2400, 0x01).unwrap();
+        cpu.h = 0x24;
+        cpu.l = 0x00;
+        cpu.a = 0x0B;
+        cpu.prep_instr_and_data(0x96, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x0A);
     }
 }

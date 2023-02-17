@@ -880,30 +880,6 @@ fn test_sta() {
     assert_eq!(cpu.memory[0x5914], cpu.a);
 }
 
-#[test]
-fn test_sub() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-    cpu.a = 0x12;
-    cpu.c = 0x02;
-
-    cpu.run_opcode((0x91, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
-    assert_eq!(cpu.a, 0x10);
-
-    cpu.a = 0x3E;
-    cpu.run_opcode((0x97, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.a, 0x00);
-    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
-    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
-
-    cpu.memory[0x2400] = 0x01;
-    cpu.h = 0x24;
-    cpu.l = 0x00;
-    cpu.a = 0x0B;
-    cpu.run_opcode((0x96, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.a, 0x0A);
-}
 
 #[test]
 fn test_sbb() {
