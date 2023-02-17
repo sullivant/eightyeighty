@@ -12,49 +12,7 @@ impl Cpu {
 
     
 
-    /// The specified byte is localled ``ORed`` bit by bit with the contents
-    /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_ora(&mut self, register: Registers) -> ProgramCounter {
-        self.a |= match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-
-        self.reset_flag(FLAG_CARRY);
-        self.update_flags(self.a, None, None);
-
-        ProgramCounter::Next
-    }
-
-    /// The specified byte is locally ``XORed`` bit by bit with the contents
-    /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_xra(&mut self, register: Registers) -> ProgramCounter {
-        let orig_value = self.a;
-        let source_value = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-        let ac = will_ac(orig_value, source_value);
-        self.a ^= source_value;
-
-        self.reset_flag(FLAG_CARRY);
-        self.update_flags(self.a, None, Some(ac));
-        ProgramCounter::Next
-    }
+    
 
     /// The byte of immediate data is logically ```ANDed``` with the contents of the
     /// accumulator.  The carry bit is reset to zero.

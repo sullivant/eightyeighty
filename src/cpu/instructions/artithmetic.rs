@@ -1,4 +1,7 @@
-use crate::cpu::{will_ac, Registers, CPU};
+use crate::{
+    constants::FLAG_CARRY,
+    cpu::{will_ac, Registers, CPU},
+};
 
 impl CPU {
     pub fn op_inx(&mut self, target: Registers) {
@@ -185,6 +188,49 @@ impl CPU {
 
         Ok(())
     }
+
+    /// The specified byte is localled ``ORed`` bit by bit with the contents
+    /// of the accumulator.  The carry bit is reset to zero.
+    pub fn op_ora(&mut self, register: Registers) {
+        let addr = self.get_addr_pointer();
+        self.a |= match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory().read(addr).unwrap_or(0),
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+
+        self.reset_flag(FLAG_CARRY);
+        self.update_flags(self.a, None, None);
+    }
+
+    /// The specified byte is locally ``XORed`` bit by bit with the contents
+    /// of the accumulator.  The carry bit is reset to zero.
+    pub fn op_xra(&mut self, register: Registers) {
+        let orig_value = self.a;
+        let addr = self.get_addr_pointer();
+        let source_value = match register {
+            Registers::B => self.b,
+            Registers::C => self.c,
+            Registers::D => self.d,
+            Registers::E => self.e,
+            Registers::H => self.h,
+            Registers::L => self.l,
+            Registers::HL => self.memory().read(addr).unwrap_or(0),
+            Registers::A => self.a,
+            _ => 0_u8,
+        };
+        let ac = will_ac(orig_value, source_value);
+        self.a ^= source_value;
+
+        self.reset_flag(FLAG_CARRY);
+        self.update_flags(self.a, None, Some(ac));
+    }
 }
 
 #[cfg(test)]
@@ -308,5 +354,42 @@ mod tests {
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.b, 0x03);
         assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+    }
+
+    #[test]
+    fn test_op_xra() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.a = 0xFC;
+
+        // Should zero out the A register
+        cpu.prep_instr_and_data(0xAF, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x00);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+
+        cpu.a = 0xFF;
+        cpu.b = 0b0000_1010;
+        cpu.prep_instr_and_data(0xA8, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0b1111_0101);
+    }
+
+    #[test]
+    fn test_op_ora() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.a = 0x33;
+        cpu.c = 0x0F;
+        cpu.set_flag(FLAG_CARRY);
+
+        // Should zero out the A register
+        cpu.prep_instr_and_data(0xB1, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x3F);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
     }
 }

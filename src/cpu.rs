@@ -328,6 +328,68 @@ impl CPU {
             0x7E => self.mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.mov(Registers::A, Registers::A),  // MOV A,A
 
+            0xA8 => {
+                self.op_xra(Registers::B);
+                Ok(())
+            }
+            0xA9 => {
+                self.op_xra(Registers::C);
+                Ok(())
+            }
+            0xAA => {
+                self.op_xra(Registers::D);
+                Ok(())
+            }
+            0xAB => {
+                self.op_xra(Registers::E);
+                Ok(())
+            }
+            0xAC => {
+                self.op_xra(Registers::H);
+                Ok(())
+            }
+            0xAD => {
+                self.op_xra(Registers::L);
+                Ok(())
+            }
+            0xAE => {
+                self.op_xra(Registers::HL);
+                Ok(())
+            }
+            0xAF => {
+                self.op_xra(Registers::A);
+                Ok(())
+            }
+
+            0xB0 => {
+                self.op_ora(Registers::B);
+                Ok(())
+            }
+            0xB1 => {
+                self.op_ora(Registers::C);
+                Ok(())
+            }
+            0xB2 => {
+                self.op_ora(Registers::D);
+                Ok(())
+            }
+            0xB3 => {
+                self.op_ora(Registers::E);
+                Ok(())
+            }
+            0xB4 => {
+                self.op_ora(Registers::H);
+                Ok(())
+            }
+            0xB5 => {
+                self.op_ora(Registers::L);
+                Ok(())
+            }
+            0xB6 => {
+                self.op_ora(Registers::HL);
+                Ok(())
+            }
+
             0xB8 => self.op_cmp(Registers::B),
             0xB9 => self.op_cmp(Registers::C),
             0xBA => self.op_cmp(Registers::D),
