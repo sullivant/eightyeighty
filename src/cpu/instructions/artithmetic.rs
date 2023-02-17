@@ -189,7 +189,7 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{FLAG_CARRY, OPCODE_SIZE, FLAG_ZERO, FLAG_SIGN, FLAG_PARITY};
+    use crate::constants::{FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE};
     use crate::cpu::CPU;
 
     #[test]
@@ -278,7 +278,6 @@ mod tests {
         assert_eq!(cpu.e, 0x9A);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
     }
-
 
     #[test]
     fn test_op_dcr() {
