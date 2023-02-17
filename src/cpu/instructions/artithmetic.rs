@@ -32,12 +32,8 @@ impl CPU {
     pub fn op_cmp(&mut self, register: Registers) -> Result<(), String> {
         let min = self.a;
         let addr = self.get_addr_pointer();
-        let mem_value = match self.memory().read(addr) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err("Invalid memory value at addr pointer".to_string());
-            }
-        };
+
+        let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
         let sub = match register {
             Registers::B => self.b,
@@ -46,7 +42,7 @@ impl CPU {
             Registers::E => self.e,
             Registers::H => self.h,
             Registers::L => self.l,
-            Registers::HL => mem_value,
+            Registers::HL => value,
             Registers::A => self.a,
             _ => 0_u8,
         };
@@ -62,12 +58,8 @@ impl CPU {
     #[allow(clippy::similar_names)]
     pub fn op_inr(&mut self, reg: Registers) -> Result<(), String> {
         let addr = self.get_addr_pointer();
-        let mem_value = match self.memory().read(addr) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err("Invalid memory value at addr pointer".to_string());
-            }
-        };
+        let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
         match reg {
             Registers::B => {
                 let (res, of) = self.b.overflowing_add(1);
@@ -106,11 +98,11 @@ impl CPU {
                 self.l = res;
             }
             Registers::HL => {
-                let val = mem_value;
+                let val = value;
                 let ac = will_ac(1, val);
                 let (res, of) = val.overflowing_add(1);
                 self.update_flags(res, Some(of), Some(ac));
-                self.memory().write(mem_value.into(), res).unwrap();
+                self.memory().write(value.into(), res).unwrap();
             }
             Registers::A => {
                 let (res, of) = self.a.overflowing_add(1);
@@ -128,12 +120,7 @@ impl CPU {
     #[allow(clippy::similar_names)]
     pub fn op_dcr(&mut self, reg: Registers) -> Result<(), String> {
         let addr = self.get_addr_pointer();
-        let mem_value = match self.memory().read(addr) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err("Invalid memory value at addr pointer".to_string());
-            }
-        };
+        let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
         match reg {
             Registers::A => {
@@ -172,7 +159,7 @@ impl CPU {
                 self.l = res;
             }
             Registers::HL => {
-                let mem = mem_value;
+                let mem = value;
                 let (res, of) = mem.overflowing_sub(1);
                 self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
                 match self.memory().write(addr, res) {

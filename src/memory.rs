@@ -27,11 +27,11 @@ impl fmt::Display for Memory {
         let mut out = format!("{}\n", table_header());
 
         for element in iter {
-            out = format!("{}{:04X} {:02X?}\n", out, idx, element);
+            out = format!("{out}{idx:04X} {element:02X?}\n");
             idx += SLICE_SIZE;
         }
 
-        write!(f, "{}", out)?;
+        write!(f, "{out}")?;
         Ok(())
     }
 }
@@ -56,7 +56,7 @@ impl Memory {
     pub fn read(&self, loc: usize) -> Result<u8, String> {
         match self.data.get(loc) {
             Some(v) => Ok(*v),
-            None => Err(format!("RAM: Unable to read at location: {:#04X}", loc)),
+            None => Err(format!("RAM: Unable to read at location: {loc:#04X}")),
         }
     }
 
@@ -64,7 +64,7 @@ impl Memory {
     // TODO: Make this respect things a little more, maybe write via range instead?
     pub fn write(&mut self, loc: usize, val: u8) -> Result<(), String> {
         if loc > RAM_SIZE - 1 {
-            return Err(format!("Unable to write to memory location: {:04X}", loc));
+            return Err(format!("Unable to write to memory location: {loc:04X}"));
         }
 
         self.data[loc] = val;
@@ -79,7 +79,7 @@ pub fn table_header() -> String {
     for (i, item) in header.iter_mut().enumerate() {
         *item = i;
     }
-    format!("0000 {:02X?}", header)
+    format!("0000 {header:02X?}")
 }
 
 #[cfg(test)]
@@ -103,10 +103,7 @@ mod tests {
 
         assert_eq!(
             mem.read(RAM_SIZE),
-            Err(format!(
-                "RAM: Unable to read at location: {:#04X}",
-                RAM_SIZE
-            ))
+            Err(format!("RAM: Unable to read at location: {RAM_SIZE:#04X}"))
         );
     }
 }

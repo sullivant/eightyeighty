@@ -42,7 +42,7 @@ impl Emulator {
         cpu.disassemble(true);
 
         // The list of rom files to load for this particular collection/game
-        let file_to_load = format!("./resources/roms/{}.COM", rom_file);
+        let file_to_load = format!("./resources/roms/{rom_file}.COM");
         let mut dims: (usize, usize) = (0, 0);
 
         match load_rom(&mut cpu, file_to_load.clone(), dims.1) {
@@ -50,7 +50,7 @@ impl Emulator {
                 dims = i;
             }
             Err(err) => {
-                return Err(format!("Unable to load rom file {}: {}", file_to_load, err));
+                return Err(format!("Unable to load rom file {file_to_load}: {err}"));
             }
         }
 
@@ -193,7 +193,7 @@ fn main() -> Result<(), String> {
             match cpu_thread.lock().unwrap().update() {
                 Ok(_) => (),
                 Err(e) => {
-                    println!("Unable to tick: {}", e);
+                    println!("Unable to tick: {e}");
                     break;
                 }
             }

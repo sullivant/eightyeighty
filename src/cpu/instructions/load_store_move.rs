@@ -27,8 +27,7 @@ impl CPU {
                 Ok(())
             }
             _ => Err(format!(
-                "Register {} is NOT IMPLEMENTED in OP_LXI, Cannot Execute",
-                target
+                "Register {target} is NOT IMPLEMENTED in OP_LXI, Cannot Execute"
             )),
         }
     }
@@ -40,8 +39,7 @@ impl CPU {
             Ok(v) => v,
             Err(_) => {
                 return Err(format!(
-                    "LHLD: Unable to read for L in memory at {:#04X}",
-                    addr
+                    "LHLD: Unable to read for L in memory at {addr:#04X}"
                 ))
             }
         };
@@ -50,8 +48,7 @@ impl CPU {
             Ok(v) => v,
             Err(_) => {
                 return Err(format!(
-                    "LHLD: Unable to read for H in memory at {:#04X}",
-                    addr
+                    "LHLD: Unable to read for H in memory at {addr:#04X}"
                 ))
             }
         };
@@ -96,10 +93,7 @@ impl CPU {
                 Err(e) => return Err(e),
             },
             _ => {
-                return Err(format!(
-                    "Cannot MOV into unimplemented register: {}",
-                    source
-                ));
+                return Err(format!("Cannot MOV into unimplemented register: {source}"));
             }
         };
 
@@ -128,8 +122,7 @@ impl CPU {
         }
 
         Err(format!(
-            "Cannot determine location from register pair provided {:#}",
-            reg
+            "Cannot determine location from register pair provided {reg:#}"
         ))
     }
 }

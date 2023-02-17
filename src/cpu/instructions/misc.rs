@@ -11,7 +11,7 @@ impl CPU {
     // TODO: If data out is needed, this needs to be finished
     #[allow(clippy::unused_self)]
     pub fn data_out(&self, data: u8) -> Result<(), String> {
-        println!("Setting Data Out: {:#04X}", data);
+        println!("Setting Data Out: {data:#04X}");
         Ok(())
     }
     // ProgramCounter is incremented and then the CPU enters a
