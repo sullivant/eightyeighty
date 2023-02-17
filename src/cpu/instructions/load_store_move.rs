@@ -73,10 +73,7 @@ impl CPU {
                 Err(e) => return Err(e),
             },
             _ => {
-                return Err(format!(
-                    "Cannot MOV from unimplemented register: {}",
-                    source
-                ));
+                return Err(format!("Cannot MOV from unimplemented register: {source}"));
             }
         };
 
