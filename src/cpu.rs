@@ -200,6 +200,8 @@ impl CPU {
         let opcode_result = match self.current_instruction.opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
 
+            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.mvi(dl),
+
             0x01 => self.lxi(Registers::BC, dl, dh),
             0x02 => self.op_stax(Registers::BC), // STAX (BC)
             0x03 => {
@@ -259,8 +261,6 @@ impl CPU {
             }
             0x3C => self.op_inr(Registers::A),
             0x3D => self.op_dcr(Registers::A),
-
-            0x3E => self.mvi(Registers::A, dl),
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C

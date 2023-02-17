@@ -124,19 +124,19 @@ impl CPU {
     }
 
     // Performs the MVI functionality
-    pub fn mvi(&mut self, target: Registers, x: u8) -> Result<(), String> {
+    pub fn mvi(&mut self, x: u8) -> Result<(), String> {
         let addr = self.get_addr_pointer();
 
-        match target {
-            Registers::A => self.a = x,                     // 0x3E
-            Registers::B => self.b = x,                     // 0x06
-            Registers::C => self.c = x,                     // 0x0E
-            Registers::D => self.d = x,                     // 0x16
-            Registers::E => self.e = x,                     // 0x1E
-            Registers::H => self.h = x,                     // 0x26
-            Registers::L => self.l = x,                     // 0x2E
-            Registers::HL => self.memory().write(addr, x)?, // 0x36
-            _ => (),                                        // Do nothing
+        match self.current_instruction.opcode {
+            0x06 => self.b = x,                    // 0x06
+            0x0E => self.c = x,                    // 0x0E
+            0x16 => self.d = x,                    // 0x16
+            0x1E => self.e = x,                    // 0x1E
+            0x26 => self.h = x,                    // 0x26
+            0x2E => self.l = x,                    // 0x2E
+            0x36 => self.memory().write(addr, x)?, // 0x36
+            0x3E => self.a = x,                    // 0x3E
+            _ => (),                               // Do nothing
         };
         Ok(())
     }
