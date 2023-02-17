@@ -1,4 +1,4 @@
-use std::{fmt, fs::File, io::Read};
+use std::fmt;
 
 mod instructions;
 mod tests;
@@ -207,11 +207,13 @@ impl CPU {
                 Ok(())
             }
             0x04 => self.op_inr(Registers::B),
+            0x05 => self.op_dcr(Registers::B),
             0x0B => {
                 self.op_dcx(Registers::BC);
                 Ok(())
             }
             0x0C => self.op_inr(Registers::C),
+            0x0D => self.op_dcr(Registers::C),
 
             0x11 => self.lxi(Registers::DE, dl, dh),
             0x12 => self.op_stax(Registers::DE), // STAX (DE)
@@ -220,11 +222,13 @@ impl CPU {
                 Ok(())
             }
             0x14 => self.op_inr(Registers::D),
+            0x15 => self.op_dcr(Registers::D),
             0x1B => {
                 self.op_dcx(Registers::DE);
                 Ok(())
             }
             0x1C => self.op_inr(Registers::E),
+            0x1D => self.op_dcr(Registers::E),
 
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
@@ -233,11 +237,13 @@ impl CPU {
                 Ok(())
             }
             0x24 => self.op_inr(Registers::H),
+            0x25 => self.op_dcr(Registers::H),
             0x2B => {
                 self.op_dcx(Registers::HL);
                 Ok(())
             }
             0x2C => self.op_inr(Registers::L),
+            0x2D => self.op_dcr(Registers::L),
 
             0x31 => self.lxi(Registers::SP, dl, dh),
             0x32 => self.op_sta(dl, dh), // STA (adr)<-A
@@ -246,11 +252,13 @@ impl CPU {
                 Ok(())
             }
             0x34 => self.op_inr(Registers::HL),
+            0x35 => self.op_dcr(Registers::HL),
             0x3B => {
                 self.op_dcx(Registers::SP);
                 Ok(())
             }
             0x3C => self.op_inr(Registers::A),
+            0x3D => self.op_dcr(Registers::A),
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C

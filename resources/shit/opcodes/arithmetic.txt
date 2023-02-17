@@ -251,60 +251,7 @@ impl Cpu {
         ProgramCounter::Next
     }
 
-    // DCR Reg
-    // Flags affected: Z,S,P,AC
-    #[allow(clippy::similar_names)]
-    pub fn op_dcr(&mut self, reg: Registers) -> ProgramCounter {
-        //let new_val = self.b.wrapping_sub(1);
-
-        match reg {
-            Registers::A => {
-                let (res, of) = self.b.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.a & 0x0F)));
-                self.a = res;
-            }
-            Registers::B => {
-                let (res, of) = self.b.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.b & 0x0F)));
-                self.b = res;
-            }
-            Registers::C => {
-                let (res, of) = self.c.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.c & 0x0F)));
-                self.c = res;
-            }
-            Registers::D => {
-                let (res, of) = self.d.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.d & 0x0F)));
-                self.d = res;
-            }
-            Registers::E => {
-                let (res, of) = self.e.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.e & 0x0F)));
-                self.e = res;
-            }
-            Registers::H => {
-                let (res, of) = self.h.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.h & 0x0F)));
-                self.h = res;
-            }
-            Registers::L => {
-                let (res, of) = self.l.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.l & 0x0F)));
-                self.l = res;
-            }
-            Registers::HL => {
-                let mem = self.memory[self.get_addr_pointer()];
-                let (res, of) = mem.overflowing_sub(1);
-                self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
-                self.memory[self.get_addr_pointer()] = res;
-            }
-
-            _ => (),
-        }
-
-        ProgramCounter::Next
-    }
+    
 
     // SUB  / SBB (Subtract register param from A with borrow if necessary)
     // Additionally, an optional subtrahend can be supplied, in the case of SBB

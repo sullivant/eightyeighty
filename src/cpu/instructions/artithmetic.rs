@@ -1,4 +1,4 @@
-use crate::cpu::{make_pointer, will_ac, Registers, CPU};
+use crate::cpu::{will_ac, Registers, CPU};
 
 impl CPU {
     pub fn op_inx(&mut self, target: Registers) {
@@ -119,11 +119,77 @@ impl CPU {
         }
         Ok(())
     }
+
+    // DCR Reg
+    // Flags affected: Z,S,P,AC
+    #[allow(clippy::similar_names)]
+    pub fn op_dcr(&mut self, reg: Registers) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+        let mem_value = match self.memory().read(addr) {
+            Ok(v) => v,
+            Err(_) => {
+                return Err("Invalid memory value at addr pointer".to_string());
+            }
+        };
+
+        match reg {
+            Registers::A => {
+                let (res, of) = self.b.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.a & 0x0F)));
+                self.a = res;
+            }
+            Registers::B => {
+                let (res, of) = self.b.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.b & 0x0F)));
+                self.b = res;
+            }
+            Registers::C => {
+                let (res, of) = self.c.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.c & 0x0F)));
+                self.c = res;
+            }
+            Registers::D => {
+                let (res, of) = self.d.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.d & 0x0F)));
+                self.d = res;
+            }
+            Registers::E => {
+                let (res, of) = self.e.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.e & 0x0F)));
+                self.e = res;
+            }
+            Registers::H => {
+                let (res, of) = self.h.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.h & 0x0F)));
+                self.h = res;
+            }
+            Registers::L => {
+                let (res, of) = self.l.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (self.l & 0x0F)));
+                self.l = res;
+            }
+            Registers::HL => {
+                let mem = mem_value;
+                let (res, of) = mem.overflowing_sub(1);
+                self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
+                match self.memory().write(addr, res) {
+                    Ok(_) => (),
+                    Err(_) => {
+                        return Err("Unable to write to memory value at addr pointer".to_string());
+                    }
+                }
+            }
+
+            _ => (),
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{FLAG_CARRY, OPCODE_SIZE};
+    use crate::constants::{FLAG_CARRY, OPCODE_SIZE, FLAG_ZERO, FLAG_SIGN, FLAG_PARITY};
     use crate::cpu::CPU;
 
     #[test]
@@ -211,5 +277,37 @@ mod tests {
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.e, 0x9A);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    }
+
+
+    #[test]
+    fn test_op_dcr() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // A simple decrement
+        cpu.b = 0x02;
+        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.b, 0x01);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.test_flag(FLAG_ZERO), false);
+        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.b, 0x00);
+        assert_eq!(cpu.test_flag(FLAG_ZERO), true);
+
+        // A wrapping decrement
+        cpu.b = 0x00;
+        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.b, 0xFF);
+        assert_eq!(cpu.test_flag(FLAG_SIGN), true);
+
+        cpu.b = 0x04;
+        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.b, 0x03);
+        assert_eq!(cpu.test_flag(FLAG_PARITY), true);
     }
 }

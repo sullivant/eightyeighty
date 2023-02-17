@@ -20,7 +20,7 @@ mod video;
 use crate::cpu::CPU;
 use crate::video::Video;
 use clap::{App, Arg};
-use constants::{CELL_SIZE, DISP_HEIGHT, DISP_WIDTH, WHITE};
+use constants::{DISP_HEIGHT, DISP_WIDTH};
 use std::fs::File;
 use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};

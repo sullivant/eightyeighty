@@ -97,32 +97,6 @@ fn test_op_00() {
 
 
 
-#[test]
-fn test_op_dcr() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-
-    // A simple decrement
-    cpu.b = 0x02;
-    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.b, 0x01);
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), false);
-    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.b, 0x00);
-    assert_eq!(cpu.test_flag(lib::FLAG_ZERO), true);
-
-    // A wrapping decrement
-    cpu.b = 0x00;
-    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.b, 0xFF);
-    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
-
-    cpu.b = 0x04;
-    cpu.run_opcode((0x05, 0x00, 0x00)).unwrap();
-    assert_eq!(cpu.b, 0x03);
-    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
-}
 
 
 
