@@ -183,14 +183,6 @@ fn test_op_1e() {
     assert_eq!(cpu.e, 0x01);
 }
 
-#[test]
-fn test_op_3e() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-    cpu.run_opcode((0x3E, 0x01, 0x02)).unwrap();
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE * 2);
-    assert_eq!(cpu.a, 0x01);
-}
 
 #[test]
 fn test_op_6f() {
@@ -1060,24 +1052,6 @@ fn test_op_stc() {
     cpu.reset_flag(lib::FLAG_CARRY);
     cpu.run_opcode((0x37, 0x00, 0x00)).unwrap();
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), true);
-    assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
-}
-
-#[test]
-fn test_op_daa() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-
-    // Setup the accum with 0x9B and reset both carry bits
-    cpu.a = 0x9b;
-    cpu.reset_flag(lib::FLAG_AUXCARRY);
-    cpu.reset_flag(lib::FLAG_CARRY);
-
-    cpu.run_opcode((0x27, 0x00, 0x00)).unwrap();
-
-    assert_eq!(cpu.a, 0x01);
-    assert!(cpu.test_flag(lib::FLAG_CARRY));
-    assert!(cpu.test_flag(lib::FLAG_AUXCARRY));
     assert_eq!(cpu.pc, op + lib::OPCODE_SIZE);
 }
 

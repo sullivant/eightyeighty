@@ -240,6 +240,10 @@ impl CPU {
             }
             0x24 => self.op_inr(Registers::H),
             0x25 => self.op_dcr(Registers::H),
+            0x27 => {
+                self.op_daa();
+                Ok(())
+            }
             0x2B => {
                 self.op_dcx(Registers::HL);
                 Ok(())

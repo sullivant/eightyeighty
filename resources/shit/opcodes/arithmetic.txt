@@ -17,33 +17,7 @@ impl Cpu {
     
     
 
-    // Decimal Adjust Accumulator
-    // If the least significant four bits of the accumulator have a value greater than nine,
-    // or if the auxiliary carry flag is ON, DAA adds six to the accumulator.
-    //
-    // If the most significant four bits of the accumulator have a value greater than nine,
-    // or if the carry flag IS ON, DAA adds six to the most significant four bits of the accumulator.
-    pub fn op_daa(&mut self) -> ProgramCounter {
-        // Find the LS4B of the accumulator
-        let mut ac = false;
-        let mut carry = false;
-
-        if (self.a & 0b0000_1111) > 9 {
-            let res = self.a.overflowing_add(6).0;
-            ac = will_ac(6, self.a);
-            self.a = res;
-        }
-
-        if (self.a & 0b1111_0000) > 9 {
-            let (res, c) = self.a.overflowing_add(6 << 4);
-            self.a = res;
-            carry = c;
-        }
-
-        self.update_flags(self.a, Some(carry), Some(ac));
-
-        ProgramCounter::Next
-    }
+    
 
     /// Add to the accumulator the supplied data byte after
     /// the opcode byte.

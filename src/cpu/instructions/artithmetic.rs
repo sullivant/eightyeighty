@@ -303,11 +303,39 @@ impl CPU {
         self.a = o.0;
         Ok(())
     }
+
+    /// Decimal Adjust Accumulator
+    /// If the least significant four bits of the accumulator have a value greater than nine,
+    /// or if the auxiliary carry flag is ON, DAA adds six to the accumulator.
+    ///
+    /// If the most significant four bits of the accumulator have a value greater than nine,
+    /// or if the carry flag IS ON, DAA adds six to the most significant four bits of the accumulator.
+    pub fn op_daa(&mut self) {
+        // Find the LS4B of the accumulator
+        let mut ac = false;
+        let mut carry = false;
+
+        if (self.a & 0b0000_1111) > 9 {
+            let res = self.a.overflowing_add(6).0;
+            ac = will_ac(6, self.a);
+            self.a = res;
+        }
+
+        if (self.a & 0b1111_0000) > 9 {
+            let (res, c) = self.a.overflowing_add(6 << 4);
+            self.a = res;
+            carry = c;
+        }
+
+        self.update_flags(self.a, Some(carry), Some(ac));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE};
+    use crate::constants::{
+        FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE,
+    };
     use crate::cpu::CPU;
 
     #[test]
@@ -522,5 +550,24 @@ mod tests {
         cpu.prep_instr_and_data(0x96, 0x00, 0x00);
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.a, 0x0A);
+    }
+
+    #[test]
+    fn test_op_daa() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // Setup the accum with 0x9B and reset both carry bits
+        cpu.a = 0x9b;
+        cpu.reset_flag(FLAG_AUXCARRY);
+        cpu.reset_flag(FLAG_CARRY);
+
+        cpu.prep_instr_and_data(0x27, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+
+        assert_eq!(cpu.a, 0x01);
+        assert!(cpu.test_flag(FLAG_CARRY));
+        assert!(cpu.test_flag(FLAG_AUXCARRY));
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
     }
 }
