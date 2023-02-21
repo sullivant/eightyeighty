@@ -21,90 +21,13 @@ impl Cpu {
 
     
 
-    // Add to the accumulator the supplied register
-    // along with the CARRY flag's value
-    // as well as update flags
-    pub fn op_adc(&mut self, register: Registers) -> ProgramCounter {
-        let to_add: u8 = u8::from(self.test_flag(FLAG_CARRY))
-            + match register {
-                Registers::B => self.b,
-                Registers::C => self.c,
-                Registers::D => self.d,
-                Registers::E => self.e,
-                Registers::H => self.h,
-                Registers::L => self.l,
-                Registers::HL => self.memory[self.get_addr_pointer()],
-                Registers::A => self.a,
-                _ => 0_u8,
-            };
+    
 
-        let (res, of) = self.a.overflowing_add(to_add);
-        let ac = will_ac(to_add, self.a);
-        self.a = res;
-        self.update_flags(res, Some(of), Some(ac));
+    
 
-        ProgramCounter::Next
-    }
+    
 
-    // Add to the accumulator the supplied register
-    // as well as update flags
-    pub fn op_add(&mut self, register: Registers) -> ProgramCounter {
-        let to_add: u8 = match register {
-            Registers::B => self.b,
-            Registers::C => self.c,
-            Registers::D => self.d,
-            Registers::E => self.e,
-            Registers::H => self.h,
-            Registers::L => self.l,
-            Registers::HL => self.memory[self.get_addr_pointer()],
-            Registers::A => self.a,
-            _ => 0_u8,
-        };
-
-        let (res, of) = self.a.overflowing_add(to_add);
-        let ac = will_ac(to_add, self.a);
-        self.a = res;
-        self.update_flags(res, Some(of), Some(ac));
-
-        ProgramCounter::Next
-    }
-
-    // Rotates right, if through_carry is true, it does that.
-    pub fn op_rrc_rar(&mut self, through_carry: bool) -> ProgramCounter {
-        // Store off our current carry bit
-        let carry_bit = self.test_flag(FLAG_CARRY);
-        let low_order = self.a & 0x01; // Save off the low order bit so we can rotate it.
-
-        let mut new_accum: u8 = self.a >> 1;
-
-        if through_carry {
-            new_accum |= u8::from(carry_bit) << 7; // Carry bit replaces high order
-        } else {
-            // Normal carry
-            new_accum |= low_order << 7; // Low order replaces high order
-        };
-
-        self.a = new_accum;
-
-        if low_order > 0 {
-            self.set_flag(FLAG_CARRY);
-        } else {
-            self.reset_flag(FLAG_CARRY);
-        }
-
-        ProgramCounter::Next
-    }
-
-    // CPI - Compare D16 to Accum, set flags accordingly
-    pub fn op_cpi(&mut self, data: u8) -> ProgramCounter {
-        // Subtract the data from register A and set flags on the result
-        let (res, overflow) = self.a.overflowing_sub(data);
-        let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
-
-        self.update_flags(res, Some(overflow), Some(aux_carry));
-
-        ProgramCounter::Two
-    }
+    
 
     // Performs the Double Add (DAD) functionality
     // Sets H to the value according to the supplied register

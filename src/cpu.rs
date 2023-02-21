@@ -217,6 +217,11 @@ impl CPU {
             0x0C => self.op_inr(Registers::C),
             0x0D => self.op_dcr(Registers::C),
 
+            0x0F => {
+                self.op_rrc_rar(true);
+                Ok(())
+            } // RRC
+
             0x11 => self.lxi(Registers::DE, dl, dh),
             0x12 => self.op_stax(Registers::DE), // STAX (DE)
             0x13 => {
@@ -231,6 +236,10 @@ impl CPU {
             }
             0x1C => self.op_inr(Registers::E),
             0x1D => self.op_dcr(Registers::E),
+            0x1F => {
+                self.op_rrc_rar(false);
+                Ok(())
+            } // RAR
 
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
@@ -334,6 +343,9 @@ impl CPU {
             0x7E => self.mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.mov(Registers::A, Registers::A),  // MOV A,A
 
+            0x80..=0x87 => self.op_add(),
+            0x88..=0x8F => self.op_adc(),
+
             0x90..=0x9F => self.op_sub(), // This includes SUB and SBB (subtrahend included in fn)
 
             0xA0..=0xA7 => self.op_ana(),
@@ -351,6 +363,11 @@ impl CPU {
 
             0xE6 => {
                 self.op_ani(dl);
+                Ok(())
+            }
+
+            0xFE => {
+                self.op_cpi(dl);
                 Ok(())
             }
 

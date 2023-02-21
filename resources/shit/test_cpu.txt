@@ -943,38 +943,8 @@ fn test_rrc() {
     assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
 }
 
-#[test]
-fn test_adc() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
 
-    cpu.a = 0x42;
-    cpu.b = 0x3D;
-    cpu.set_flag(lib::FLAG_CARRY);
-    // Add the register B to the Accum with the Carry bit, too
-    cpu.run_opcode((0x88, 0x00, 000)).unwrap();
-    assert_eq!(cpu.a, 0x80);
-    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
-    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
-}
 
-#[test]
-fn test_add() {
-    let mut cpu = Cpu::new();
-    let op = cpu.pc;
-
-    cpu.a = 0x6C;
-    cpu.d = 0x2E;
-    cpu.set_flag(lib::FLAG_CARRY);
-    // Add the register B to the Accum with the Carry bit, too
-    cpu.run_opcode((0x82, 0x00, 000)).unwrap();
-    assert_eq!(cpu.a, 0x9A);
-    assert_eq!(cpu.test_flag(lib::FLAG_CARRY), false);
-    assert_eq!(cpu.test_flag(lib::FLAG_PARITY), true);
-    assert_eq!(cpu.test_flag(lib::FLAG_SIGN), true);
-    assert_eq!(cpu.test_flag(lib::FLAG_AUXCARRY), true);
-    assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE));
-}
 
 #[test]
 fn test_stax() {

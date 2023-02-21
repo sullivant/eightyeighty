@@ -330,6 +330,15 @@ impl CPU {
         self.update_flags(self.a, Some(carry), Some(ac));
     }
 
+    /// CPI - Compare D8 to Accum, set flags accordingly
+    pub fn op_cpi(&mut self, data: u8) {
+        // Subtract the data from register A and set flags on the result
+        let (res, overflow) = self.a.overflowing_sub(data);
+        let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
+
+        self.update_flags(res, Some(overflow), Some(aux_carry));
+    }
+
     /// Add to the accumulator the supplied data byte after
     /// the opcode byte.
     ///
@@ -350,6 +359,86 @@ impl CPU {
         let (res, of) = self.a.overflowing_add(to_add);
         self.a = res;
         self.update_flags(res, Some(of), Some(ac));
+    }
+
+    /// Add to the accumulator the supplied register
+    /// along with the CARRY flag's value
+    /// as well as update flags
+    pub fn op_adc(&mut self) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
+        let op = self.current_instruction.opcode;
+
+        let to_add: u8 = u8::from(self.test_flag(FLAG_CARRY))
+            + match op {
+                0x88 => self.b,
+                0x89 => self.c,
+                0x8A => self.d,
+                0x8B => self.e,
+                0x8C => self.h,
+                0x8D => self.l,
+                0x8E => mem_value,
+                0x8F => self.a,
+                _ => 0_u8,
+            };
+
+        let (res, of) = self.a.overflowing_add(to_add);
+        let ac = will_ac(to_add, self.a);
+        self.a = res;
+        self.update_flags(res, Some(of), Some(ac));
+
+        Ok(())
+    }
+
+    /// Add to the accumulator the supplied register
+    /// as well as update flags
+    pub fn op_add(&mut self) -> Result<(), String> {
+        let addr = self.get_addr_pointer();
+        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+
+        let to_add: u8 = match self.current_instruction.opcode {
+            0x80 => self.b,
+            0x81 => self.c,
+            0x82 => self.d,
+            0x83 => self.e,
+            0x84 => self.h,
+            0x85 => self.l,
+            0x86 => mem_value,
+            0x87 => self.a,
+            _ => 0_u8,
+        };
+
+        let (res, of) = self.a.overflowing_add(to_add);
+        let ac = will_ac(to_add, self.a);
+        self.a = res;
+        self.update_flags(res, Some(of), Some(ac));
+
+        Ok(())
+    }
+
+    /// Rotates right, if `through_carry` is true, it does that.
+    pub fn op_rrc_rar(&mut self, through_carry: bool) {
+        // Store off our current carry bit
+        let carry_bit = self.test_flag(FLAG_CARRY);
+        let low_order = self.a & 0x01; // Save off the low order bit so we can rotate it.
+
+        let mut new_accum: u8 = self.a >> 1;
+
+        if through_carry {
+            new_accum |= u8::from(carry_bit) << 7; // Carry bit replaces high order
+        } else {
+            // Normal carry
+            new_accum |= low_order << 7; // Low order replaces high order
+        };
+
+        self.a = new_accum;
+
+        if low_order > 0 {
+            self.set_flag(FLAG_CARRY);
+        } else {
+            self.reset_flag(FLAG_CARRY);
+        }
     }
 }
 
@@ -645,4 +734,57 @@ mod tests {
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.a, 0x57);
     }
+
+    #[test]
+    fn test_adc() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.a = 0x42;
+        cpu.b = 0x3D;
+        cpu.set_flag(FLAG_CARRY);
+        // Add the register B to the Accum with the Carry bit, too
+        cpu.prep_instr_and_data(0x88, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x80);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
+        assert_eq!(cpu.pc, op + (OPCODE_SIZE));
+    }
+
+    #[test]
+    fn test_add() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.a = 0x6C;
+        cpu.d = 0x2E;
+        cpu.set_flag(FLAG_CARRY);
+        // Add the register B to the Accum with the Carry bit, too
+        cpu.prep_instr_and_data(0x82, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x9A);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
+        assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+        assert_eq!(cpu.test_flag(FLAG_SIGN), true);
+        assert_eq!(cpu.test_flag(FLAG_AUXCARRY), true);
+        assert_eq!(cpu.pc, op + (OPCODE_SIZE));
+    }
+
+    // TODO: This needs to be worked on, just a bit busy today.
+    // #[test]
+    // fn test_op_cpi() {
+    //     let mut cpu = CPU::new();
+    //     let op = cpu.pc;
+
+    //     // Prepare the accumulator
+    //     cpu.prep_instr_and_data(0x3E, 0x4A, 0x00);
+    //     cpu.run_opcode().unwrap();
+    //     assert_eq!(cpu.a, 0x4A);
+
+    //     cpu.prep_instr_and_data(0xFE, 0x40, 0x00);
+    //     cpu.run_opcode().unwrap();
+    //     assert_eq!(cpu.a, 0x4A);
+    //     assert_eq!(cpu.test_flag(FLAG_CARRY), true);
+    //     assert_eq!(cpu.pc, op + (OPCODE_SIZE));
+    // }
 }
