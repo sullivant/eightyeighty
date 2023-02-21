@@ -19,28 +19,7 @@ impl Cpu {
 
     
 
-    /// Add to the accumulator the supplied data byte after
-    /// the opcode byte.
-    ///
-    /// If the parmeter ``carry_bit`` is true this performs the function
-    /// of the opcode "ACI" by including the value of the carry bit in the
-    /// addition.
-    ///
-    /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
-    pub fn op_adi_aci(&mut self, dl: u8, carry_bit: bool) -> ProgramCounter {
-        let mut to_add = dl;
-
-        if carry_bit {
-            to_add = to_add.overflowing_add(1).0; // Do we need to care about overflow here?
-        };
-
-        let ac = will_ac(to_add, self.a);
-        let (res, of) = self.a.overflowing_add(to_add);
-        self.a = res;
-        self.update_flags(res, Some(of), Some(ac));
-
-        ProgramCounter::Two
-    }
+    
 
     // Add to the accumulator the supplied register
     // along with the CARRY flag's value

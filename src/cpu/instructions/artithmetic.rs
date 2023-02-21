@@ -329,6 +329,28 @@ impl CPU {
 
         self.update_flags(self.a, Some(carry), Some(ac));
     }
+
+    /// Add to the accumulator the supplied data byte after
+    /// the opcode byte.
+    ///
+    /// If the opcode is ACI we will consider using the  ``carry_bit`` in
+    /// the opcode "ACI" by including the value of the carry bit in the
+    /// addition.
+    ///
+    /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
+    pub fn op_adi_aci(&mut self, dl: u8) {
+        let mut to_add = dl;
+
+        // If the current opcode is 0xCE we use the value of the carry flag.
+        if self.current_instruction.opcode == 0xCE && self.test_flag(FLAG_CARRY) {
+            to_add = to_add.overflowing_add(1).0; // Do we need to care about overflow here?
+        };
+
+        let ac = will_ac(to_add, self.a);
+        let (res, of) = self.a.overflowing_add(to_add);
+        self.a = res;
+        self.update_flags(res, Some(of), Some(ac));
+    }
 }
 
 #[cfg(test)]
@@ -569,5 +591,58 @@ mod tests {
         assert!(cpu.test_flag(FLAG_CARRY));
         assert!(cpu.test_flag(FLAG_AUXCARRY));
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
+    }
+
+    #[test]
+    fn test_op_adi() {
+        let mut cpu = CPU::new();
+
+        // Set the accumulator to 0x14
+        cpu.prep_instr_and_data(0x3E, 0x14, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x14);
+
+        let op = cpu.pc;
+        cpu.prep_instr_and_data(0xC6, 0x42, 0x00);
+        cpu.run_opcode().unwrap();
+
+        // Accumulator should now be 0x56 (0x14 + 0x42 = 0x56)
+        assert_eq!(cpu.a, 0x56);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
+        assert_eq!(cpu.test_flag(FLAG_AUXCARRY), false);
+        assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
+
+        // Bring us back to the original accumulator value
+        cpu.prep_instr_and_data(0xC6, 0xBE, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x14);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), true);
+        assert_eq!(cpu.test_flag(FLAG_AUXCARRY), true);
+        assert_eq!(cpu.test_flag(FLAG_PARITY), true);
+        assert_eq!(cpu.test_flag(FLAG_SIGN), false);
+        assert_eq!(cpu.test_flag(FLAG_ZERO), false);
+    }
+
+    #[test]
+    fn test_op_aci() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.prep_instr_and_data(0x3E, 0x56, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x56);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
+
+        cpu.reset_flag(FLAG_CARRY);
+        cpu.prep_instr_and_data(0xCE, 0xBE, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x14);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), true);
+
+        // Now, let's do one with a carry flag
+        cpu.prep_instr_and_data(0xCE, 0x42, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x57);
     }
 }

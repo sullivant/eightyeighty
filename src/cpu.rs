@@ -342,6 +342,11 @@ impl CPU {
             0xB0..=0xB7 => self.op_ora(),
             0xB8..=0xBF => self.op_cmp(),
 
+            0xC6 | 0xCE => {
+                self.op_adi_aci(dl);
+                Ok(())
+            }
+
             0xD3 => self.data_out(dl),
 
             0xE6 => {
