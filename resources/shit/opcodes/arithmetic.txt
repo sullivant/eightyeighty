@@ -29,32 +29,7 @@ impl Cpu {
 
     
 
-    // Performs the Double Add (DAD) functionality
-    // Sets H to the value according to the supplied register
-    // Basically: HL = HL+<Selected register pair>
-    pub fn op_dad(&mut self, source: Registers) -> ProgramCounter {
-        //let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
-        let val = usize::from(self.get_register_pair(Registers::HL));
-
-        let src: usize = match source {
-            Registers::B | Registers::BC => usize::from(self.get_register_pair(Registers::BC)),
-            Registers::D | Registers::DE => usize::from(self.get_register_pair(Registers::DE)),
-            Registers::SP => usize::from(self.get_register_pair(Registers::SP)),
-            Registers::H | Registers::HL => val,
-            _ => 0,
-        };
-
-        let (new, of) = val.overflowing_add(src);
-
-        self.h = (new >> 8) as u8;
-        self.l = (new & 0xFF) as u8;
-
-        if of {
-            self.set_flag(FLAG_CARRY);
-        }
-
-        ProgramCounter::Next
-    }
+    
 
     
 

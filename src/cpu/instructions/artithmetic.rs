@@ -330,6 +330,31 @@ impl CPU {
         self.update_flags(self.a, Some(carry), Some(ac));
     }
 
+    /// Performs the Double Add (DAD) functionality
+    /// Sets H to the value according to the supplied register
+    /// Basically: HL = HL+<Selected register pair>
+    pub fn op_dad(&mut self) {
+        //let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
+        let val = usize::from(self.get_register_pair(Registers::HL));
+
+        let src: usize = match self.current_instruction.opcode {
+            0x09 => usize::from(self.get_register_pair(Registers::BC)),
+            0x19 => usize::from(self.get_register_pair(Registers::DE)),
+            0x29 => val,
+            0x39 => usize::from(self.get_register_pair(Registers::SP)),
+            _ => 0,
+        };
+
+        let (new, of) = val.overflowing_add(src);
+
+        self.h = (new >> 8) as u8;
+        self.l = (new & 0xFF) as u8;
+
+        if of {
+            self.set_flag(FLAG_CARRY);
+        }
+    }
+
     /// CPI - Compare D8 to Accum, set flags accordingly
     pub fn op_cpi(&mut self, data: u8) {
         // Subtract the data from register A and set flags on the result
@@ -767,6 +792,24 @@ mod tests {
         assert_eq!(cpu.test_flag(FLAG_PARITY), true);
         assert_eq!(cpu.test_flag(FLAG_SIGN), true);
         assert_eq!(cpu.test_flag(FLAG_AUXCARRY), true);
+        assert_eq!(cpu.pc, op + (OPCODE_SIZE));
+    }
+
+    #[test]
+    fn test_op_dad() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.b = 0x33;
+        cpu.c = 0x9F;
+        cpu.h = 0xA1;
+        cpu.l = 0x7B;
+
+        cpu.prep_instr_and_data(0x09, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.h, 0xD5);
+        assert_eq!(cpu.l, 0x1A);
+        assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.pc, op + (OPCODE_SIZE));
     }
 

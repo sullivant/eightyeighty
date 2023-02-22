@@ -202,6 +202,11 @@ impl CPU {
 
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.mvi(dl),
 
+            0x09 | 0x19 | 0x29 | 0x39 => {
+                self.op_dad();
+                Ok(())
+            }
+
             0x01 => self.lxi(Registers::BC, dl, dh),
             0x02 => self.op_stax(Registers::BC), // STAX (BC)
             0x03 => {
