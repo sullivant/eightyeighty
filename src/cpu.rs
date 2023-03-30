@@ -210,13 +210,13 @@ impl CPU {
             0x01 => self.lxi(Registers::BC, dl, dh),
             0x02 => self.op_stax(Registers::BC), // STAX (BC)
             0x03 => {
-                self.op_inx(Registers::BC);
+                self.inx(Registers::BC);
                 Ok(())
             }
             0x04 => self.op_inr(Registers::B),
             0x05 => self.op_dcr(Registers::B),
             0x0B => {
-                self.op_dcx(Registers::BC);
+                self.dcx(Registers::BC);
                 Ok(())
             }
             0x0C => self.op_inr(Registers::C),
@@ -230,13 +230,13 @@ impl CPU {
             0x11 => self.lxi(Registers::DE, dl, dh),
             0x12 => self.op_stax(Registers::DE), // STAX (DE)
             0x13 => {
-                self.op_inx(Registers::DE);
+                self.inx(Registers::DE);
                 Ok(())
             }
             0x14 => self.op_inr(Registers::D),
             0x15 => self.op_dcr(Registers::D),
             0x1B => {
-                self.op_dcx(Registers::DE);
+                self.dcx(Registers::DE);
                 Ok(())
             }
             0x1C => self.op_inr(Registers::E),
@@ -249,7 +249,7 @@ impl CPU {
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x2A => self.lhld(dl, dh),
             0x23 => {
-                self.op_inx(Registers::HL);
+                self.inx(Registers::HL);
                 Ok(())
             }
             0x24 => self.op_inr(Registers::H),
@@ -259,7 +259,7 @@ impl CPU {
                 Ok(())
             }
             0x2B => {
-                self.op_dcx(Registers::HL);
+                self.dcx(Registers::HL);
                 Ok(())
             }
             0x2C => self.op_inr(Registers::L),
@@ -268,13 +268,13 @@ impl CPU {
             0x31 => self.lxi(Registers::SP, dl, dh),
             0x32 => self.op_sta(dl, dh), // STA (adr)<-A
             0x33 => {
-                self.op_inx(Registers::SP);
+                self.inx(Registers::SP);
                 Ok(())
             }
             0x34 => self.op_inr(Registers::HL),
             0x35 => self.op_dcr(Registers::HL),
             0x3B => {
-                self.op_dcx(Registers::SP);
+                self.dcx(Registers::SP);
                 Ok(())
             }
             0x3C => self.op_inr(Registers::A),
@@ -358,6 +358,8 @@ impl CPU {
 
             0xB0..=0xB7 => self.op_ora(),
             0xB8..=0xBF => self.op_cmp(),
+
+            0xC3 | 0xCB => self.jmp(dl, dh),
 
             0xC6 | 0xCE => {
                 self.op_adi_aci(dl);

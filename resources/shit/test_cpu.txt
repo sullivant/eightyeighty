@@ -440,12 +440,6 @@ fn test_op_jz() {
     assert_eq!(cpu.pc, op + (lib::OPCODE_SIZE * 3));
 }
 
-#[test]
-fn test_op_c3() {
-    let mut cpu = Cpu::new();
-    cpu.run_opcode((0xC3, 0x01, 0x02)).unwrap();
-    assert_eq!(cpu.pc, 0x0201);
-}
 
 #[test]
 fn test_op_c5() {

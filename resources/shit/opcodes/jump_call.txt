@@ -69,13 +69,7 @@ impl Cpu {
         ProgramCounter::Three // And go to the next op
     }
 
-    // Jump to a given location as provided by (y<<8 | x)
-    #[must_use]
-    pub fn op_jmp(x: u8, y: u8) -> ProgramCounter {
-        let ys: u16 = u16::from(y) << 8;
-        let dest: u16 = ys | u16::from(x);
-        ProgramCounter::Jump(dest.into())
-    }
+ 
 
     // JZ (Jump if zero)
     pub fn op_jz(&mut self, x: u8, y: u8) -> ProgramCounter {

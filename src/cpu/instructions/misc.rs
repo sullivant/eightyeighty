@@ -5,20 +5,37 @@ use crate::cpu::CPU;
 
 #[allow(clippy::unnecessary_wraps)]
 impl CPU {
-    // OUT D8
-    // Would send the contents of accumulator to the device sent
-    // as the data portion of this command
-    // TODO: If data out is needed, this needs to be finished
+    /// OUT D8
+    /// Would send the contents of accumulator to the device sent
+    /// as the data portion of this command
+    /// TODO: If data out is needed, this needs to be finished
     #[allow(clippy::unused_self)]
     pub fn data_out(&self, data: u8) -> Result<(), String> {
         println!("Setting Data Out: {data:#04X}");
         Ok(())
     }
-    // ProgramCounter is incremented and then the CPU enters a
-    // STOPPED state and no further activity takes place until
-    // an interrupt occurrs
+    /// ProgramCounter is incremented and then the CPU enters a
+    /// STOPPED state and no further activity takes place until
+    /// an interrupt occurrs
     pub fn hlt(&mut self) -> Result<(), String> {
         self.nop(true);
+        Ok(())
+    }
+
+    /// Performs a JUMP (JMP) - Program execution continues unconditionally <br>
+    /// at the memory address made by combining (dh) with (dl) (concatenation)
+    pub fn jmp(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+        let ys: u16 = u16::from(dh) << 8;
+        let dest: u16 = ys | u16::from(dl);
+
+        self.pc = dest.into();
+
+        // Because this is a jump, and a unconditional one, this current instruction's
+        // size is actually 0 because we're manually setting the ProgramCounter.  Later on
+        // another kind of jump (jump if, etc), may only set size to 0 if conditions are
+        // appropriate, etc.
+        self.current_instruction.size = 0;
+
         Ok(())
     }
 }
@@ -46,5 +63,14 @@ mod tests {
         cpu.nop(false);
         cpu.tick().unwrap();
         assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
+    }
+
+    #[test]
+    fn test_op_jmp() {
+        let mut cpu = CPU::new();
+        cpu.prep_instr_and_data(0xC3, 0x01, 0x02);
+
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, 0x0201);
     }
 }

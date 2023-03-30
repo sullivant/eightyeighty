@@ -4,7 +4,7 @@ use crate::{
 };
 
 impl CPU {
-    pub fn op_inx(&mut self, target: Registers) {
+    pub fn inx(&mut self, target: Registers) {
         match target {
             Registers::SP | Registers::BC | Registers::DE | Registers::HL => {
                 let mut pair: u16 = self.get_register_pair(target);
@@ -16,7 +16,7 @@ impl CPU {
     }
 
     // DCX
-    pub fn op_dcx(&mut self, reg: Registers) {
+    pub fn dcx(&mut self, reg: Registers) {
         let mut val = self.get_register_pair(reg);
         val = val.overflowing_sub(1).0;
         self.set_register_pair(reg, val);
