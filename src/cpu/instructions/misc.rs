@@ -14,7 +14,7 @@ impl CPU {
         println!("Setting Data Out: {data:#04X}");
         Ok(())
     }
-    /// ProgramCounter is incremented and then the CPU enters a
+    /// `ProgramCounter` is incremented and then the CPU enters a
     /// STOPPED state and no further activity takes place until
     /// an interrupt occurrs
     pub fn hlt(&mut self) -> Result<(), String> {
@@ -23,7 +23,8 @@ impl CPU {
     }
 
     /// Performs a JUMP (JMP) - Program execution continues unconditionally <br>
-    /// at the memory address made by combining (dh) with (dl) (concatenation)
+    /// at the memory address made by combining (dh) with (dl) (concatenation) and
+    /// then updating the `ProgramCounter` value.
     pub fn jmp(&mut self, dl: u8, dh: u8) -> Result<(), String> {
         let ys: u16 = u16::from(dh) << 8;
         let dest: u16 = ys | u16::from(dl);
