@@ -215,6 +215,7 @@ impl CPU {
             }
             0x04 => self.op_inr(Registers::B),
             0x05 => self.op_dcr(Registers::B),
+            0x0A => self.ldax(Registers::BC),
             0x0B => {
                 self.dcx(Registers::BC);
                 Ok(())
@@ -235,6 +236,7 @@ impl CPU {
             }
             0x14 => self.op_inr(Registers::D),
             0x15 => self.op_dcr(Registers::D),
+            0x1A => self.ldax(Registers::DE),
             0x1B => {
                 self.dcx(Registers::DE);
                 Ok(())
@@ -264,6 +266,11 @@ impl CPU {
             }
             0x2C => self.op_inr(Registers::L),
             0x2D => self.op_dcr(Registers::L),
+            0x2F => {
+                // Complement the accumulator
+                self.a = !self.a;
+                Ok(())
+            }
 
             0x31 => self.lxi(Registers::SP, dl, dh),
             0x32 => self.op_sta(dl, dh), // STA (adr)<-A
@@ -273,12 +280,22 @@ impl CPU {
             }
             0x34 => self.op_inr(Registers::HL),
             0x35 => self.op_dcr(Registers::HL),
+            0x3A => self.lda(dl, dh),
             0x3B => {
                 self.dcx(Registers::SP);
                 Ok(())
             }
             0x3C => self.op_inr(Registers::A),
             0x3D => self.op_dcr(Registers::A),
+            0x3F => {
+                // Complement the carry flag
+                if self.test_flag(FLAG_CARRY) {
+                    self.reset_flag(FLAG_CARRY);
+                } else {
+                    self.set_flag(FLAG_CARRY);
+                }
+                Ok(())
+            }
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
             0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C
@@ -507,7 +524,8 @@ impl CPU {
         self.flags & mask != 0
     }
 
-    // Returns the binary value of a flag, as a u8 for various ops.
+    /// Returns the binary value of a flag, as a u8 for various ops.
+    /// TODO: I don't like how this is not returning a single bit, instead of the u8.
     pub fn get_flag(&mut self, mask: u8) -> u8 {
         u8::from(self.test_flag(mask))
     }
@@ -557,7 +575,9 @@ impl CPU {
     }
 }
 
-// Makes a memory pointer by simply concatenating the two values
+/// Makes a memory pointer by simply concatenating the two values
+/// For instance:
+/// `make_pointer(0xFF,0xAA)` will return 0xAAFF
 #[must_use]
 #[allow(unused)]
 pub fn make_pointer(dl: u8, dh: u8) -> u16 {

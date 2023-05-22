@@ -4,7 +4,43 @@ use crate::cpu::{make_pointer, Registers, CPU};
 /// that need to be implemented within the CPU
 
 impl CPU {
-    // LXI (target pair), D16
+    /// LDA
+    /// Loads the accumulator with a copy of the byte at the location specified
+    /// in bytes 2 and 3 of the instruction
+    pub fn lda(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+        let addr: u16 = make_pointer(dl, dh);
+        self.a = match self.memory.read(addr as usize) {
+            Ok(v) => v,
+            Err(_) => return Err(format!("LHLD: Unable to read memory at {addr:#04X}")),
+        };
+
+        Ok(())
+    }
+
+    /// LDAX
+    /// Loads the accumulator with the contents of the memory location indicated by
+    /// the register pair (B or D).
+    pub fn ldax(&mut self, target: Registers) -> Result<(), String> {
+        let addr: u16 = match target {
+            Registers::BC => self.get_register_pair(Registers::BC),
+            Registers::DE => self.get_register_pair(Registers::DE),
+            _ => {
+                return Err(format!(
+                    "LDAX: Invalid register pair for LDAX instruction: {target}"
+                ))
+            }
+        };
+
+        self.a = match self.memory.read(addr as usize) {
+            Ok(v) => v,
+            Err(_) => return Err(format!("LDAX: Unable to read memory at {addr:#04X}")),
+        };
+
+        Ok(())
+    }
+
+    /// LXI (target pair), D16
+    /// Loads into the target pair the source data (dl and dh)
     pub fn lxi(&mut self, target: Registers, dl: u8, dh: u8) -> Result<(), String> {
         match target {
             Registers::BC => {
@@ -145,7 +181,44 @@ impl CPU {
 #[cfg(test)]
 mod tests {
     use crate::constants::OPCODE_SIZE;
-    use crate::cpu::CPU;
+    use crate::cpu::{Registers, CPU};
+
+    #[test]
+    fn test_ldax() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // Prep our memory
+        cpu.memory.write(0x938B, 0xA4).unwrap(); // For BC
+        cpu.memory.write(0x13FA, 0xC4).unwrap(); // For DE
+
+        cpu.set_register_pair(Registers::BC, 0x938B);
+        cpu.prep_instr_and_data(0x0A, 0x00, 0x00); // LDAX BC
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.a, 0xA4);
+
+        cpu.set_register_pair(Registers::DE, 0x13FA);
+        cpu.prep_instr_and_data(0x1A, 0x00, 0x00); // LDAX DE
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0xC4);
+    }
+
+    #[test]
+    fn test_lda() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // Prep our memory
+        cpu.memory.write(0x025B, 0xFF).unwrap();
+
+        // Call the instruction
+        cpu.prep_instr_and_data(0x3A, 0x5B, 0x02); // Load accum with mem value at location 0x025B
+        cpu.run_opcode().unwrap();
+
+        assert_eq!(cpu.a, 0xFF);
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
+    }
 
     #[test]
     fn test_lhld() {

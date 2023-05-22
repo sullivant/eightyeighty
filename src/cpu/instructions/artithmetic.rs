@@ -475,6 +475,40 @@ mod tests {
     use crate::cpu::CPU;
 
     #[test]
+    fn test_op_cmd() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // If the flag is set, it should end up reset
+        cpu.set_flag(FLAG_CARRY);
+        assert!(cpu.test_flag(FLAG_CARRY));
+        cpu.prep_instr_and_data(0x3F, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert!(!cpu.test_flag(FLAG_CARRY));
+        assert_eq!(cpu.pc, (op + OPCODE_SIZE));
+
+        // If the flag is reset, it should end up set
+        cpu.reset_flag(FLAG_CARRY);
+        assert!(!cpu.test_flag(FLAG_CARRY));
+        cpu.prep_instr_and_data(0x3F, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert!(cpu.test_flag(FLAG_CARRY));
+    }
+
+    #[test]
+    fn test_op_cma() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.a = 0x51;
+        cpu.prep_instr_and_data(0x2F, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+
+        assert_eq!(cpu.pc, (op + OPCODE_SIZE));
+        assert_eq!(cpu.a, 0x0AE);
+    }
+
+    #[test]
     fn test_op_inx() {
         let mut cpu = CPU::new();
         let op = cpu.pc;
