@@ -208,7 +208,7 @@ impl CPU {
             }
 
             0x01 => self.lxi(Registers::BC, dl, dh),
-            0x02 => self.op_stax(Registers::BC), // STAX (BC)
+            0x02 => self.stax(Registers::BC), // STAX (BC)
             0x03 => {
                 self.inx(Registers::BC);
                 Ok(())
@@ -233,7 +233,7 @@ impl CPU {
             } // RRC
 
             0x11 => self.lxi(Registers::DE, dl, dh),
-            0x12 => self.op_stax(Registers::DE), // STAX (DE)
+            0x12 => self.stax(Registers::DE), // STAX (DE)
             0x13 => {
                 self.inx(Registers::DE);
                 Ok(())
@@ -282,7 +282,7 @@ impl CPU {
             }
 
             0x31 => self.lxi(Registers::SP, dl, dh),
-            0x32 => self.op_sta(dl, dh), // STA (adr)<-A
+            0x32 => self.sta(dl, dh), // STA (adr)<-A
             0x33 => {
                 self.inx(Registers::SP);
                 Ok(())
@@ -392,7 +392,7 @@ impl CPU {
             0xC3 | 0xCB => self.jmp(dl, dh),
 
             0xC6 | 0xCE => {
-                self.op_adi_aci(dl);
+                self.adi_aci(dl);
                 Ok(())
             }
 
@@ -402,9 +402,13 @@ impl CPU {
                 self.op_ani(dl);
                 Ok(())
             }
+            0xEB => {
+                self.xchg();
+                Ok(())
+            }
 
             0xFE => {
-                self.op_cpi(dl);
+                self.cpi(dl);
                 Ok(())
             }
 

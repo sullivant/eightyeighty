@@ -4,9 +4,20 @@ use crate::{
 };
 
 /// This contains any instructions of the LOAD / STORE / MOVE category
-/// that need to be implemented within the CPU
-
 impl CPU {
+    /// Exchanges the contents of the H and L registers with the contents of the
+    /// D and E registers.
+    pub fn xchg(&mut self) {
+        let oh = self.h;
+        let ol = self.l;
+
+        self.h = self.d;
+        self.l = self.e;
+
+        self.d = oh;
+        self.e = ol;
+    }
+
     /// Stores a copy of the L register in the memory location specified in bytes
     /// two and three of this instruction and then stores a copy of the H register
     /// in the next higher memory location.
@@ -199,13 +210,13 @@ impl CPU {
 
     // Store accumulator direct to location in memory specified
     // by address dhdl
-    pub fn op_sta(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn sta(&mut self, dl: u8, dh: u8) -> Result<(), String> {
         let addr: usize = usize::from(u16::from(dh) << 8 | u16::from(dl));
         self.memory.write(addr, self.a)
     }
 
     // Stores accumulator at memory location of supplied register
-    pub fn op_stax(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn stax(&mut self, reg: Registers) -> Result<(), String> {
         // Get our location first
         let location = match reg {
             Registers::BC => Some(self.get_register_pair(Registers::BC)),
@@ -246,6 +257,25 @@ impl CPU {
 mod tests {
     use crate::constants::{FLAG_CARRY, OPCODE_SIZE};
     use crate::cpu::{Registers, CPU};
+
+    #[test]
+    fn test_xchg() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.h = 0x12;
+        cpu.l = 0x34;
+        cpu.d = 0xAB;
+        cpu.e = 0xCD;
+
+        cpu.prep_instr_and_data(0xEB, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.h, 0xAB);
+        assert_eq!(cpu.l, 0xCD);
+        assert_eq!(cpu.d, 0x12);
+        assert_eq!(cpu.e, 0x34);
+    }
 
     #[test]
     fn test_shld() {

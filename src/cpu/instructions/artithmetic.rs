@@ -356,7 +356,7 @@ impl CPU {
     }
 
     /// CPI - Compare D8 to Accum, set flags accordingly
-    pub fn op_cpi(&mut self, data: u8) {
+    pub fn cpi(&mut self, data: u8) {
         // Subtract the data from register A and set flags on the result
         let (res, overflow) = self.a.overflowing_sub(data);
         let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
@@ -372,7 +372,7 @@ impl CPU {
     /// addition.
     ///
     /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
-    pub fn op_adi_aci(&mut self, dl: u8) {
+    pub fn adi_aci(&mut self, dl: u8) {
         let mut to_add = dl;
 
         // If the current opcode is 0xCE we use the value of the carry flag.

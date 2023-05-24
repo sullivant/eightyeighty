@@ -67,11 +67,11 @@ mod tests {
     }
 
     #[test]
-    fn test_op_jmp() {
+    fn test_jmp() {
         let mut cpu = CPU::new();
-        cpu.prep_instr_and_data(0xC3, 0x01, 0x02);
+        cpu.prep_instr_and_data(0xC3, 0x03, 0x3C);
 
         cpu.run_opcode().unwrap();
-        assert_eq!(cpu.pc, 0x0201);
+        assert_eq!(cpu.pc, 0x3C03);
     }
 }
