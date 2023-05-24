@@ -1,6 +1,7 @@
 use std::fmt;
 
 mod artithmetic;
+mod jump_call;
 mod load_store_move;
 mod misc;
 #[allow(clippy::wildcard_imports)]

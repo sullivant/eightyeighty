@@ -157,7 +157,7 @@ impl CPU {
             self.update_flag(FLAG_CARRY, high_order != 0);
 
             // High order bit transfers to low order bit
-            new_accum |= high_order as u8;
+            new_accum |= high_order;
         }
 
         self.a = new_accum;
