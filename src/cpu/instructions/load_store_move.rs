@@ -1,9 +1,69 @@
-use crate::cpu::{make_pointer, Registers, CPU};
+use crate::{
+    constants::FLAG_CARRY,
+    cpu::{make_pointer, Registers, CPU},
+};
 
 /// This contains any instructions of the LOAD / STORE / MOVE category
 /// that need to be implemented within the CPU
 
 impl CPU {
+    /// Stores a copy of the L register in the memory location specified in bytes
+    /// two and three of this instruction and then stores a copy of the H register
+    /// in the next higher memory location.
+    pub fn shld(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+        let addr: u16 = make_pointer(dl, dh);
+
+        match self.memory.write(addr as usize, self.l) {
+            Ok(_v) => (),
+            Err(e) => {
+                return Err(format!(
+                    "SHLD: Unable to write L to memory at {addr:#04X}, error is: {e}"
+                ))
+            }
+        };
+        match self.memory.write((addr + 1) as usize, self.h) {
+            Ok(_v) => (),
+            Err(e) => {
+                return Err(format!(
+                    "SHLD: Unable to write H to memory at {addr:#04X}, error is: {e}"
+                ))
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Rotates accumulator left (RLC), if `through_carry` is true, it
+    /// will roate accumulator left, through the carry bit (RAL), too.
+    pub fn rlc_ral(&mut self, through_carry: bool) {
+        // Store off our current carry bit
+        let carry_bit = self.test_flag(FLAG_CARRY);
+
+        // Store off our current accumulator's high order bit
+        let high_order = self.a >> 7;
+
+        // Rotate accum left
+        let mut new_accum: u8 = self.a << 1;
+
+        if through_carry {
+            // RAR
+            // Set carry bit to high order
+            self.update_flag(FLAG_CARRY, high_order != 0);
+
+            // Set low order to prior carry bit
+            new_accum |= u8::from(carry_bit);
+        } else {
+            // RLC
+            // Set carry bit to high order
+            self.update_flag(FLAG_CARRY, high_order != 0);
+
+            // High order bit transfers to low order bit
+            new_accum |= high_order as u8;
+        }
+
+        self.a = new_accum;
+    }
+
     /// LDA
     /// Loads the accumulator with a copy of the byte at the location specified
     /// in bytes 2 and 3 of the instruction
@@ -11,7 +71,11 @@ impl CPU {
         let addr: u16 = make_pointer(dl, dh);
         self.a = match self.memory.read(addr as usize) {
             Ok(v) => v,
-            Err(_) => return Err(format!("LHLD: Unable to read memory at {addr:#04X}")),
+            Err(e) => {
+                return Err(format!(
+                    "LHLD: Unable to read memory at {addr:#04X}, error is {e}"
+                ))
+            }
         };
 
         Ok(())
@@ -180,8 +244,47 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::OPCODE_SIZE;
+    use crate::constants::{FLAG_CARRY, OPCODE_SIZE};
     use crate::cpu::{Registers, CPU};
+
+    #[test]
+    fn test_shld() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.h = 0x0AE;
+        cpu.l = 0x029;
+
+        cpu.prep_instr_and_data(0x22, 0x01, 0x0A);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE * 3);
+
+        assert_eq!(cpu.memory.read(0x0A01).unwrap(), 0x29);
+        assert_eq!(cpu.memory.read(0x0A02).unwrap(), 0xAE);
+    }
+
+    #[test]
+    fn test_rlc_ral() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        // Test RLC
+        cpu.a = 0x0AA;
+        cpu.reset_flag(FLAG_CARRY);
+        cpu.prep_instr_and_data(0x07, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.a, 0x55);
+        assert!(cpu.test_flag(FLAG_CARRY));
+
+        // Test RAL
+        cpu.a = 0x0AA;
+        cpu.reset_flag(FLAG_CARRY);
+        cpu.prep_instr_and_data(0x17, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0x54);
+        assert!(cpu.test_flag(FLAG_CARRY));
+    }
 
     #[test]
     fn test_ldax() {

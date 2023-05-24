@@ -215,6 +215,10 @@ impl CPU {
             }
             0x04 => self.op_inr(Registers::B),
             0x05 => self.op_dcr(Registers::B),
+            0x07 => {
+                self.rlc_ral(false);
+                Ok(())
+            }
             0x0A => self.ldax(Registers::BC),
             0x0B => {
                 self.dcx(Registers::BC);
@@ -236,6 +240,10 @@ impl CPU {
             }
             0x14 => self.op_inr(Registers::D),
             0x15 => self.op_dcr(Registers::D),
+            0x17 => {
+                self.rlc_ral(true);
+                Ok(())
+            }
             0x1A => self.ldax(Registers::DE),
             0x1B => {
                 self.dcx(Registers::DE);
@@ -249,6 +257,7 @@ impl CPU {
             } // RAR
 
             0x21 => self.lxi(Registers::HL, dl, dh),
+            0x22 => self.shld(dl, dh),
             0x2A => self.lhld(dl, dh),
             0x23 => {
                 self.inx(Registers::HL);
@@ -280,6 +289,10 @@ impl CPU {
             }
             0x34 => self.op_inr(Registers::HL),
             0x35 => self.op_dcr(Registers::HL),
+            0x37 => {
+                self.set_flag(FLAG_CARRY);
+                Ok(())
+            }
             0x3A => self.lda(dl, dh),
             0x3B => {
                 self.dcx(Registers::SP);
@@ -499,16 +512,25 @@ impl CPU {
         };
     }
 
-    // Sets a flag using a bitwise OR operation
-    // Mask of 2 (00100)
-    // if flags = 10010 new value will be 10110
+    /// Sets a flag to a provided boolean value
+    pub fn update_flag(&mut self, mask: u8, value: bool) {
+        if value {
+            self.set_flag(mask);
+        } else {
+            self.reset_flag(mask);
+        }
+    }
+
+    /// Sets a flag using a bitwise OR operation
+    /// Mask of 2 (00100)
+    /// if flags = 10010 new value will be 10110
     pub fn set_flag(&mut self, mask: u8) {
         self.flags |= mask;
     }
 
-    // Resets a flag using bitwise AND operation
-    // Mask of 2 (00100)
-    // if flags = 11111 new value will be 11011
+    /// Resets a flag using bitwise AND operation
+    /// Mask of 2 (00100)
+    /// if flags = 11111 new value will be 11011
     pub fn reset_flag(&mut self, mask: u8) {
         self.flags &= !mask;
     }

@@ -9,53 +9,7 @@ use crate::Cpu;
 impl Cpu {
     
 
-    // Rotates left, if through_carry is true, it does that.
-    pub fn op_rlc_ral(&mut self, through_carry: bool) -> ProgramCounter {
-        // Store off our current carry bit
-        let carry_bit = self.test_flag(FLAG_CARRY);
-
-        // Store off our current high order bit
-        let high_order = self.a >> 7;
-
-        // Shift one position to the left
-        let mut new_accum: u8 = self.a << 1;
-
-        if through_carry {
-            new_accum |= u8::from(carry_bit); // carry bit replaces low order
-        } else {
-            new_accum |= high_order as u8; // high order replaces low order
-        };
-
-        self.a = new_accum;
-
-        // Update the carry bit with the old high order bit
-        if high_order > 0 {
-            self.set_flag(FLAG_CARRY);
-        } else {
-            self.reset_flag(FLAG_CARRY);
-        }
-
-        ProgramCounter::Next
-    }
-
-    // LDAX
-    // Loads A with value from memory location specified by register pair
-    pub fn op_ldax(&mut self, reg: Registers) -> ProgramCounter {
-        let loc: u16 = match reg {
-            Registers::DE => u16::from(self.d) << 8 | u16::from(self.e),
-            Registers::BC => u16::from(self.b) << 8 | u16::from(self.c),
-            _ => {
-                return ProgramCounter::Next;
-            }
-        };
-
-        self.a = match self.memory.get(loc as usize) {
-            Some(&v) => v,
-            None => 0,
-        };
-
-        ProgramCounter::Next
-    }
+    
 
     
 

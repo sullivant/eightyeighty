@@ -15,11 +15,11 @@ pub struct Instruction {
     pub text: &'static str, // Found in constansts
 }
 
-impl Default for Instruction {
-    fn default() -> Self {
-        Self::new(0x00)
-    }
-}
+// impl Default for Instruction {
+//     fn default() -> Self {
+//         Self::new(0x00)
+//     }
+// }
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -68,7 +68,7 @@ impl Instruction {
             0x1F => (1, 4, OP_RAR),
 
             0x21 => (2, 10, OP_LXI_H),
-            0x22 => (2, 16, OP_SHLD),
+            0x22 => (3, 16, OP_SHLD),
             0x23 => (1, 5, OP_INX_H),
             0x24 => (1, 5, OP_INR_H),
             0x25 => (1, 5, OP_DCR_H),
