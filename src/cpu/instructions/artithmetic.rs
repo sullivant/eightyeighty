@@ -56,7 +56,7 @@ impl CPU {
     // INR Reg
     // Flags affected: Z,S,P,AC
     #[allow(clippy::similar_names)]
-    pub fn op_inr(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn inr(&mut self, reg: Registers) -> Result<(), String> {
         let addr = self.get_addr_pointer();
         let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -118,7 +118,7 @@ impl CPU {
     // DCR Reg
     // Flags affected: Z,S,P,AC
     #[allow(clippy::similar_names)]
-    pub fn op_dcr(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn dcr(&mut self, reg: Registers) -> Result<(), String> {
         let addr = self.get_addr_pointer();
         let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -204,7 +204,7 @@ impl CPU {
     /// The specified byte is logically ``ANDed`` bit
     /// by bit with the contents of the accumulator. The Carry bit
     /// is reset to zero.
-    pub fn op_ana(&mut self) -> Result<(), String> {
+    pub fn ana(&mut self) -> Result<(), String> {
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -228,7 +228,7 @@ impl CPU {
     /// The byte of immediate data is logically ```ANDed``` with the contents of the
     /// accumulator.  The carry bit is reset to zero.
     /// Bits affected: Carry, Zero, Sign, Parity
-    pub fn op_ani(&mut self, dl: u8) {
+    pub fn ani(&mut self, dl: u8) {
         self.a &= dl;
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, None);
@@ -236,7 +236,7 @@ impl CPU {
 
     /// The specified byte is locally ``XORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_xra(&mut self) -> Result<(), String> {
+    pub fn xra(&mut self) -> Result<(), String> {
         let orig_value = self.a;
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
@@ -269,7 +269,7 @@ impl CPU {
     /// register to use.
     ///
     /// Flags affected: Z, S, P, CY, AC
-    pub fn op_sub(&mut self) -> Result<(), String> {
+    pub fn sub(&mut self) -> Result<(), String> {
         let opcode = self.current_instruction.opcode;
         let sub = self.get_flag(FLAG_CARRY);
 
@@ -310,7 +310,7 @@ impl CPU {
     ///
     /// If the most significant four bits of the accumulator have a value greater than nine,
     /// or if the carry flag IS ON, DAA adds six to the most significant four bits of the accumulator.
-    pub fn op_daa(&mut self) {
+    pub fn daa(&mut self) {
         // Find the LS4B of the accumulator
         let mut ac = false;
         let mut carry = false;
@@ -333,7 +333,7 @@ impl CPU {
     /// Performs the Double Add (DAD) functionality
     /// Sets H to the value according to the supplied register
     /// Basically: HL = HL+<Selected register pair>
-    pub fn op_dad(&mut self) {
+    pub fn dad(&mut self) {
         //let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
         let val = usize::from(self.get_register_pair(Registers::HL));
 
@@ -389,7 +389,7 @@ impl CPU {
     /// Add to the accumulator the supplied register
     /// along with the CARRY flag's value
     /// as well as update flags
-    pub fn op_adc(&mut self) -> Result<(), String> {
+    pub fn adc(&mut self) -> Result<(), String> {
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -418,7 +418,7 @@ impl CPU {
 
     /// Add to the accumulator the supplied register
     /// as well as update flags
-    pub fn op_add(&mut self) -> Result<(), String> {
+    pub fn add(&mut self) -> Result<(), String> {
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -443,7 +443,7 @@ impl CPU {
     }
 
     /// Rotates right, if `through_carry` is true, it does that.
-    pub fn op_rrc_rar(&mut self, through_carry: bool) {
+    pub fn rrc_rar(&mut self, through_carry: bool) {
         // Store off our current carry bit
         let carry_bit = self.test_flag(FLAG_CARRY);
         let low_order = self.a & 0x01; // Save off the low order bit so we can rotate it.

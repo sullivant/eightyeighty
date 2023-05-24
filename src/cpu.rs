@@ -203,7 +203,7 @@ impl CPU {
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.mvi(dl),
 
             0x09 | 0x19 | 0x29 | 0x39 => {
-                self.op_dad();
+                self.dad();
                 Ok(())
             }
 
@@ -213,8 +213,8 @@ impl CPU {
                 self.inx(Registers::BC);
                 Ok(())
             }
-            0x04 => self.op_inr(Registers::B),
-            0x05 => self.op_dcr(Registers::B),
+            0x04 => self.inr(Registers::B),
+            0x05 => self.dcr(Registers::B),
             0x07 => {
                 self.rlc_ral(false);
                 Ok(())
@@ -224,11 +224,11 @@ impl CPU {
                 self.dcx(Registers::BC);
                 Ok(())
             }
-            0x0C => self.op_inr(Registers::C),
-            0x0D => self.op_dcr(Registers::C),
+            0x0C => self.inr(Registers::C),
+            0x0D => self.dcr(Registers::C),
 
             0x0F => {
-                self.op_rrc_rar(true);
+                self.rrc_rar(true);
                 Ok(())
             } // RRC
 
@@ -238,8 +238,8 @@ impl CPU {
                 self.inx(Registers::DE);
                 Ok(())
             }
-            0x14 => self.op_inr(Registers::D),
-            0x15 => self.op_dcr(Registers::D),
+            0x14 => self.inr(Registers::D),
+            0x15 => self.dcr(Registers::D),
             0x17 => {
                 self.rlc_ral(true);
                 Ok(())
@@ -249,10 +249,10 @@ impl CPU {
                 self.dcx(Registers::DE);
                 Ok(())
             }
-            0x1C => self.op_inr(Registers::E),
-            0x1D => self.op_dcr(Registers::E),
+            0x1C => self.inr(Registers::E),
+            0x1D => self.dcr(Registers::E),
             0x1F => {
-                self.op_rrc_rar(false);
+                self.rrc_rar(false);
                 Ok(())
             } // RAR
 
@@ -263,18 +263,18 @@ impl CPU {
                 self.inx(Registers::HL);
                 Ok(())
             }
-            0x24 => self.op_inr(Registers::H),
-            0x25 => self.op_dcr(Registers::H),
+            0x24 => self.inr(Registers::H),
+            0x25 => self.dcr(Registers::H),
             0x27 => {
-                self.op_daa();
+                self.daa();
                 Ok(())
             }
             0x2B => {
                 self.dcx(Registers::HL);
                 Ok(())
             }
-            0x2C => self.op_inr(Registers::L),
-            0x2D => self.op_dcr(Registers::L),
+            0x2C => self.inr(Registers::L),
+            0x2D => self.dcr(Registers::L),
             0x2F => {
                 // Complement the accumulator
                 self.a = !self.a;
@@ -287,8 +287,8 @@ impl CPU {
                 self.inx(Registers::SP);
                 Ok(())
             }
-            0x34 => self.op_inr(Registers::HL),
-            0x35 => self.op_dcr(Registers::HL),
+            0x34 => self.inr(Registers::HL),
+            0x35 => self.dcr(Registers::HL),
             0x37 => {
                 self.set_flag(FLAG_CARRY);
                 Ok(())
@@ -298,8 +298,8 @@ impl CPU {
                 self.dcx(Registers::SP);
                 Ok(())
             }
-            0x3C => self.op_inr(Registers::A),
-            0x3D => self.op_dcr(Registers::A),
+            0x3C => self.inr(Registers::A),
+            0x3D => self.dcr(Registers::A),
             0x3F => {
                 // Complement the carry flag
                 if self.test_flag(FLAG_CARRY) {
@@ -378,13 +378,13 @@ impl CPU {
             0x7E => self.mov(Registers::A, Registers::HL), // MOV A,(HL)
             0x7F => self.mov(Registers::A, Registers::A),  // MOV A,A
 
-            0x80..=0x87 => self.op_add(),
-            0x88..=0x8F => self.op_adc(),
+            0x80..=0x87 => self.add(),
+            0x88..=0x8F => self.adc(),
 
-            0x90..=0x9F => self.op_sub(), // This includes SUB and SBB (subtrahend included in fn)
+            0x90..=0x9F => self.sub(), // This includes SUB and SBB (subtrahend included in fn)
 
-            0xA0..=0xA7 => self.op_ana(),
-            0xA8..=0xAF => self.op_xra(),
+            0xA0..=0xA7 => self.ana(),
+            0xA8..=0xAF => self.xra(),
 
             0xB0..=0xB7 => self.ora(),
             0xB8..=0xBF => self.cmp(),
@@ -406,7 +406,7 @@ impl CPU {
             0xE1 => self.pop(Registers::HL),
             0xE5 => self.push(Registers::HL),
             0xE6 => {
-                self.op_ani(dl);
+                self.ani(dl);
                 Ok(())
             }
             0xEB => {
