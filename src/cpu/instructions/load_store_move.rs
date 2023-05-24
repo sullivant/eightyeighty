@@ -366,8 +366,8 @@ mod tests {
         cpu.d = 0x8F;
         cpu.e = 0x9D;
         cpu.sp = 0x3B2C;
-        cpu.memory.write(0x3B2B,0x00).unwrap();
-        cpu.memory.write(0x3B2A,0x00).unwrap();
+        cpu.memory.write(0x3B2B, 0x00).unwrap();
+        cpu.memory.write(0x3B2A, 0x00).unwrap();
         cpu.prep_instr_and_data(0xD5, 0x00, 0x00); // PUSH D
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.memory.read(0x3B2B).unwrap(), 0x8F);
@@ -377,8 +377,8 @@ mod tests {
         cpu.h = 0x8F;
         cpu.l = 0x9D;
         cpu.sp = 0x3F2C;
-        cpu.memory.write(0x3F2B,0x00).unwrap();
-        cpu.memory.write(0x3F2A,0x00).unwrap();
+        cpu.memory.write(0x3F2B, 0x00).unwrap();
+        cpu.memory.write(0x3F2A, 0x00).unwrap();
         cpu.prep_instr_and_data(0xE5, 0x00, 0x00); // PUSH H
         cpu.run_opcode().unwrap();
         assert_eq!(cpu.memory.read(0x3F2B).unwrap(), 0x8F);
@@ -394,12 +394,10 @@ mod tests {
         cpu.reset_flag(FLAG_AUXCARRY);
         cpu.prep_instr_and_data(0xF5, 0x00, 0x00);
         cpu.run_opcode().unwrap();
-        assert_eq!(cpu.memory.read(0x5029).unwrap(),0x1F);
-        assert_eq!(cpu.memory.read(0x5028).unwrap(),0x47); // The PSW setup with the flags, above
+        assert_eq!(cpu.memory.read(0x5029).unwrap(), 0x1F);
+        assert_eq!(cpu.memory.read(0x5028).unwrap(), 0x47); // The PSW setup with the flags, above
         assert_eq!(cpu.sp, 0x5028);
-        
     }
-
 
     #[test]
     fn test_pop() {
