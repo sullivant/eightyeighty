@@ -386,18 +386,25 @@ impl CPU {
             0xA0..=0xA7 => self.op_ana(),
             0xA8..=0xAF => self.op_xra(),
 
-            0xB0..=0xB7 => self.op_ora(),
-            0xB8..=0xBF => self.op_cmp(),
+            0xB0..=0xB7 => self.ora(),
+            0xB8..=0xBF => self.cmp(),
 
+            0xC1 => self.pop(Registers::BC),
             0xC3 | 0xCB => self.jmp(dl, dh),
 
+            0xC5 => self.push(Registers::BC),
             0xC6 | 0xCE => {
                 self.adi_aci(dl);
                 Ok(())
             }
 
+            0xD1 => self.pop(Registers::DE),
             0xD3 => self.data_out(dl),
 
+            0xD5 => self.push(Registers::DE),
+
+            0xE1 => self.pop(Registers::HL),
+            0xE5 => self.push(Registers::HL),
             0xE6 => {
                 self.op_ani(dl);
                 Ok(())
@@ -407,6 +414,8 @@ impl CPU {
                 Ok(())
             }
 
+            0xF1 => self.pop(Registers::SW),
+            0xF5 => self.push(Registers::SW),
             0xFE => {
                 self.cpi(dl);
                 Ok(())
@@ -539,7 +548,7 @@ impl CPU {
         self.flags &= !mask;
     }
 
-    // Returns the current flag values
+    /// Returns the current flag values, also known as the PSW
     #[must_use]
     pub fn get_flags(&self) -> u8 {
         self.flags

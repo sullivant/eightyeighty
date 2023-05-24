@@ -50,19 +50,6 @@ impl Cpu {
         ProgramCounter::Three
     }
 
-    // Exchanges registers DE with HL
-    pub fn op_xchg(&mut self) -> ProgramCounter {
-        let d = self.d;
-        let e = self.e;
-
-        self.d = self.h;
-        self.e = self.l;
-        self.h = d;
-        self.l = e;
-
-        ProgramCounter::Next
-    }
-
     // Pushes onto stack according to the register pair requested
     // (sp-2)<-P2; (sp-1)<-P1; sp <- sp - 2
     pub fn op_push(&mut self, reg: Registers) -> ProgramCounter {

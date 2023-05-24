@@ -5,6 +5,94 @@ use crate::{
 
 /// This contains any instructions of the LOAD / STORE / MOVE category
 impl CPU {
+    /// Pushes onto the stack according to the register pair requested.
+    /// (sp-2)<-P2; (sp-1)<-P1; sp <- sp - 2
+    pub fn push(&mut self, reg: Registers) -> Result<(), String> {
+        let (source_a, source_b) = match reg {
+            Registers::BC => (self.b, self.c),
+            Registers::DE => (self.d, self.e),
+            Registers::HL => (self.h, self.l),
+            Registers::SW => (self.a, self.get_flags()),
+            _ => {
+                return Err(format!(
+                    "PUSH: Invalid register pair requested {reg}, cannot push."
+                ))
+            }
+        };
+
+        match self.memory.write((self.sp - 1).into(), source_a) {
+            Ok(_) => (),
+            Err(e) => {
+                return Err(format!(
+                    "PUSH: Unable to write to SP location {0}, error is: {e}",
+                    self.sp
+                ))
+            }
+        }
+
+        match self.memory.write((self.sp - 2).into(), source_b) {
+            Ok(_) => (),
+            Err(e) => {
+                return Err(format!(
+                    "PUSH: Unable to write to SP location {0}, error is: {e}",
+                    self.sp
+                ))
+            }
+        }
+
+        self.sp -= 2;
+
+        Ok(())
+    }
+
+    /// Pops from the stack according to the register pair requested
+    /// L <- (sp); H <- (sp+1); sp <- sp+2
+    pub fn pop(&mut self, reg: Registers) -> Result<(), String> {
+        // Gather our two values we're popping
+        let source_a = match self.memory.read(self.sp.into()) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(format!(
+                    "POP: Unable to read from SP location {0}, error is: {e}",
+                    self.sp
+                ))
+            }
+        };
+        let source_b = match self.memory.read((self.sp + 1).into()) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(format!(
+                    "POP: Unable to read from SP location {0}, error is: {e}",
+                    self.sp + 1
+                ))
+            }
+        };
+
+        match reg {
+            Registers::BC => {
+                self.c = source_a;
+                self.b = source_b;
+            }
+            Registers::DE => {
+                self.e = source_a;
+                self.d = source_b;
+            }
+            Registers::HL => {
+                self.l = source_a;
+                self.h = source_b;
+            }
+            Registers::SW => {
+                self.flags = source_a;
+                self.a = source_b;
+            }
+            _ => return Err(format!("POP: Invalid source register requested: {reg}")),
+        };
+
+        self.sp += 2;
+
+        Ok(())
+    }
+
     /// Exchanges the contents of the H and L registers with the contents of the
     /// D and E registers.
     pub fn xchg(&mut self) {
@@ -255,8 +343,107 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{FLAG_CARRY, OPCODE_SIZE};
+    use crate::constants::{
+        FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE,
+    };
     use crate::cpu::{Registers, CPU};
+
+    #[test]
+    fn test_push() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.b = 0x8F;
+        cpu.c = 0x9D;
+        cpu.sp = 0x3A2C;
+        cpu.prep_instr_and_data(0xC5, 0x00, 0x00); // PUSH B
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.memory.read(0x3A2B).unwrap(), 0x8F);
+        assert_eq!(cpu.memory.read(0x3A2A).unwrap(), 0x9D);
+        assert_eq!(cpu.sp, 0x3A2A);
+
+        cpu.d = 0x8F;
+        cpu.e = 0x9D;
+        cpu.sp = 0x3B2C;
+        cpu.memory.write(0x3B2B,0x00).unwrap();
+        cpu.memory.write(0x3B2A,0x00).unwrap();
+        cpu.prep_instr_and_data(0xD5, 0x00, 0x00); // PUSH D
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.memory.read(0x3B2B).unwrap(), 0x8F);
+        assert_eq!(cpu.memory.read(0x3B2A).unwrap(), 0x9D);
+        assert_eq!(cpu.sp, 0x3B2A);
+
+        cpu.h = 0x8F;
+        cpu.l = 0x9D;
+        cpu.sp = 0x3F2C;
+        cpu.memory.write(0x3F2B,0x00).unwrap();
+        cpu.memory.write(0x3F2A,0x00).unwrap();
+        cpu.prep_instr_and_data(0xE5, 0x00, 0x00); // PUSH H
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.memory.read(0x3F2B).unwrap(), 0x8F);
+        assert_eq!(cpu.memory.read(0x3F2A).unwrap(), 0x9D);
+        assert_eq!(cpu.sp, 0x3F2A);
+
+        cpu.a = 0x1F;
+        cpu.sp = 0x502A;
+        cpu.set_flag(FLAG_CARRY);
+        cpu.set_flag(FLAG_ZERO);
+        cpu.set_flag(FLAG_PARITY);
+        cpu.reset_flag(FLAG_SIGN);
+        cpu.reset_flag(FLAG_AUXCARRY);
+        cpu.prep_instr_and_data(0xF5, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.memory.read(0x5029).unwrap(),0x1F);
+        assert_eq!(cpu.memory.read(0x5028).unwrap(),0x47); // The PSW setup with the flags, above
+        assert_eq!(cpu.sp, 0x5028);
+        
+    }
+
+
+    #[test]
+    fn test_pop() {
+        let mut cpu = CPU::new();
+        let op = cpu.pc;
+
+        cpu.memory().write(0x1239, 0x3D).unwrap();
+        cpu.memory().write(0x123A, 0x93).unwrap();
+        cpu.sp = 0x1239;
+        cpu.prep_instr_and_data(0xC1, 0x00, 0x00); // POP B
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.c, 0x3D);
+        assert_eq!(cpu.b, 0x93);
+        assert_eq!(cpu.sp, 0x123B);
+
+        cpu.sp = 0x1239;
+        cpu.prep_instr_and_data(0xD1, 0x00, 0x00); // POP D
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.e, 0x3D);
+        assert_eq!(cpu.d, 0x93);
+        assert_eq!(cpu.sp, 0x123B);
+
+        cpu.sp = 0x1239;
+        cpu.prep_instr_and_data(0xE1, 0x00, 0x00); // POP H
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.c, 0x3D);
+        assert_eq!(cpu.b, 0x93);
+        assert_eq!(cpu.sp, 0x123B);
+
+        cpu.memory().write(0x2C00, 0xC3).unwrap();
+        cpu.memory().write(0x2C01, 0xFF).unwrap();
+        cpu.sp = 0x2C00;
+        cpu.prep_instr_and_data(0xF1, 0x00, 0x00); // POP PSW
+        cpu.run_opcode().unwrap();
+        assert_eq!(cpu.a, 0xFF);
+        assert_eq!(cpu.get_flags(), 0xC3); // PSW is 11000011 (0xC3)
+                                           // Check the flags individually anyway..
+        assert!(cpu.test_flag(FLAG_SIGN));
+        assert!(cpu.test_flag(FLAG_ZERO));
+        assert!(!cpu.test_flag(FLAG_AUXCARRY));
+        assert!(!cpu.test_flag(FLAG_PARITY));
+        assert!(cpu.test_flag(FLAG_CARRY));
+    }
 
     #[test]
     fn test_xchg() {

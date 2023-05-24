@@ -29,7 +29,7 @@ impl CPU {
     /// Since a subtract operation is performed, the Carry bit will be set if there is no
     /// carry out of bit 7, indicating that the contents of REG are greater than the
     /// contents of the accumulator, and reset otherwise.
-    pub fn op_cmp(&mut self) -> Result<(), String> {
+    pub fn cmp(&mut self) -> Result<(), String> {
         let min = self.a;
         let addr = self.get_addr_pointer();
 
@@ -178,7 +178,7 @@ impl CPU {
 
     /// The specified byte is localled ``ORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn op_ora(&mut self) -> Result<(), String> {
+    pub fn ora(&mut self) -> Result<(), String> {
         let opcode = self.current_instruction.opcode;
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
