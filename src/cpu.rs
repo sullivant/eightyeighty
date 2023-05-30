@@ -392,19 +392,24 @@ impl CPU {
             0xC1 => self.pop(Registers::BC),
             0xC3 | 0xCB => self.jmp(dl, dh),
 
-            0xC5 => self.push(Registers::BC),
+            0xC5 => self.push(self.c, self.b),
             0xC6 | 0xCE => {
                 self.adi_aci(dl);
                 Ok(())
             }
+            0xCD | 0xDD | 0xED | 0xFD => self.call(dl, dh),
 
             0xD1 => self.pop(Registers::DE),
             0xD3 => self.data_out(dl),
 
-            0xD5 => self.push(Registers::DE),
+            0xD5 => self.push(self.e, self.d),
+            0xDA => {
+                self.jc(dl, dh);
+                Ok(())
+            }
 
             0xE1 => self.pop(Registers::HL),
-            0xE5 => self.push(Registers::HL),
+            0xE5 => self.push(self.l, self.h),
             0xE6 => {
                 self.ani(dl);
                 Ok(())
@@ -415,7 +420,7 @@ impl CPU {
             }
 
             0xF1 => self.pop(Registers::SW),
-            0xF5 => self.push(Registers::SW),
+            0xF5 => self.push(self.get_flags(), self.a),
             0xFE => {
                 self.cpi(dl);
                 Ok(())

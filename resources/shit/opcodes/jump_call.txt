@@ -6,22 +6,6 @@ use crate::{cpu::ProgramCounter, Cpu};
 ///
 
 impl Cpu {
-    // Similar to a jump, but it saves the current PC to the stack
-    pub fn op_call(&mut self, x: u8, y: u8) -> ProgramCounter {
-        // Save away the current PC hi/lo into the stack
-        let pc_hi = self.pc >> 8;
-        let pc_lo = self.pc & 0xFF;
-
-        self.memory[usize::from(self.sp - 1)] = pc_hi as u8;
-        self.memory[usize::from(self.sp - 2)] = pc_lo as u8;
-        self.sp -= 2;
-
-        // Tell the program counter where we want to go next
-        let ys: u16 = u16::from(y) << 8;
-        self.pc = usize::from(ys | u16::from(x));
-
-        ProgramCounter::Jump(self.pc)
-    }
 
     // Calls if the flag's supplied value matches the supplied sign
     pub fn op_call_if(&mut self, flag: u8, sign: bool, x: u8, y: u8) -> ProgramCounter {

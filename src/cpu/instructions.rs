@@ -236,7 +236,7 @@ impl Instruction {
             0xC0 => (1, 11, OP_RNZ),
             0xC1 => (1, 10, OP_POP_B),
             0xC2 => (3, 10, OP_JNZ),
-            0xC3 | 0xCB => (3, 10, OP_JMP_16),
+            0xC3 | 0xCB => (0, 10, OP_JMP_16), // Always going to jump, no size needed
             0xC4 => (3, 17, OP_CNZ),
             0xC5 => (1, 11, OP_PUSH_B),
             0xC6 => (2, 7, OP_ADI),
@@ -245,7 +245,7 @@ impl Instruction {
             0xC9 | 0xD9 => (1, 10, OP_RET),
             0xCA => (3, 10, OP_JZ),
             0xCC => (3, 17, OP_CZ),
-            0xCD | 0xDD | 0xED | 0xFD => (3, 17, OP_CALL),
+            0xCD | 0xDD | 0xED | 0xFD => (0, 17, OP_CALL), // Size determined in instr
             0xCE => (2, 2, OP_ACI),
             0xCF => (1, 1, OP_RST_1),
 
@@ -258,7 +258,7 @@ impl Instruction {
             0xD6 => (2, 7, OP_SUI),
             0xD7 => (1, 11, OP_RST_2),
             0xD8 => (1, 11, OP_RC),
-            0xDA => (3, 10, OP_JC),
+            0xDA => (0, 10, OP_JC), // Size determined in instruction
             0xDB => (2, 10, OP_IN),
             0xDC => (3, 17, OP_CC),
             0xDE => (2, 7, OP_SBI),

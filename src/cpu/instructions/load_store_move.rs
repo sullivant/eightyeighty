@@ -5,22 +5,14 @@ use crate::{
 
 /// This contains any instructions of the LOAD / STORE / MOVE category
 impl CPU {
-    /// Pushes onto the stack according to the register pair requested.
-    /// (sp-2)<-P2; (sp-1)<-P1; sp <- sp - 2
-    pub fn push(&mut self, reg: Registers) -> Result<(), String> {
-        let (source_a, source_b) = match reg {
-            Registers::BC => (self.b, self.c),
-            Registers::DE => (self.d, self.e),
-            Registers::HL => (self.h, self.l),
-            Registers::SW => (self.a, self.get_flags()),
-            _ => {
-                return Err(format!(
-                    "PUSH: Invalid register pair requested {reg}, cannot push."
-                ))
-            }
-        };
-
-        match self.memory.write((self.sp - 1).into(), source_a) {
+    /// Pushes onto the stack the values provided to this function.  They are,
+    /// most likely and often, the values contained in a register pair such as `BC`
+    ///
+    /// They are pushed on like this:
+    /// (sp-1)<-dh; (sp-2)<-dl; sp <- sp - 2
+    pub fn push(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+        self.sp -= 1;
+        match self.memory.write(self.sp.into(), dh) {
             Ok(_) => (),
             Err(e) => {
                 return Err(format!(
@@ -30,7 +22,8 @@ impl CPU {
             }
         }
 
-        match self.memory.write((self.sp - 2).into(), source_b) {
+        self.sp -= 1;
+        match self.memory.write(self.sp.into(), dl) {
             Ok(_) => (),
             Err(e) => {
                 return Err(format!(
@@ -39,8 +32,6 @@ impl CPU {
                 ))
             }
         }
-
-        self.sp -= 2;
 
         Ok(())
     }
