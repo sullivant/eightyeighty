@@ -48,8 +48,7 @@ impl CPU {
             Ok(_) => (),
             Err(e) => {
                 return Err(format!(
-                    "CALL: Unable to push PC {0}, {1} onto stack. error is: {e}",
-                    pc_hi, pc_lo
+                    "CALL: Unable to push PC {pc_hi}, {pc_lo} onto stack. error is: {e}"
                 ))
             }
         };
