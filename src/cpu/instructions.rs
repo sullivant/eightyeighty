@@ -240,14 +240,14 @@ impl Instruction {
             0xC4 => (3, 17, OP_CNZ),
             0xC5 => (1, 11, OP_PUSH_B),
             0xC6 => (2, 7, OP_ADI),
-            0xC7 => (1, 11, OP_RST_0),
+            0xC7 => (0, 11, OP_RST_0),
             0xC8 => (1, 11, OP_RZ),
-            0xC9 | 0xD9 => (1, 10, OP_RET),
+            0xC9 | 0xD9 => (0, 10, OP_RET),
             0xCA => (3, 10, OP_JZ),
             0xCC => (3, 17, OP_CZ),
-            0xCD | 0xDD | 0xED | 0xFD => (0, 17, OP_CALL), // Size determined in instr
+            0xCD | 0xDD | 0xED | 0xFD => (3, 17, OP_CALL), // Size determined in instr
             0xCE => (2, 2, OP_ACI),
-            0xCF => (1, 1, OP_RST_1),
+            0xCF => (0, 1, OP_RST_1),
 
             0xD0 => (1, 11, OP_RNC),
             0xD1 => (1, 10, OP_POP_D),
@@ -256,13 +256,13 @@ impl Instruction {
             0xD4 => (3, 17, OP_CNC),
             0xD5 => (1, 11, OP_PUSH_D),
             0xD6 => (2, 7, OP_SUI),
-            0xD7 => (1, 11, OP_RST_2),
+            0xD7 => (0, 11, OP_RST_2),
             0xD8 => (1, 11, OP_RC),
-            0xDA => (0, 10, OP_JC), // Size determined in instruction
+            0xDA => (3, 10, OP_JC), // Size determined in instruction
             0xDB => (2, 10, OP_IN),
             0xDC => (3, 17, OP_CC),
             0xDE => (2, 7, OP_SBI),
-            0xDF => (1, 11, OP_RST_3),
+            0xDF => (0, 11, OP_RST_3),
 
             0xE0 => (1, 11, OP_RPO),
             0xE1 => (1, 10, OP_POP_H),
@@ -271,14 +271,14 @@ impl Instruction {
             0xE4 => (3, 17, OP_CPO),
             0xE5 => (1, 11, OP_PUSH_H),
             0xE6 => (2, 7, OP_ANI),
-            0xE7 => (1, 11, OP_RST_4),
+            0xE7 => (0, 11, OP_RST_4),
             0xE8 => (1, 11, OP_RPE),
-            0xE9 => (1, 5, OP_PCHL),
+            0xE9 => (0, 5, OP_PCHL),
             0xEA => (3, 10, OP_JPE),
             0xEB => (1, 5, OP_XCHG),
             0xEC => (3, 17, OP_CPE),
             0xEE => (2, 7, OP_XRI),
-            0xEF => (1, 11, OP_RST_5),
+            0xEF => (0, 11, OP_RST_5),
 
             0xF0 => (1, 11, OP_RP),
             0xF1 => (1, 10, OP_POP_PSW),
@@ -287,14 +287,14 @@ impl Instruction {
             0xF4 => (3, 17, OP_CP),
             0xF5 => (1, 11, OP_PUSH_PSW),
             0xF6 => (2, 7, OP_ORI),
-            0xF7 => (1, 11, OP_RST_6),
+            0xF7 => (0, 11, OP_RST_6),
             0xF8 => (1, 11, OP_RM),
             0xF9 => (1, 5, OP_SPHL),
             0xFA => (3, 10, OP_JM_16),
             0xFB => (1, 4, OP_EI),
             0xFC => (3, 17, OP_CM),
             0xFE => (2, 7, OP_CPI),
-            0xFF => (1, 11, OP_RST_7),
+            0xFF => (0, 11, OP_RST_7),
         };
 
         Instruction {

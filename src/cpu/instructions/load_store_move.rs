@@ -5,6 +5,48 @@ use crate::{
 
 /// This contains any instructions of the LOAD / STORE / MOVE category
 impl CPU {
+    /// The registers HL replace the contents of the SP
+    pub fn sphl(&mut self) {
+        self.sp = make_pointer(self.l, self.h);
+    }
+
+    /// Contents of L are exchanged with contents of memory byte whose
+    /// address is held in the stack pointer SP.  The contents of H are
+    /// exchanged with the contents of the memory byte whose address is
+    /// one greater than that held in the stack pointer SP.
+    pub fn xthl(&mut self) -> Result<(), String> {
+        // Store away our temp values
+        let ch = self.h;
+        let cl = self.l;
+
+        // Pop the sp into the new values
+        match self.pop(Registers::HL) {
+            Ok(_) => (),
+            Err(e) => return Err(e),
+        };
+
+        // Push the "old" ones
+        match self.push(cl, ch) {
+            Ok(_) => (),
+            Err(e) => return Err(e),
+        };
+
+        Ok(())
+    }
+
+    /// Exchanges the contents of the H and L registers with the contents of the
+    /// D and E registers.
+    pub fn xchg(&mut self) {
+        let oh = self.h;
+        let ol = self.l;
+
+        self.h = self.d;
+        self.l = self.e;
+
+        self.d = oh;
+        self.e = ol;
+    }
+
     /// Pushes onto the stack the values provided to this function.  They are,
     /// most likely and often, the values contained in a register pair such as `BC`
     ///
@@ -82,19 +124,6 @@ impl CPU {
         self.sp += 2;
 
         Ok(())
-    }
-
-    /// Exchanges the contents of the H and L registers with the contents of the
-    /// D and E registers.
-    pub fn xchg(&mut self) {
-        let oh = self.h;
-        let ol = self.l;
-
-        self.h = self.d;
-        self.l = self.e;
-
-        self.d = oh;
-        self.e = ol;
     }
 
     /// Stores a copy of the L register in the memory location specified in bytes
@@ -338,6 +367,36 @@ mod tests {
         FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE,
     };
     use crate::cpu::{Registers, CPU};
+
+    #[test]
+    fn test_sphl() {
+        let mut cpu = CPU::new();
+        cpu.h = 0x50;
+        cpu.l = 0x6C;
+
+        cpu.prep_instr_and_data(0xF9, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+
+        assert_eq!(cpu.sp, 0x506C);
+    }
+
+    #[test]
+    fn test_xthl() {
+        let mut cpu = CPU::new();
+        cpu.sp = 0x10AD;
+        cpu.h = 0x0B;
+        cpu.l = 0x3C;
+        cpu.memory.write(0x10AD, 0xF0).unwrap();
+        cpu.memory.write(0x10AE, 0x0D).unwrap();
+
+        cpu.prep_instr_and_data(0xE3, 0x00, 0x00);
+        cpu.run_opcode().unwrap();
+
+        assert_eq!(cpu.h, 0x0D);
+        assert_eq!(cpu.l, 0xF0);
+        assert_eq!(cpu.memory.read(0x10AD).unwrap(), 0x3C);
+        assert_eq!(cpu.memory.read(0x10AE).unwrap(), 0x0B);
+    }
 
     #[test]
     fn test_push() {

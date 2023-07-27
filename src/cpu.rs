@@ -389,42 +389,78 @@ impl CPU {
             0xB0..=0xB7 => self.ora(),
             0xB8..=0xBF => self.cmp(),
 
+            0xC0 => self.rnz(),
             0xC1 => self.pop(Registers::BC),
+            0xC2 => self.jnz(dl, dh),
             0xC3 | 0xCB => self.jmp(dl, dh),
-
+            0xC4 => self.cnz(dl, dh),
             0xC5 => self.push(self.c, self.b),
             0xC6 | 0xCE => {
                 self.adi_aci(dl);
                 Ok(())
             }
+            0xC7 => self.rst(0),
+            0xC8 => self.rz(),
+            0xC9 | 0xD9 => self.ret(),
+            0xCA => self.jz(dl, dh),
+            0xCC => self.cz(dl, dh),
             0xCD | 0xDD | 0xED | 0xFD => self.call(dl, dh),
+            0xCF => self.rst(1),
 
+            0xD0 => self.rnc(),
             0xD1 => self.pop(Registers::DE),
+            0xD2 => self.jnc(dl, dh),
             0xD3 => self.data_out(dl),
-
+            0xD4 => self.cnc(dl, dh),
             0xD5 => self.push(self.e, self.d),
-            0xDA => {
-                self.jc(dl, dh);
-                Ok(())
-            }
+            0xD7 => self.rst(2),
+            0xD8 => self.rc(),
+            0xDA => self.jc(dl, dh),
+            0xDB => self.data_in(dl),
+            0xDC => self.cc(dl, dh),
+            0xDF => self.rst(3),
 
+            0xE0 => self.rpo(),
             0xE1 => self.pop(Registers::HL),
+            0xE2 => self.jpo(dl, dh),
+            0xE3 => self.xthl(),
+            0xE4 => self.cpo(dl, dh),
             0xE5 => self.push(self.l, self.h),
             0xE6 => {
                 self.ani(dl);
                 Ok(())
             }
+            0xE7 => self.rst(4),
+            0xE8 => self.rpe(),
+            0xE9 => self.pchl(),
+            0xEA => self.jpe(dl, dh),
             0xEB => {
                 self.xchg();
                 Ok(())
             }
+            0xEC => self.cpe(dl, dh),
+            0xEF => self.rst(5),
 
+            0xF0 => self.rp(),
             0xF1 => self.pop(Registers::SW),
+            0xF2 => self.jp(dl, dh),
+            0xF3 => self.di(),
+            0xF4 => self.cp(dl, dh),
             0xF5 => self.push(self.get_flags(), self.a),
+            0xF7 => self.rst(6),
+            0xF8 => self.rm(),
+            0xF9 => {
+                self.sphl();
+                Ok(())
+            }
+            0xFA => self.jm(dl, dh),
+            0xFB => self.ei(),
+            0xFC => self.cm(dl, dh),
             0xFE => {
                 self.cpi(dl);
                 Ok(())
             }
+            0xFF => self.rst(7),
 
             _ => Err(format!(
                 "Unable to process UNKNOWN OPCODE: {}",
