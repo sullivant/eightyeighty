@@ -184,6 +184,8 @@ fn main() -> Result<(), String> {
     }
 
     // Simply a slow-to-update (only once, then when F3 is hit) representation of the memory.
+    cpu_clone.lock().unwrap().cpu.memory.table_start = 0x2300;
+    cpu_clone.lock().unwrap().cpu.memory.table_stop = 0x3FFF;
     let mut memory_label: String = format!("{}", cpu_clone.lock().unwrap().cpu.memory);
 
     // Create a thread that will be our running cpu
@@ -249,6 +251,8 @@ fn main() -> Result<(), String> {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
+
+        // Setup a panel that contains some application controls
         egui::TopBottomPanel::top("wrap_app_top_bar").show(&egui_ctx, |ui| {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
@@ -265,6 +269,7 @@ fn main() -> Result<(), String> {
             });
         });
 
+        // Setup a side panel that contains details from our CPU's current state
         egui::SidePanel::right("right_panel")
             .default_width(200.0)
             .show(&egui_ctx, |ui| {

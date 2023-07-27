@@ -15,14 +15,14 @@ const SLICE_SIZE: usize = 16;
 #[derive(Clone)]
 pub struct Memory {
     data: [u8; RAM_SIZE],
-    table_start: usize, // If set, will allow fmt::Display to be truncated/walked
-    table_stop: usize,  // If set, will allow fmt::Display to be truncated/walked
+    pub table_start: usize, // If set, will allow fmt::Display to be truncated/walked
+    pub table_stop: usize,  // If set, will allow fmt::Display to be truncated/walked
 }
 
 impl fmt::Display for Memory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let iter = &mut self.data[self.table_start..=self.table_stop].chunks(SLICE_SIZE);
-        let mut idx: usize = 0x00;
+        let mut idx: usize = self.table_start;
 
         let mut out = format!("{}\n", table_header());
 
