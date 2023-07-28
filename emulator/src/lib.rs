@@ -5,14 +5,17 @@ mod constants;
 mod cpu;
 mod memory;
 mod video;
+mod utils;
 
-pub use crate::cpu::CPU;
-pub use clap::{App, Arg};
-pub use std::fs::File;
-pub use std::io::Read;
-pub use std::sync::atomic::{AtomicBool, Ordering};
-pub use std::sync::{Arc, Mutex};
-pub use std::thread;
+use crate::cpu::CPU;
+use clap::{App, Arg};
+use std::fs::File;
+use std::io::Read;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use wasm_bindgen::prelude::*;
+
 
 #[derive(Clone)]
 pub struct Emulator {
@@ -159,3 +162,16 @@ pub fn go() -> Result<(), String> {
     // lib::go()?;
     Ok(())
 }
+
+
+
+#[wasm_bindgen]
+extern "C" {
+    fn alert(s: &str);
+}
+
+#[wasm_bindgen]
+pub fn greet() {
+    alert("Hello, wasm!");
+}
+

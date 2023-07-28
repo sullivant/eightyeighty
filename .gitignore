@@ -10,3 +10,10 @@
 
 # VS Code stuff
 .vscode/
+
+**/target
+**/*.rs.bk
+Cargo.lock
+**/bin/
+**/pkg/
+**/wasm-pack.log
