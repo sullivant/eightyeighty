@@ -4,13 +4,14 @@
   "private": true,
   "scripts": {
     "setup": "yarn && yarn build:wasm",
+    "setup:wasm": "wasm-pack build ../emulator --target web --dev",
     "dev": "yarn vite",
     "build": "yarn build:wasm && vue-tsc --noEmit && vite build",
     "build:wasm": "wasm-pack build ../emulator --target web --release",
-    "preview": "vite preview",
     "build-only": "vite build",
     "watch:wasm": "cd ../emulator && cargo watch -i .gitignore -i \"pkg/*\" -s \"wasm-pack build --target web --dev\"",
-    "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false"
+    "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
+    "preview": "vite preview"
   },
   "dependencies": {
     "emulator": "file:../emulator/pkg",

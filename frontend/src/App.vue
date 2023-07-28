@@ -1,18 +1,41 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import init, { greet, set_disassemble, get_disassemble } from 'emulator'
+import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, cpu_state } from 'emulator'
 
 const disassembleState = ref(false)
+const cpuState = ref("CPU NOT READY");
 
-function greet_wasm() {
+function updateInterface() {
+  disassembleState.value = cpu_get_disassemble();
+  cpuState.value = cpu_state();
+}
+
+function greetWASM() {
   console.log("Greeting WASM")
-  greet()
+  cpu_greet()
 }
 
 function setDisassemble(flag: boolean) {
-  set_disassemble(flag)
-  disassembleState.value = get_disassemble()
+  cpu_set_disassemble(flag)
+  updateInterface();
 }
+
+function loadROM() {
+  console.log("Loading INVADERS.COM")
+
+  fetch('roms/INVADERS.COM')
+    .then(i => i.arrayBuffer())
+    .then(buffer => {
+      // Loop and write rom to CPU memory
+      const start_index = 0;
+      const rom = new DataView(buffer, 0, buffer.byteLength);
+      for (let i = 0; i < rom.byteLength; i++) {
+        cpu_memory_write(start_index+i, rom.getUint8(i));
+      }
+    });
+    updateInterface();
+}
+
 
 init()
 </script>
@@ -24,17 +47,25 @@ init()
 
   <main>
     <br/>
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greet_wasm()">
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greetWASM()">
       Check
     </button>
     <br/>
-    Disassemble State: {{ disassembleState }} <br />
+    
     <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(true)">
       Disassemble ON
     </button>
     <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(false)">
       Disassemble OFF
     </button>
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="loadROM()">
+      Load ROM
+    </button>
+
+    <footer>
+      Disassemble State: {{ disassembleState }} <br />
+      CPU State: {{  cpuState }} <br />
+    </footer>
 
   </main>
 </template>

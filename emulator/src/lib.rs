@@ -8,14 +8,10 @@ mod video;
 mod utils;
 
 use crate::cpu::CPU;
-use clap::{App, Arg};
 use std::fs::File;
 use std::io::Read;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
 use wasm_bindgen::prelude::*;
-use web_sys::console::{log_1, self};
+use web_sys::console::{self};
 
 #[derive(Clone)]
 pub struct Emulator {
@@ -26,40 +22,9 @@ impl Emulator {
     const fn new() -> Emulator {
         Emulator{ cpu: CPU::new() }
     }
-
-    // fn new_old(rom_file: &str) -> Result<Emulator, String> {
-    //     println!("Creating new Emulator Object");
-
-    //     // Generate our CPU
-    //     let mut cpu = CPU::new();
-    //     cpu.disassemble(true);
-
-    //     // The list of rom files to load for this particular collection/game
-    //     let file_to_load = format!("./resources/roms/{rom_file}.COM");
-    //     let mut dims: (usize, usize) = (0, 0);
-
-    //     match load_rom(&mut cpu, file_to_load.clone(), dims.1) {
-    //         Ok(i) => {
-    //             dims = i;
-    //         }
-    //         Err(err) => {
-    //             return Err(format!("Unable to load rom file {file_to_load}: {err}"));
-    //         }
-    //     }
-
-    //     println!(
-    //         "Loaded rom file: {} start at: {:#06X} end at: {:#06X}",
-    //         file_to_load,
-    //         dims.0,
-    //         dims.1 - 1
-    //     );
-
-    //     Ok(Emulator { cpu })
-    // }
-
 }
 
-
+// Our actual emulator is really just a wrapped call to CPU
 static mut EMULATOR: Emulator = Emulator::new();
 
 #[wasm_bindgen]
@@ -68,13 +33,13 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn greet() {
-    alert(format!("Hello from WASM.").as_str());
+pub fn cpu_greet() {
+    alert(format!("Hello from WASM...").as_str());
 }
 
 #[wasm_bindgen]
 #[no_mangle]
-pub fn set_disassemble(flag: bool) {
+pub fn cpu_set_disassemble(flag: bool) {
     console::log_2(&"Setting disassemble flag to:".into(), &flag.into());
     unsafe {
         EMULATOR.cpu.disassemble(flag);
@@ -83,63 +48,39 @@ pub fn set_disassemble(flag: bool) {
 
 #[wasm_bindgen]
 #[no_mangle]
-pub fn get_disassemble() -> bool {
+pub fn cpu_get_disassemble() -> bool {
     unsafe {
         EMULATOR.cpu.disassemble
     }
 }
 
-
-/// Load the ROM file into memory, starting at ``start_index``
-/// Returns a tuple containing the index we started at and where we
-/// actually finished at.
-///
-/// # Errors
-/// Will return a standard io Error if necessary
-/// # Panics
-/// If the error happens, this will cause the function to panic
-pub fn load_rom(
-    cpu: &mut CPU,
-    file: String,
-    start_index: usize,
-) -> Result<(usize, usize), std::io::Error> {
-    let rom = File::open(file)?;
-    let mut last_idx: usize = 0;
-    for (i, b) in rom.bytes().enumerate() {
-        cpu.memory().write(start_index + i, b.unwrap()).unwrap();
-        last_idx = i;
+/// Since we cannot directly open a local file in Web Assembly, we need to expect
+/// the ROM data to come from the JavaScript side, on the browser.  So let's have
+/// a function here that will simply allow for the mapping of an array of data
+/// into the ROM space in memory.
+#[wasm_bindgen]
+#[no_mangle]
+pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
+    unsafe {
+        match EMULATOR.cpu.memory().write(location, data) {
+            Ok(_) => (),
+            Err(e) => {
+                console::log_1(&JsValue::from(format!("{}", e)));
+            }
+        };
     }
-    Ok((start_index, start_index + last_idx + 1))
+
+    Ok(true)
 }
 
+#[wasm_bindgen]
+#[no_mangle]
+pub fn cpu_state() -> String {
+    unsafe {
+        EMULATOR.cpu.to_string()
+    }
+}
 
-
-// #[allow(clippy::too_many_lines)]
-// pub fn go() -> Result<(), String> {
-//     // Get some cli options from CLAP
-//     let matches = App::new("EightyEighty")
-//         .version("1.0")
-//         .author("Thomas Sullivan <sullivan.t@gmail.com>")
-//         .about("An 8080 emulator")
-//         .arg(Arg::from_usage(
-//             "-p, --pause... 'initiates single step (pause on tick) mode'",
-//         ))
-//         .arg(Arg::from_usage(
-//             "-c, --count=[COUNT] 'pauses and initiates single step mode on program count <count>'",
-//         ))
-//         .args_from_usage("<rom> 'The rom file to load and execute'")
-//         .get_matches();
-
-
-//     // Gather from the command the rom to use; Clap won't let us skip this but we
-//     // load INVADERS by default just in case
-//     let mut rom_file: String = String::from("INVADERS");
-//     if let Some(f) = matches.value_of("rom") {
-//         rom_file = String::from(f);
-//     }
-
-//     // Thread status flags
-//     let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // Used to bail out of the threads if needed
 
 //     // Actual threaded bits
 //     let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?)); // A threadable version of our emulator

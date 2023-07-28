@@ -34,7 +34,7 @@ features = [
   'HtmlElement',
   'Node',
   'Window',
-]       
+]  
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
