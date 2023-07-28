@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
 import init, { greet } from 'emulator'
 
 init()
@@ -8,19 +6,16 @@ init()
 
 <template>
   <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-      <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greet()">
-        🦀 + 🕸 Hello WebAssembly!
-      </button>
-    </div>
-
+    Intel 8080 - Emulator
   </header>
 
   <main>
-    <TheWelcome />
+    <br/>
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greet()">
+      Check
+    </button>
+
+    
   </main>
 </template>
 
