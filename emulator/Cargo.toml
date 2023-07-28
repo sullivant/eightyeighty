@@ -5,11 +5,11 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "eightyeighty"
+name = "emulator"
 path = "src/main.rs"
 
 [lib]
-name = "eightyeighty"
+name = "emulator"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 

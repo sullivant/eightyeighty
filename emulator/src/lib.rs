@@ -172,6 +172,6 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn greet() {
-    alert("Hello, wasm!");
+    alert("Hello, from wasm");
 }
 
