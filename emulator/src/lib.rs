@@ -5,7 +5,6 @@ mod constants;
 mod cpu;
 mod memory;
 mod video;
-mod utils;
 
 use crate::cpu::CPU;
 use wasm_bindgen::prelude::*;
@@ -26,13 +25,14 @@ impl Emulator {
 static mut EMULATOR: Emulator = Emulator::new();
 
 #[wasm_bindgen]
+#[must_use]
 extern "C" {
-    fn alert(s: &str);
+    fn alert(s: String);
 }
 
 #[wasm_bindgen]
 pub fn cpu_greet() {
-    alert(format!("Hello from WASM...").as_str());
+    alert("Hello from WASM...".to_string());
 }
 
 #[wasm_bindgen]
@@ -46,6 +46,7 @@ pub fn cpu_set_disassemble(flag: bool) {
 
 #[wasm_bindgen]
 #[no_mangle]
+#[must_use]
 pub fn cpu_get_disassemble() -> bool {
     unsafe {
         EMULATOR.cpu.disassemble
@@ -63,7 +64,7 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
         match EMULATOR.cpu.memory().write(location, data) {
             Ok(_) => (),
             Err(e) => {
-                console::log_1(&JsValue::from(format!("{}", e)));
+                console::log_1(&JsValue::from(e.to_string()));
             }
         };
     }
@@ -73,6 +74,7 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
 
 #[wasm_bindgen]
 #[no_mangle]
+#[must_use]
 pub fn cpu_get_memory() -> String {
     unsafe {
         EMULATOR.cpu.memory.to_string()
@@ -81,6 +83,7 @@ pub fn cpu_get_memory() -> String {
 
 #[wasm_bindgen]
 #[no_mangle]
+#[must_use]
 pub fn cpu_state() -> String {
     unsafe {
         EMULATOR.cpu.to_string()
@@ -89,6 +92,7 @@ pub fn cpu_state() -> String {
 
 #[wasm_bindgen]
 #[no_mangle]
+#[must_use]
 pub fn cpu_curr_instr() -> String {
     unsafe {
         EMULATOR.cpu.current_instruction.to_string()
@@ -97,12 +101,13 @@ pub fn cpu_curr_instr() -> String {
 
 #[wasm_bindgen]
 #[no_mangle]
+#[must_use]
 pub fn cpu_tick() -> bool {
     unsafe {
         match EMULATOR.cpu.tick() {
             Ok(_) => true,
             Err(e) => {
-                console::log_1(&JsValue::from(format!("{}", e)));
+                console::log_1(&JsValue::from(e.to_string()));
                 false
             }
         }
