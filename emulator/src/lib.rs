@@ -17,7 +17,7 @@ pub struct Emulator {
 
 impl Emulator {
     const fn new() -> Emulator {
-        Emulator{ cpu: CPU::new() }
+        Emulator { cpu: CPU::new() }
     }
 }
 
@@ -48,9 +48,7 @@ pub fn cpu_set_disassemble(flag: bool) {
 #[no_mangle]
 #[must_use]
 pub fn cpu_get_disassemble() -> bool {
-    unsafe {
-        EMULATOR.cpu.disassemble
-    }
+    unsafe { EMULATOR.cpu.disassemble }
 }
 
 /// Since we cannot directly open a local file in Web Assembly, we need to expect
@@ -76,27 +74,21 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
 #[no_mangle]
 #[must_use]
 pub fn cpu_get_memory() -> String {
-    unsafe {
-        EMULATOR.cpu.memory.to_string()
-    }
+    unsafe { EMULATOR.cpu.memory.to_string() }
 }
 
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
 pub fn cpu_state() -> String {
-    unsafe {
-        EMULATOR.cpu.to_string()
-    }
+    unsafe { EMULATOR.cpu.to_string() }
 }
 
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
 pub fn cpu_curr_instr() -> String {
-    unsafe {
-        EMULATOR.cpu.current_instruction.to_string()
-    }
+    unsafe { EMULATOR.cpu.current_instruction.to_string() }
 }
 
 #[wasm_bindgen]
