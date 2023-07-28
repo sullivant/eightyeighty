@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, cpu_state } from 'emulator'
+import { CCard, CCardBody, CCardTitle, CCardText, CButton } from '@coreui/vue'
+import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
+  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
 
 const disassembleState = ref(false)
 const cpuState = ref("CPU NOT READY");
+const currInstr = ref("NO INSTRUCTION");
+const currRAM = ref("NO RAM");
 
 function updateInterface() {
   disassembleState.value = cpu_get_disassemble();
   cpuState.value = cpu_state();
+  currInstr.value = cpu_curr_instr();
+  currRAM.value = cpu_get_memory();
 }
 
 function greetWASM() {
@@ -32,8 +38,13 @@ function loadROM() {
       for (let i = 0; i < rom.byteLength; i++) {
         cpu_memory_write(start_index+i, rom.getUint8(i));
       }
-    });
-    updateInterface();
+    })
+    updateInterface()
+}
+
+function tick() {
+  cpu_tick()
+  updateInterface()
 }
 
 
@@ -49,7 +60,10 @@ init()
     <br/>
     <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greetWASM()">
       Check
-    </button>
+    </button> <br />
+    Disassemble State: {{ disassembleState }} <br />
+    CPU State: {{  cpuState }} <br />
+    Current Instr: {{  currInstr }} <br />
     <br/>
     
     <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(true)">
@@ -57,17 +71,22 @@ init()
     </button>
     <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(false)">
       Disassemble OFF
-    </button>
+    </button> <br />
     <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="loadROM()">
       Load ROM
     </button>
-
-    <footer>
-      Disassemble State: {{ disassembleState }} <br />
-      CPU State: {{  cpuState }} <br />
-    </footer>
-
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="tick()">
+      Tick
+    </button>
   </main>
+
+  <CCard style="width: 18rem">
+      <CCardBody>
+        <CCardTitle>Card title</CCardTitle>
+        <CCardText>{{  currRAM }}</CCardText>
+        <CButton href="#">Go somewhere</CButton>
+      </CCardBody>
+    </CCard>
 </template>
 
 <style scoped>

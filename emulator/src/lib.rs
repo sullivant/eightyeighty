@@ -8,8 +8,6 @@ mod video;
 mod utils;
 
 use crate::cpu::CPU;
-use std::fs::File;
-use std::io::Read;
 use wasm_bindgen::prelude::*;
 use web_sys::console::{self};
 
@@ -75,47 +73,38 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
 
 #[wasm_bindgen]
 #[no_mangle]
+pub fn cpu_get_memory() -> String {
+    unsafe {
+        EMULATOR.cpu.memory.to_string()
+    }
+}
+
+#[wasm_bindgen]
+#[no_mangle]
 pub fn cpu_state() -> String {
     unsafe {
         EMULATOR.cpu.to_string()
     }
 }
 
+#[wasm_bindgen]
+#[no_mangle]
+pub fn cpu_curr_instr() -> String {
+    unsafe {
+        EMULATOR.cpu.current_instruction.to_string()
+    }
+}
 
-//     // Actual threaded bits
-//     let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?)); // A threadable version of our emulator
-//     let cpu_clone = Arc::clone(&cpu); // Used to tickle various settings
-
-//     // If we are in debug mode, set that now, before we start
-//     if matches.is_present("pause") {
-//         println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
-//         cpu_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
-//         cpu_clone.lock().unwrap().cpu.single_step_mode = true;
-//     }
-
-//     // Create a thread that will be our running cpu
-//     // It's just gonna tick like a boss, until it's told not to.
-//     let cpu_thread_handle = thread::spawn(move || {
-//         while cpu_alive.load(Ordering::Relaxed) {
-//             match cpu_clone.lock().unwrap().update() {
-//                 Ok(_) => (),
-//                 Err(e) => {
-//                     println!("Unable to tick: {e}");
-//                     break;
-//                 }
-//             }
-
-//             // TODO: Make some form of cycle based speed regulation
-//         }
-
-//         println!(
-//             "Shutting down. Final CPU state:\n{}",
-//             cpu_clone.lock().unwrap().cpu
-//         );
-//     });
-
-//     cpu_thread_handle.join().unwrap();
-//     // lib::go()?;
-//     Ok(())
-// }
-
+#[wasm_bindgen]
+#[no_mangle]
+pub fn cpu_tick() -> bool {
+    unsafe {
+        match EMULATOR.cpu.tick() {
+            Ok(_) => true,
+            Err(e) => {
+                console::log_1(&JsValue::from(format!("{}", e)));
+                false
+            }
+        }
+    }
+}

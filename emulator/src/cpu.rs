@@ -101,7 +101,6 @@ impl Default for CPU {
 }
 
 impl CPU {
-
     #[must_use]
     pub const fn new() -> CPU {
         CPU {

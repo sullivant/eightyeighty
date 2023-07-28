@@ -14,6 +14,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@coreui/vue": "^4.10.0",
     "emulator": "file:../emulator/pkg",
     "vue": "^3.3.4"
   },
