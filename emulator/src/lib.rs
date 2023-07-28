@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use wasm_bindgen::prelude::*;
-
+use web_sys::console::{log_1, self};
 
 #[derive(Clone)]
 pub struct Emulator {
@@ -23,57 +23,72 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    fn new(rom_file: &str) -> Result<Emulator, String> {
-        println!("Creating new Emulator Object");
-
-        // Generate our CPU
-        let mut cpu = CPU::new();
-        cpu.disassemble(true);
-
-        // The list of rom files to load for this particular collection/game
-        let file_to_load = format!("./resources/roms/{rom_file}.COM");
-        let mut dims: (usize, usize) = (0, 0);
-
-        match load_rom(&mut cpu, file_to_load.clone(), dims.1) {
-            Ok(i) => {
-                dims = i;
-            }
-            Err(err) => {
-                return Err(format!("Unable to load rom file {file_to_load}: {err}"));
-            }
-        }
-
-        println!(
-            "Loaded rom file: {} start at: {:#06X} end at: {:#06X}",
-            file_to_load,
-            dims.0,
-            dims.1 - 1
-        );
-
-        // TODO: Remove when done tinkering
-        //println!("{}",cpu.memory());
-
-        // For testing the odd CPUDIAG ROM
-        // if file_to_load.eq("./resources/roms/TST8080.COM") {
-        //     println!("TS8080 loaded, making some debug changes");
-        //     // First, make a jump to 0x0100
-        //     cpu.memory[0] = 0xC3;
-        //     cpu.memory[1] = 0x00;
-        //     cpu.memory[2] = 0x01;
-        // }
-
-        // Return a good version of the app object
-        Ok(Emulator { cpu })
+    const fn new() -> Emulator {
+        Emulator{ cpu: CPU::new() }
     }
 
-    /// Performs an actual "tick" of the CPU for a single instruction.
-    /// 
-    /// This will be called via the thread, loaded below in go() somewhere...
-    fn update(&mut self) -> Result<(), String> {
-        // Tick the cpu
-        self.cpu.tick()
+    // fn new_old(rom_file: &str) -> Result<Emulator, String> {
+    //     println!("Creating new Emulator Object");
+
+    //     // Generate our CPU
+    //     let mut cpu = CPU::new();
+    //     cpu.disassemble(true);
+
+    //     // The list of rom files to load for this particular collection/game
+    //     let file_to_load = format!("./resources/roms/{rom_file}.COM");
+    //     let mut dims: (usize, usize) = (0, 0);
+
+    //     match load_rom(&mut cpu, file_to_load.clone(), dims.1) {
+    //         Ok(i) => {
+    //             dims = i;
+    //         }
+    //         Err(err) => {
+    //             return Err(format!("Unable to load rom file {file_to_load}: {err}"));
+    //         }
+    //     }
+
+    //     println!(
+    //         "Loaded rom file: {} start at: {:#06X} end at: {:#06X}",
+    //         file_to_load,
+    //         dims.0,
+    //         dims.1 - 1
+    //     );
+
+    //     Ok(Emulator { cpu })
+    // }
+
+}
+
+
+static mut EMULATOR: Emulator = Emulator::new();
+
+#[wasm_bindgen]
+extern "C" {
+    fn alert(s: &str);
+}
+
+#[wasm_bindgen]
+pub fn greet() {
+    alert(format!("Hello from WASM.").as_str());
+}
+
+#[wasm_bindgen]
+#[no_mangle]
+pub fn set_disassemble(flag: bool) {
+    console::log_2(&"Setting disassemble flag to:".into(), &flag.into());
+    unsafe {
+        EMULATOR.cpu.disassemble(flag);
     }
 }
+
+#[wasm_bindgen]
+#[no_mangle]
+pub fn get_disassemble() -> bool {
+    unsafe {
+        EMULATOR.cpu.disassemble
+    }
+}
+
 
 /// Load the ROM file into memory, starting at ``start_index``
 /// Returns a tuple containing the index we started at and where we
@@ -99,79 +114,67 @@ pub fn load_rom(
 
 
 
-#[allow(clippy::too_many_lines)]
-pub fn go() -> Result<(), String> {
-    // Get some cli options from CLAP
-    let matches = App::new("EightyEighty")
-        .version("1.0")
-        .author("Thomas Sullivan <sullivan.t@gmail.com>")
-        .about("An 8080 emulator")
-        .arg(Arg::from_usage(
-            "-p, --pause... 'initiates single step (pause on tick) mode'",
-        ))
-        .arg(Arg::from_usage(
-            "-c, --count=[COUNT] 'pauses and initiates single step mode on program count <count>'",
-        ))
-        .args_from_usage("<rom> 'The rom file to load and execute'")
-        .get_matches();
+// #[allow(clippy::too_many_lines)]
+// pub fn go() -> Result<(), String> {
+//     // Get some cli options from CLAP
+//     let matches = App::new("EightyEighty")
+//         .version("1.0")
+//         .author("Thomas Sullivan <sullivan.t@gmail.com>")
+//         .about("An 8080 emulator")
+//         .arg(Arg::from_usage(
+//             "-p, --pause... 'initiates single step (pause on tick) mode'",
+//         ))
+//         .arg(Arg::from_usage(
+//             "-c, --count=[COUNT] 'pauses and initiates single step mode on program count <count>'",
+//         ))
+//         .args_from_usage("<rom> 'The rom file to load and execute'")
+//         .get_matches();
 
 
-    // Gather from the command the rom to use; Clap won't let us skip this but we
-    // load INVADERS by default just in case
-    let mut rom_file: String = String::from("INVADERS");
-    if let Some(f) = matches.value_of("rom") {
-        rom_file = String::from(f);
-    }
+//     // Gather from the command the rom to use; Clap won't let us skip this but we
+//     // load INVADERS by default just in case
+//     let mut rom_file: String = String::from("INVADERS");
+//     if let Some(f) = matches.value_of("rom") {
+//         rom_file = String::from(f);
+//     }
 
-    // Thread status flags
-    let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // Used to bail out of the threads if needed
+//     // Thread status flags
+//     let cpu_alive: Arc<AtomicBool> = Arc::new(AtomicBool::new(true)); // Used to bail out of the threads if needed
 
-    // Actual threaded bits
-    let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?)); // A threadable version of our emulator
-    let cpu_clone = Arc::clone(&cpu); // Used to tickle various settings
+//     // Actual threaded bits
+//     let cpu = Arc::new(Mutex::new(Emulator::new(&rom_file)?)); // A threadable version of our emulator
+//     let cpu_clone = Arc::clone(&cpu); // Used to tickle various settings
 
-    // If we are in debug mode, set that now, before we start
-    if matches.is_present("pause") {
-        println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
-        cpu_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
-        cpu_clone.lock().unwrap().cpu.single_step_mode = true;
-    }
+//     // If we are in debug mode, set that now, before we start
+//     if matches.is_present("pause") {
+//         println!("Setting pause on tick mode; <s> to step; <F1> to toggle; <F2> to kill CPU;");
+//         cpu_clone.lock().unwrap().cpu.ok_to_step = false; // Will ensure we wait before executing first opcode!
+//         cpu_clone.lock().unwrap().cpu.single_step_mode = true;
+//     }
 
-    // Create a thread that will be our running cpu
-    // It's just gonna tick like a boss, until it's told not to.
-    let cpu_thread_handle = thread::spawn(move || {
-        while cpu_alive.load(Ordering::Relaxed) {
-            match cpu_clone.lock().unwrap().update() {
-                Ok(_) => (),
-                Err(e) => {
-                    println!("Unable to tick: {e}");
-                    break;
-                }
-            }
+//     // Create a thread that will be our running cpu
+//     // It's just gonna tick like a boss, until it's told not to.
+//     let cpu_thread_handle = thread::spawn(move || {
+//         while cpu_alive.load(Ordering::Relaxed) {
+//             match cpu_clone.lock().unwrap().update() {
+//                 Ok(_) => (),
+//                 Err(e) => {
+//                     println!("Unable to tick: {e}");
+//                     break;
+//                 }
+//             }
 
-            // TODO: Make some form of cycle based speed regulation
-        }
+//             // TODO: Make some form of cycle based speed regulation
+//         }
 
-        println!(
-            "Shutting down. Final CPU state:\n{}",
-            cpu_clone.lock().unwrap().cpu
-        );
-    });
+//         println!(
+//             "Shutting down. Final CPU state:\n{}",
+//             cpu_clone.lock().unwrap().cpu
+//         );
+//     });
 
-    cpu_thread_handle.join().unwrap();
-    // lib::go()?;
-    Ok(())
-}
-
-
-
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, from wasm");
-}
+//     cpu_thread_handle.join().unwrap();
+//     // lib::go()?;
+//     Ok(())
+// }
 

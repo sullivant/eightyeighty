@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import init, { greet } from 'emulator'
+import { ref } from 'vue'
+import init, { greet, set_disassemble, get_disassemble } from 'emulator'
+
+const disassembleState = ref(false)
+
+function greet_wasm() {
+  console.log("Greeting WASM")
+  greet()
+}
+
+function setDisassemble(flag: boolean) {
+  set_disassemble(flag)
+  disassembleState.value = get_disassemble()
+}
 
 init()
 </script>
@@ -11,11 +24,18 @@ init()
 
   <main>
     <br/>
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greet()">
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greet_wasm()">
       Check
     </button>
+    <br/>
+    Disassemble State: {{ disassembleState }} <br />
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(true)">
+      Disassemble ON
+    </button>
+    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(false)">
+      Disassemble OFF
+    </button>
 
-    
   </main>
 </template>
 

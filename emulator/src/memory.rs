@@ -43,7 +43,7 @@ impl Default for Memory {
 }
 
 impl Memory {
-    pub fn new() -> Memory {
+    pub const fn new() -> Memory {
         Memory {
             data: [0; RAM_SIZE],
             table_start: 0,

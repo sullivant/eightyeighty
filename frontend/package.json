@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "setup": "yarn && yarn build:wasm",
-    "dev": "yarn watch:wasm & vite",
+    "dev": "yarn vite",
     "build": "yarn build:wasm && vue-tsc --noEmit && vite build",
     "build:wasm": "wasm-pack build ../emulator --target web --release",
     "preview": "vite preview",

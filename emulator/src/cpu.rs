@@ -101,8 +101,9 @@ impl Default for CPU {
 }
 
 impl CPU {
+
     #[must_use]
-    pub fn new() -> CPU {
+    pub const fn new() -> CPU {
         CPU {
             //memory: [0; RAM_SIZE],
             memory: Memory::new(),
