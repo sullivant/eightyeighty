@@ -47,41 +47,46 @@ function tick() {
   updateInterface()
 }
 
+function getCPUState() {
+  cpuState.value = cpu_state();
+}
+
 
 init()
 
 </script>
 
 <template>
-  <header>
-    Intel 8080 - Emulator
-  </header>
+  <v-layout class="rounded rounded-md">
+    <v-app-bar color="surface-variant" title="8080"></v-app-bar>
 
-  <main>
-    <br/>
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="greetWASM()">
-      Check
-    </button> <br />
-    Disassemble State: {{ disassembleState }} <br />
-    CPU State: {{  cpuState }} <br />
-    Current Instr: {{  currInstr }} <br />
-    <br/>
-    
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(true)">
-      Disassemble ON
-    </button>
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="setDisassemble(false)">
-      Disassemble OFF
-    </button> <br />
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="loadROM()">
-      Load ROM
-    </button>
-    <button class="bg-red-300 m-4 p-4 rounded text-lg" @click="tick()">
-      Tick
-    </button>
-  </main>
+    <v-navigation-drawer expand-on-hover rail>
+      <v-divider></v-divider>
 
-  <v-icon>mdi-home</v-icon>
+        <v-list density="compact" nav>
+          <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
+          <v-list-item prepend-icon="mdi-check-circle-outline" title="Set Disassemble" @click="setDisassemble(true)"></v-list-item>
+          <v-list-item prepend-icon="mdi-alpha-x-circle-outline" title="Unset Disassemble" @click="setDisassemble(false)"></v-list-item>
+          <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
+        </v-list>
+    </v-navigation-drawer>
+
+    <v-navigation-drawer location="right">
+      <v-list>
+        <v-list-item title="Disassemble">{{ disassembleState }}</v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
+      {{ cpuState }}
+    </v-main>
+
+    <v-bottom-navigation>
+      {{  currInstr }}
+    </v-bottom-navigation>
+  </v-layout>
+
+
 
 </template>
 
