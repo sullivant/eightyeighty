@@ -7,11 +7,6 @@
   resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.22.7.tgz#df8cf085ce92ddbdbf668a7f186ce848c9036cae"
   integrity sha512-7NF8pOkHP5o2vpmGgNGcfAeCvOYhGLyA3Z4eBQkT1RJlWu47n63bCs93QfJ2hIAFCil7L5P2IWhs1oToVgrL0Q==
 
-"@coreui/vue@^4.10.0":
-  version "4.10.0"
-  resolved "https://registry.yarnpkg.com/@coreui/vue/-/vue-4.10.0.tgz#7748309de29dac824b369042ae55f62adb9ef5dc"
-  integrity sha512-caUvFn/ro/0Dc+dFl9Yj70/5SSaz35XHZnhfSuLkg7aieWCqPt8FWKpIYjcToHQv4TVCH/v8/1gTuwLntva+0g==
-
 "@esbuild/android-arm64@0.18.17":
   version "0.18.17"
   resolved "https://registry.yarnpkg.com/@esbuild/android-arm64/-/android-arm64-0.18.17.tgz#9e00eb6865ed5f2dbe71a1e96f2c52254cd92903"
@@ -126,6 +121,11 @@
   version "1.4.15"
   resolved "https://registry.yarnpkg.com/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.4.15.tgz#d7c6e6755c78567a951e04ab52ef0fd26de59f32"
   integrity sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==
+
+"@mdi/font@7.0.96":
+  version "7.0.96"
+  resolved "https://registry.yarnpkg.com/@mdi/font/-/font-7.0.96.tgz#9853c222623072f5575b4039c8c195ea929b61fc"
+  integrity sha512-rzlxTfR64hqY8yiBzDjmANfcd8rv+T5C0Yedv/TWk2QyAQYdc66e0kaN1ipmnYU3RukHRTRcBARHzzm+tIhL7w==
 
 "@tsconfig/node18@^18.2.0":
   version "18.2.0"
@@ -1256,6 +1256,11 @@ vue@^3.3.4:
     "@vue/runtime-dom" "3.3.4"
     "@vue/server-renderer" "3.3.4"
     "@vue/shared" "3.3.4"
+
+vuetify@^3.3.10:
+  version "3.3.10"
+  resolved "https://registry.yarnpkg.com/vuetify/-/vuetify-3.3.10.tgz#5eaf304f792c576e4083016f2fd26c81abb3b030"
+  integrity sha512-jV5zA4PMK1ik8j/alPhAR75fzSoAvUgPcoKl+fZ/buDu70vJ3nM6+F3zh78UBs0PMzyLlarwt851QNbYXLbZbQ==
 
 which-boxed-primitive@^1.0.2:
   version "1.0.2"

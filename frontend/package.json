@@ -14,9 +14,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@coreui/vue": "^4.10.0",
+    "@mdi/font": "7.0.96",
     "emulator": "file:../emulator/pkg",
-    "vue": "^3.3.4"
+    "vue": "^3.3.4",
+    "vuetify": "^3.3.10"
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.0",

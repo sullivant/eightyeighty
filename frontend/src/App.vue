@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { CCard, CCardBody, CCardTitle, CCardText, CButton } from '@coreui/vue'
+
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
 
@@ -49,6 +49,7 @@ function tick() {
 
 
 init()
+
 </script>
 
 <template>
@@ -80,13 +81,8 @@ init()
     </button>
   </main>
 
-  <CCard style="width: 18rem">
-      <CCardBody>
-        <CCardTitle>Card title</CCardTitle>
-        <CCardText>{{  currRAM }}</CCardText>
-        <CButton href="#">Go somewhere</CButton>
-      </CCardBody>
-    </CCard>
+  <v-icon>mdi-home</v-icon>
+
 </template>
 
 <style scoped>
