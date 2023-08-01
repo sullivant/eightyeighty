@@ -1,29 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive, computed } from 'vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
 
-const disassembleState = ref(false)
+
+const disassembleState = ref(false);
+
 const cpuState = ref("CPU NOT READY");
 const currInstr = ref("NO INSTRUCTION");
 const currRAM = ref("NO RAM");
-
-function updateInterface() {
-  disassembleState.value = cpu_get_disassemble();
-  cpuState.value = cpu_state();
-  currInstr.value = cpu_curr_instr();
-  currRAM.value = cpu_get_memory();
-}
 
 function greetWASM() {
   console.log("Greeting WASM")
   cpu_greet()
 }
 
-function setDisassemble(flag: boolean) {
-  cpu_set_disassemble(flag)
-  updateInterface();
+function toggleDisassemble() {
+  // cpu_set_disassemble(!disassembleState.value)
+  disassembleState.value = !disassembleState.value
+  cpu_set_disassemble(disassembleState.value)
 }
 
 function loadROM() {
@@ -39,18 +35,11 @@ function loadROM() {
         cpu_memory_write(start_index+i, rom.getUint8(i));
       }
     })
-    updateInterface()
 }
 
 function tick() {
   cpu_tick()
-  updateInterface()
 }
-
-function getCPUState() {
-  cpuState.value = cpu_state();
-}
-
 
 init()
 
@@ -65,8 +54,8 @@ init()
 
         <v-list density="compact" nav>
           <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
-          <v-list-item prepend-icon="mdi-check-circle-outline" title="Set Disassemble" @click="setDisassemble(true)"></v-list-item>
-          <v-list-item prepend-icon="mdi-alpha-x-circle-outline" title="Unset Disassemble" @click="setDisassemble(false)"></v-list-item>
+          <v-list-item v-if="disassembleState" prepend-icon="mdi-check-circle-outline" title="Toggle Disassemble" @click="toggleDisassemble()"></v-list-item>
+          <v-list-item v-else prepend-icon="mdi-alpha-x-circle-outline" title="Toggle Disassemble" @click="toggleDisassemble()"></v-list-item>
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
         </v-list>
     </v-navigation-drawer>
