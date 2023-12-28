@@ -19,7 +19,6 @@ default = ["console_error_panic_hook"]
 [dependencies]
 rand = "0.7.0"
 structopt = "0.3.21"
-clap = "2.33.3"
 gl = "0.14"
 wasm-bindgen = "0.2.63"
 console_error_panic_hook = { version = "0.1.6", optional = true }
