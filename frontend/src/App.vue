@@ -16,6 +16,9 @@ function greetWASM() {
   cpu_greet()
 }
 
+// Toggles the dissassably state (which will update the latest instruction, etc)
+// and in doing so calls down to the wasm to actually implement the change.
+// (this is not just a local boolean flip.)
 function toggleDisassemble() {
   // cpu_set_disassemble(!disassembleState.value)
   disassembleState.value = !disassembleState.value
@@ -53,17 +56,26 @@ init()
       <v-divider></v-divider>
 
         <v-list density="compact" nav>
+          <v-list-item
+            prepend-icon="mdi-robot-love-outline"
+            title="Controls"
+          />
+          <v-divider/>
           <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
-          <v-list-item v-if="disassembleState" prepend-icon="mdi-check-circle-outline" title="Toggle Disassemble" @click="toggleDisassemble()"></v-list-item>
-          <v-list-item v-else prepend-icon="mdi-alpha-x-circle-outline" title="Toggle Disassemble" @click="toggleDisassemble()"></v-list-item>
+          <v-list-item v-if="disassembleState" prepend-icon="mdi-package-variant" title="Disassembling" @click="toggleDisassemble()"></v-list-item>
+          <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
         </v-list>
     </v-navigation-drawer>
 
-    <v-navigation-drawer location="right">
-      <v-list>
-        <v-list-item title="Disassemble">{{ disassembleState }}</v-list-item>
-      </v-list>
+    <v-navigation-drawer location="right"> 
+      <v-list density="compact" nav>
+          <v-list-item
+            prepend-icon="mdi-puzzle-outline"
+            title="Details"
+          />
+          <v-divider/>
+        </v-list>
     </v-navigation-drawer>
 
     <v-main class="d-flex align-center justify-center" style="min-height: 300px;">

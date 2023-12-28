@@ -10,6 +10,11 @@ use crate::cpu::CPU;
 use wasm_bindgen::prelude::*;
 use web_sys::console::{self};
 
+/**
+ * This library is, at its heart, simply a WASM bound wrapper to the calls necessary to do
+ * stuff within main.rs and cpu.rs.
+ */
+
 #[derive(Clone)]
 pub struct Emulator {
     cpu: CPU,

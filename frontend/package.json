@@ -14,6 +14,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/types": "^7.23.6",
     "@mdi/font": "7.0.96",
     "emulator": "file:../emulator/pkg",
     "vue": "^3.3.4",
