@@ -6,10 +6,13 @@ import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_w
 
 
 const disassembleState = ref(false);
-
 const cpuState = ref("CPU NOT READY");
 const currInstr = ref("NO INSTRUCTION");
-const currRAM = ref("NO RAM");
+
+type Memory= {
+  data: number[];
+};
+let currRAM = ref(JSON.parse('{"data": [-1]}') as Memory);
 
 function greetWASM() {
   console.log("Greeting WASM")
@@ -44,6 +47,12 @@ function tick() {
   cpu_tick()
 }
 
+async function refreshRAMState() {
+  console.log("Refreshing CPU memory...");
+  const newRAMState = cpu_get_memory();
+  currRAM.value = JSON.parse(newRAMState) as Memory;
+}
+
 init()
 
 </script>
@@ -65,6 +74,7 @@ init()
           <v-list-item v-if="disassembleState" prepend-icon="mdi-package-variant" title="Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
+          <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
         </v-list>
     </v-navigation-drawer>
 
@@ -75,16 +85,35 @@ init()
             title="Details"
           />
           <v-divider/>
+          {{  currInstr }}
+          <v-divider/>
         </v-list>
     </v-navigation-drawer>
 
     <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
-      {{ cpuState }}
+
+      <v-sheet color="grey-lighten-3" :height="200" :width="200" rounded>{{ cpuState }}</v-sheet>
+
+      
+      <v-sheet :height="200" :width="200" rounded>
+        <div style="display: flex; height: 200px;">
+          <v-virtual-scroll :items="currRAM.data">
+            <template v-slot:default="{ item }">
+              Virtual Item {{ item }}
+            </template>
+          </v-virtual-scroll>
+        </div>
+      </v-sheet>
     </v-main>
 
-    <v-bottom-navigation>
-      {{  currInstr }}
-    </v-bottom-navigation>
+
+    <!-- 
+    <v-bottom-navigation class="cpu-ram">
+      <v-sheet>
+
+      </v-sheet>
+    </v-bottom-navigation> 
+    -->
   </v-layout>
 
 
