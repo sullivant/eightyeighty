@@ -37,7 +37,7 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn cpu_greet() {
-    alert("Hello from WASM...".to_string());
+    alert("Hello from WASM!".to_string());
 }
 
 #[wasm_bindgen]
@@ -75,6 +75,8 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
     Ok(true)
 }
 
+/// This returns all the memory.  Which... whatever.  Could probably be paged
+/// in such a way as to only return what's requested.  "(operating)Memory is cheap?"
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]

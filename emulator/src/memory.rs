@@ -13,7 +13,6 @@ use crate::constants::RAM_SIZE;
 
 const SLICE_SIZE: usize = 16;
 
-// Let's see how long we can last as full private?
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Memory {
     #[serde(with = "BigArray")]

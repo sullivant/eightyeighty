@@ -9,6 +9,16 @@ const disassembleState = ref(false);
 const cpuState = ref("CPU NOT READY");
 const currInstr = ref("NO INSTRUCTION");
 
+const items = [
+    {
+      name: 'African Elephant',
+      species: 'Loxodonta africana',
+      diet: 'Herbivore',
+      habitat: 'Savanna, Forests',
+    },
+    // ... more items
+  ]
+
 type Memory= {
   data: number[];
 };
@@ -87,22 +97,23 @@ init()
           <v-divider/>
           {{  currInstr }}
           <v-divider/>
+          <v-divider/>
+          {{ cpuState }}
+          <v-divider/>
+          {{ currRAM.data }}
         </v-list>
     </v-navigation-drawer>
 
     <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
-
-      <v-sheet color="grey-lighten-3" :height="200" :width="200" rounded>{{ cpuState }}</v-sheet>
-
-      
-      <v-sheet :height="200" :width="200" rounded>
-        <div style="display: flex; height: 200px;">
+      <v-sheet :height="400" :width="400" rounded>
+        <!-- <div style="display: flex; height: 400px;">
           <v-virtual-scroll :items="currRAM.data">
             <template v-slot:default="{ item }">
-              Virtual Item {{ item }}
+             {{ item }}
             </template>
           </v-virtual-scroll>
-        </div>
+        </div> -->
+        <v-data-table :items="currRAM.data"></v-data-table>
       </v-sheet>
     </v-main>
 

@@ -18,7 +18,7 @@
     "@mdi/font": "7.0.96",
     "emulator": "file:../emulator/pkg",
     "vue": "^3.3.4",
-    "vuetify": "^3.3.10"
+    "vuetify": "^3.5.15"
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.0",
