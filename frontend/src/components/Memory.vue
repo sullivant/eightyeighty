@@ -1,0 +1,34 @@
+<script setup lang="ts">
+import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
+  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
+
+defineProps(['currRAM'])
+
+const memoryHeaders = [
+  { title: '', value: 'address' },
+  { title: '0x0', value: '0x0' },
+  { title: '0x1', value: '0x1' },
+  { title: '0x2', value: '0x2' },
+  { title: '0x3', value: '0x3' },
+  { title: '0x4', value: '0x4' },
+  { title: '0x5', value: '0x5' },
+  { title: '0x6', value: '0x6' },
+  { title: '0x7', value: '0x7' },
+  { title: '0x8', value: '0x8' },
+  { title: '0x9', value: '0x9' },
+  { title: '0xA', value: '0xA' },
+  { title: '0xB', value: '0xB' },
+  { title: '0xC', value: '0xC' },
+  { title: '0xD', value: '0xD' },
+  { title: '0xE', value: '0xE' },
+  { title: '0xF', value: '0xF' },
+]
+
+</script>
+
+<template>
+      <v-sheet rounded>
+        <v-data-table :headers="memoryHeaders" :items="currRAM" density="compact">
+        </v-data-table>
+      </v-sheet>
+</template>

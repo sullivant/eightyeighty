@@ -1,28 +1,16 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import Memory from './components/Memory.vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
 
-
+var tab = null;
 const disassembleState = ref(false);
 const cpuState = ref("CPU NOT READY");
 const currInstr = ref("NO INSTRUCTION");
 
-const items = [
-    {
-      name: 'African Elephant',
-      species: 'Loxodonta africana',
-      diet: 'Herbivore',
-      habitat: 'Savanna, Forests',
-    },
-    // ... more items
-  ]
-
-type Memory= {
-  data: number[];
-};
-let currRAM = ref(JSON.parse('{"data": [-1]}') as Memory);
+let currRAM = ref(JSON.parse('[{"address": -1}]'));
 
 function greetWASM() {
   console.log("Greeting WASM")
@@ -59,8 +47,20 @@ function tick() {
 
 async function refreshRAMState() {
   console.log("Refreshing CPU memory...");
-  const newRAMState = cpu_get_memory();
-  currRAM.value = JSON.parse(newRAMState) as Memory;
+  currRAM.value=[];
+
+  //Walk through each slice, incrementing address by 0x0F each time and insert it into currRAM.value[]
+  for(let i = 0; i < 4096; i++){
+    var thisAddress = (i*16);
+    const ramState = JSON.parse(cpu_get_memory(thisAddress));   // i*16
+    var currSlice = {};
+    currSlice["address"] = "0x"+thisAddress.toString(16).toUpperCase().padStart(4,'0');
+    ramState.forEach((element, idx) => {
+      currSlice["0x"+idx.toString(16).toUpperCase()] = element.toString(16).toUpperCase().padStart(1,'0');
+    });
+    currRAM.value.push(currSlice);
+  }
+
 }
 
 init()
@@ -100,34 +100,15 @@ init()
           <v-divider/>
           {{ cpuState }}
           <v-divider/>
-          {{ currRAM.data }}
+          {{ tab }}
         </v-list>
     </v-navigation-drawer>
 
     <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
-      <v-sheet :height="400" :width="400" rounded>
-        <!-- <div style="display: flex; height: 400px;">
-          <v-virtual-scroll :items="currRAM.data">
-            <template v-slot:default="{ item }">
-             {{ item }}
-            </template>
-          </v-virtual-scroll>
-        </div> -->
-        <v-data-table :items="currRAM.data"></v-data-table>
-      </v-sheet>
+      <Memory :currRAM=currRAM />
     </v-main>
 
-
-    <!-- 
-    <v-bottom-navigation class="cpu-ram">
-      <v-sheet>
-
-      </v-sheet>
-    </v-bottom-navigation> 
-    -->
   </v-layout>
-
-
 
 </template>
 

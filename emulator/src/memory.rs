@@ -45,6 +45,19 @@ impl Memory {
         }
     }
 
+    pub fn get_slice(&self, start: usize) -> [u8; 16] {
+        let mut ret: [u8; 16] = [0; 16];
+
+        for n in 0..16 {
+            ret[n] = match self.read(n + start) {
+                Ok(x) => x,
+                Err(_) => 0
+            };
+        }
+
+        return ret;
+    }
+
     // Returns a cloned copy of the value in memory, or an error if unable to read
     // from that portion.
     pub fn read(&self, loc: usize) -> Result<u8, String> {

@@ -75,13 +75,20 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
     Ok(true)
 }
 
-/// This returns all the memory.  Which... whatever.  Could probably be paged
-/// in such a way as to only return what's requested.  "(operating)Memory is cheap?"
+/// This returns a slice of memory, based off of a starting
+/// address and consists of an array that is formatted in address/value pairs like this: [[0,255], [1,128]]
+/// 
+/// TODO: Actually access based on slice starting index.  
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
-pub fn cpu_get_memory() -> String {
-    unsafe { EMULATOR.cpu.memory.to_string() }
+pub fn cpu_get_memory(start: usize) -> String {
+
+    unsafe {
+        format!("{:?}",EMULATOR.cpu.memory.get_slice(start))
+    }
+
+    // unsafe { EMULATOR.cpu.memory.to_string() }
 }
 
 #[wasm_bindgen]
