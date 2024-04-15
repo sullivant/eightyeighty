@@ -27,7 +27,7 @@ const memoryHeaders = [
 </script>
 
 <template>
-      <v-sheet rounded>
+      <v-sheet rounded border>
         <v-data-table :headers="memoryHeaders" :items="currRAM" density="compact">
         </v-data-table>
       </v-sheet>

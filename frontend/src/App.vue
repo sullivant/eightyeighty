@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import Memory from './components/Memory.vue'
+import Registers from './components/Registers.vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
@@ -11,6 +12,11 @@ const cpuState = ref("CPU NOT READY");
 const currInstr = ref("NO INSTRUCTION");
 
 let currRAM = ref(JSON.parse('[{"address": -1}]'));
+// let currRegisters = ref(JSON.parse('[{"register":"PC", "value":-1}]'))
+let currRegisters = [
+  {register:"PC", value:-1},
+  {register:"SP", value:-1},
+]
 
 function greetWASM() {
   console.log("Greeting WASM")
@@ -100,11 +106,11 @@ init()
           <v-divider/>
           {{ cpuState }}
           <v-divider/>
-          {{ tab }}
+          <Registers :currRegisters=currRegisters />
         </v-list>
     </v-navigation-drawer>
 
-    <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
+    <v-main class="d-flex" style="min-height: 300px;">
       <Memory :currRAM=currRAM />
     </v-main>
 
