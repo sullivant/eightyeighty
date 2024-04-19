@@ -77,8 +77,6 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
 
 /// This returns a slice of memory, based off of a starting
 /// address and consists of an array that is formatted in address/value pairs like this: [[0,255], [1,128]]
-/// 
-/// TODO: Actually access based on slice starting index.  
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
@@ -91,11 +89,38 @@ pub fn cpu_get_memory(start: usize) -> String {
     // unsafe { EMULATOR.cpu.memory.to_string() }
 }
 
+
+/// Returns an array containing all of the current register values as well as PC.
+#[wasm_bindgen]
+#[no_mangle]
+#[must_use]
+pub fn get_all_registers() -> String {
+    let mut ret: [usize; 9] = [0; 9];
+
+    unsafe {
+        let regs = EMULATOR.cpu.get_all_registers();
+        // (&self.pc, &self.sp, &self.a, &self.b, &self.c, &self.d, &self.e, &self.h, &self.l)
+        ret[0] = *regs.0; // PC
+        ret[1] = *regs.1 as usize; // SP
+        ret[2] = *regs.2 as usize; // A
+        ret[3] = *regs.3 as usize; // B
+        ret[4] = *regs.4 as usize; // C
+        ret[5] = *regs.5 as usize; // D
+        ret[6] = *regs.6 as usize; // E
+        ret[7] = *regs.7 as usize; // H
+        ret[8] = *regs.8 as usize; // L
+    
+        format!("{:?}", ret)
+    }
+}
+
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
 pub fn cpu_state() -> String {
-    unsafe { EMULATOR.cpu.to_string() }
+    unsafe { 
+        EMULATOR.cpu.to_string() 
+    }
 }
 
 #[wasm_bindgen]

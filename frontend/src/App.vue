@@ -4,19 +4,20 @@ import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
+  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick, get_all_registers } from 'emulator'
 
 var tab = null;
 const disassembleState = ref(false);
 const cpuState = ref("CPU NOT READY");
 const currInstr = ref("NO INSTRUCTION");
 
-let currRAM = ref(JSON.parse('[{"address": -1}]'));
+let currRAM = ref([{address: -1}]);
+
 // let currRegisters = ref(JSON.parse('[{"register":"PC", "value":-1}]'))
-let currRegisters = [
+let currRegisters = ref([
   {register:"PC", value:-1},
-  {register:"SP", value:-1},
-]
+  {register:"SP", value:123},
+]);
 
 function greetWASM() {
   console.log("Greeting WASM")
@@ -45,10 +46,18 @@ function loadROM() {
         cpu_memory_write(start_index+i, rom.getUint8(i));
       }
     })
+
+
+  refreshRAMState();
 }
 
 function tick() {
-  cpu_tick()
+  cpu_tick();
+  refreshRAMState();
+}
+
+function makeHex(value, hexlen) {
+  return "0x"+value.toString(16).toUpperCase().padStart(hexlen,'0');
 }
 
 async function refreshRAMState() {
@@ -66,7 +75,25 @@ async function refreshRAMState() {
     });
     currRAM.value.push(currSlice);
   }
+}
 
+async function refreshRegisters() {
+  // (&self.pc, &self.sp, &self.a, &self.b, &self.c, &self.d, &self.e, &self.h, &self.l)
+  console.log("Refreshing Registers...");
+  currRegisters.value=[];
+  const regState = JSON.parse(get_all_registers());
+
+  currRegisters.value.push({register:"PC", value:makeHex(regState[0], 4)});
+  currRegisters.value.push({register:"SP", value:makeHex(regState[1], 4)});
+  currRegisters.value.push({register:"A", value:makeHex(regState[2], 4)});
+  currRegisters.value.push({register:"B", value:makeHex(regState[3], 4)});
+  currRegisters.value.push({register:"C", value:makeHex(regState[4], 4)});
+  currRegisters.value.push({register:"D", value:makeHex(regState[5], 4)});
+  currRegisters.value.push({register:"E", value:makeHex(regState[6], 4)});
+  currRegisters.value.push({register:"H", value:makeHex(regState[7], 4)});
+  currRegisters.value.push({register:"L", value:makeHex(regState[8], 4)});
+
+  console.log(regState[0]);
 }
 
 init()
@@ -91,6 +118,7 @@ init()
           <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
           <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
+          <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
         </v-list>
     </v-navigation-drawer>
 

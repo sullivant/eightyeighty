@@ -607,8 +607,8 @@ impl CPU {
     }
 
     #[must_use]
-    pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
-        (&self.pc, &self.sp, &self.h, &self.l, &self.b)
+    pub fn get_all_registers(&self) -> (&usize, &u16, &u8, &u8, &u8, &u8, &u8, &u8, &u8) {
+        (&self.pc, &self.sp, &self.a, &self.b, &self.c, &self.d, &self.e, &self.h, &self.l)
     }
 
     // Computes and sets the mask of flags for a supplied value

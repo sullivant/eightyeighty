@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
+  import { ref } from 'vue'
 
-defineProps(['currRAM'])
+defineProps(['currRAM']);
+const search = ref('');
 
 const memoryHeaders = [
-  { title: '', value: 'address' },
+  { title: 'Address', value: 'address', sortable: false},
   { title: '0x0', value: '0x0' },
   { title: '0x1', value: '0x1' },
   { title: '0x2', value: '0x2' },
@@ -28,7 +30,23 @@ const memoryHeaders = [
 
 <template>
       <v-sheet rounded border>
-        <v-data-table :headers="memoryHeaders" :items="currRAM" density="compact">
-        </v-data-table>
+        <v-card title="" flat >
+
+          <template v-slot:text>
+            <v-text-field
+              v-model="search"
+              label="Search"
+              prepend-inner-icon="mdi-magnify"
+              variant="outlined"
+              hide-details
+              clearable
+              single-line
+            ></v-text-field>
+          </template>
+          
+          <v-data-table :headers="memoryHeaders" :items="currRAM" :search="search" density="compact">
+          </v-data-table>
+          Search is {{ search }}
+      </v-card>
       </v-sheet>
 </template>
