@@ -130,6 +130,32 @@ impl CPU {
         }
     }
 
+    /// Performs a basic CPU reset without the need to re-create the entire CPU
+    pub fn reset(&mut self) -> Result<(), String> {
+        self.memory = Memory::new();
+        self.pc = 0x00;
+        self.sp = 0x00;
+        self.a = 0x00;
+        self.b = 0x00;
+        self.c = 0x00;
+        self.d = 0x00;
+        self.e = 0x00;
+        self.h = 0x00;
+        self.l = 0x00;
+        self.flags = 0x02;
+        self.disassemble = false;
+        self.single_step_mode = false;
+        self.ok_to_step = true;
+        self.ok_to_step = true;
+        self.tick_happened = false;
+        self.nop = false;
+        self.interrupts = false;
+        self.cycle_count = 1;
+        self.current_instruction = Instruction::new(0x00);
+
+        Ok(())
+    }
+
     // Reads an instruction at ProgramCounter
     pub fn read_instruction(&mut self) -> Instruction {
         let opcode = self.memory.read(self.pc).unwrap_or(0);

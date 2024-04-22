@@ -144,3 +144,18 @@ pub fn cpu_tick() -> bool {
         }
     }
 }
+
+#[wasm_bindgen]
+#[no_mangle]
+#[must_use]
+pub fn cpu_reset() -> bool {
+    unsafe {
+        match EMULATOR.cpu.reset() {
+            Ok(_) => true,
+            Err(e) => {
+                console::log_1(&JsValue::from(e.to_string()));
+                false
+            }
+        }
+    }
+}

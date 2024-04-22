@@ -26,6 +26,8 @@ const memoryHeaders = [
   { title: '0xF', value: '0xF' },
 ]
 
+//TODO: Highlight PC's location.  Maybe SP too?
+
 </script>
 
 <template>

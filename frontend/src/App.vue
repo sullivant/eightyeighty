@@ -4,7 +4,7 @@ import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick, get_all_registers } from 'emulator'
+  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
 
 var tab = null;
 const disassembleState = ref(false);
@@ -34,8 +34,6 @@ function toggleDisassemble() {
 }
 
 function loadROM() {
-  console.log("Loading INVADERS.COM")
-
   fetch('roms/INVADERS.COM')
     .then(i => i.arrayBuffer())
     .then(buffer => {
@@ -45,15 +43,26 @@ function loadROM() {
       for (let i = 0; i < rom.byteLength; i++) {
         cpu_memory_write(start_index+i, rom.getUint8(i));
       }
-    })
-
+    });
+  console.log("Loaded INVADERS.COM");
 
   refreshRAMState();
+  refreshRegisters();
+}
+
+function reset() {
+  console.log("Resetting CPU");
+  cpu_reset();
+  refreshRAMState();
+  refreshRegisters();
+  refreshCurrentInstr();
 }
 
 function tick() {
   cpu_tick();
   refreshRAMState();
+  refreshRegisters();
+  refreshCurrentInstr();
 }
 
 function makeHex(value, hexlen) {
@@ -92,8 +101,11 @@ async function refreshRegisters() {
   currRegisters.value.push({register:"E", value:makeHex(regState[6], 4)});
   currRegisters.value.push({register:"H", value:makeHex(regState[7], 4)});
   currRegisters.value.push({register:"L", value:makeHex(regState[8], 4)});
+}
 
-  console.log(regState[0]);
+async function refreshCurrentInstr() {
+  console.log("Refreshing current instruction...");
+  currInstr.value=cpu_curr_instr();
 }
 
 init()
@@ -114,6 +126,7 @@ init()
           />
           <v-divider/>
           <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
+          <v-list-item prepend-icon="mdi-restart" title="Rest CPU" @click="reset()"></v-list-item>          
           <v-list-item v-if="disassembleState" prepend-icon="mdi-package-variant" title="Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
@@ -123,19 +136,7 @@ init()
     </v-navigation-drawer>
 
     <v-navigation-drawer location="right"> 
-      <v-list density="compact" nav>
-          <v-list-item
-            prepend-icon="mdi-puzzle-outline"
-            title="Details"
-          />
-          <v-divider/>
-          {{  currInstr }}
-          <v-divider/>
-          <v-divider/>
-          {{ cpuState }}
-          <v-divider/>
-          <Registers :currRegisters=currRegisters />
-        </v-list>
+        <Registers :currRegisters=currRegisters :cpuState=cpuState :currInstr=currInstr />
     </v-navigation-drawer>
 
     <v-main class="d-flex" style="min-height: 300px;">
