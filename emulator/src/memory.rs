@@ -1,6 +1,8 @@
 // use std::fmt;
 
 use std::fmt;
+use serde::{Deserialize,Serialize};
+use serde_big_array::BigArray;
 
 use crate::constants::RAM_SIZE;
 
@@ -11,27 +13,21 @@ use crate::constants::RAM_SIZE;
 
 const SLICE_SIZE: usize = 16;
 
-// Let's see how long we can last as full private?
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Memory {
-    data: [u8; RAM_SIZE],
-    pub table_start: usize, // If set, will allow fmt::Display to be truncated/walked
-    pub table_stop: usize,  // If set, will allow fmt::Display to be truncated/walked
+    #[serde(with = "BigArray")]
+    data: [u8; RAM_SIZE]
 }
 
+/// When returning (for display) the memory, we need to represent this as a JSON string
+/// so that the caller can parse it in the way necessary.
+/// 
+/// TODO: Consider a separate "as JSON" function, to allow for display of ram in other ways.
 impl fmt::Display for Memory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let iter = &mut self.data[self.table_start..=self.table_stop].chunks(SLICE_SIZE);
-        let mut idx: usize = self.table_start;
-
-        let mut out = format!("{}\n", table_header());
-
-        for element in iter {
-            out = format!("{out}{idx:04X} {element:02X?}\n");
-            idx += SLICE_SIZE;
-        }
-
-        write!(f, "{out}")?;
+        // Serialize it to a JSON string.
+        let j = serde_json::to_string(self).unwrap();
+        write!(f, "{j}")?;
         Ok(())
     }
 }
@@ -43,12 +39,23 @@ impl Default for Memory {
 }
 
 impl Memory {
-    pub fn new() -> Memory {
+    pub const fn new() -> Memory {
         Memory {
-            data: [0; RAM_SIZE],
-            table_start: 0,
-            table_stop: RAM_SIZE - 1,
+            data: [0; RAM_SIZE]
         }
+    }
+
+    pub fn get_slice(&self, start: usize) -> [u8; 16] {
+        let mut ret: [u8; 16] = [0; 16];
+
+        for n in 0..16 {
+            ret[n] = match self.read(n + start) {
+                Ok(x) => x,
+                Err(_) => 0
+            };
+        }
+
+        return ret;
     }
 
     // Returns a cloned copy of the value in memory, or an error if unable to read

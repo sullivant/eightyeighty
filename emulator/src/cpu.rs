@@ -42,10 +42,11 @@ pub struct CPU {
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
     pub nop: bool,
 
-    pub interrupts: bool, // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
+    pub interrupts: bool,                   // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
 
-    pub cycle_count: usize, // Cycle count
-    pub current_instruction: Instruction,
+    pub cycle_count: usize,                 // Cycle count
+    pub current_instruction: Instruction,   // Used in cpu.run_opcode()
+    pub next_instruction: Instruction,      // Populated after run_opcode() but before next tick()
 }
 
 #[allow(unused)]
@@ -102,7 +103,7 @@ impl Default for CPU {
 
 impl CPU {
     #[must_use]
-    pub fn new() -> CPU {
+    pub const fn new() -> CPU {
         CPU {
             //memory: [0; RAM_SIZE],
             memory: Memory::new(),
@@ -126,8 +127,36 @@ impl CPU {
             nop: false,
             interrupts: false,
             cycle_count: 1,
-            current_instruction: Instruction::new(0x00),
+            current_instruction: Instruction::new(0x00), 
+            next_instruction: Instruction::new(0x00) 
         }
+    }
+
+    /// Performs a basic CPU reset without the need to re-create the entire CPU
+    pub fn reset(&mut self) -> Result<(), String> {
+        self.memory = Memory::new();
+        self.pc = 0x00;
+        self.sp = 0x00;
+        self.a = 0x00;
+        self.b = 0x00;
+        self.c = 0x00;
+        self.d = 0x00;
+        self.e = 0x00;
+        self.h = 0x00;
+        self.l = 0x00;
+        self.flags = 0x02;
+        self.disassemble = false;
+        self.single_step_mode = false;
+        self.ok_to_step = true;
+        self.ok_to_step = true;
+        self.tick_happened = false;
+        self.nop = false;
+        self.interrupts = false;
+        self.cycle_count = 1;
+        self.current_instruction = Instruction::new(0x00);
+        self.next_instruction = Instruction::new(0x00);
+
+        Ok(())
     }
 
     // Reads an instruction at ProgramCounter
@@ -180,10 +209,15 @@ impl CPU {
         self.cycle_count += 1;
 
         // If we are not ok after running the opcode, we will error
-        match self.run_opcode() {
+        let retCode = match self.run_opcode() {
             Ok(_) => Ok(()),
             Err(e) => Err(e),
-        }
+        };
+
+        // Store what we think our next instruction will be
+        self.next_instruction = self.read_instruction();
+
+        return retCode;
     }
 
     // Gathers the data necessary for the instruction and
@@ -607,8 +641,8 @@ impl CPU {
     }
 
     #[must_use]
-    pub fn get_registers(&self) -> (&usize, &u16, &u8, &u8, &u8) {
-        (&self.pc, &self.sp, &self.h, &self.l, &self.b)
+    pub fn get_all_registers(&self) -> (&usize, &u16, &u8, &u8, &u8, &u8, &u8, &u8, &u8) {
+        (&self.pc, &self.sp, &self.a, &self.b, &self.c, &self.d, &self.e, &self.h, &self.l)
     }
 
     // Computes and sets the mask of flags for a supplied value

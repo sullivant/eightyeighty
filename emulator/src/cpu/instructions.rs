@@ -34,7 +34,7 @@ impl fmt::Display for Instruction {
 
 impl Instruction {
     #[allow(clippy::too_many_lines)]
-    pub fn new(opcode: u8) -> Instruction {
+    pub const fn new(opcode: u8) -> Instruction {
         // Gather size, cycles, and text
         let info = match opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => (1, 4, OP_NOP),

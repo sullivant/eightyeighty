@@ -31,8 +31,4 @@ impl Video {
     pub fn new() -> Video {
         Video { tick_count: 0 }
     }
-
-    pub fn tick(&mut self) {
-        self.tick_count += 1;
-    }
 }

@@ -3,11 +3,14 @@ An Intel 8080 Emulator, written in Rust.
 
 [![Continuous Integration](https://github.com/sullivant/eightyeighty/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sullivant/eightyeighty/actions/workflows/ci.yml)
 
+## Needed
+NPM
+Yarn
+wasm-pack
+
 ## The deal
-- Clone.
-- Ensure lib sdl2 installed
-- `cargo build`
-- Acquire ROMs and place into ./resources/roms/
-- Acquire fonts and place into ./resources/fonts/
-- `cargo run -- ROMNAME`
-- Laugh as it fails because I messed up an opcode.  
+``` sh
+cd frontend
+yarn build
+yarn dev
+```
