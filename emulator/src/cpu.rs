@@ -42,10 +42,11 @@ pub struct CPU {
     // A flag to indicate that we do not wish to execute, probably just printing disassembly
     pub nop: bool,
 
-    pub interrupts: bool, // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
+    pub interrupts: bool,                   // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
 
-    pub cycle_count: usize, // Cycle count
-    pub current_instruction: Instruction,
+    pub cycle_count: usize,                 // Cycle count
+    pub current_instruction: Instruction,   // Used in cpu.run_opcode()
+    pub next_instruction: Instruction,      // Populated after run_opcode() but before next tick()
 }
 
 #[allow(unused)]
@@ -126,7 +127,8 @@ impl CPU {
             nop: false,
             interrupts: false,
             cycle_count: 1,
-            current_instruction: Instruction::new(0x00),
+            current_instruction: Instruction::new(0x00), 
+            next_instruction: Instruction::new(0x00) 
         }
     }
 
@@ -152,6 +154,7 @@ impl CPU {
         self.interrupts = false;
         self.cycle_count = 1;
         self.current_instruction = Instruction::new(0x00);
+        self.next_instruction = Instruction::new(0x00);
 
         Ok(())
     }
@@ -206,10 +209,15 @@ impl CPU {
         self.cycle_count += 1;
 
         // If we are not ok after running the opcode, we will error
-        match self.run_opcode() {
+        let retCode = match self.run_opcode() {
             Ok(_) => Ok(()),
             Err(e) => Err(e),
-        }
+        };
+
+        // Store what we think our next instruction will be
+        self.next_instruction = self.read_instruction();
+
+        return retCode;
     }
 
     // Gathers the data necessary for the instruction and

@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
+  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_next_instr, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
+
+const theme = useTheme()
 
 var tab = null;
 const disassembleState = ref(false);
 const cpuState = ref("CPU NOT READY");
-const currInstr = ref("NO INSTRUCTION");
+const lastInstr = ref("NO LAST INSTRUCTION");
+const nextInstr = ref("NO NEXT INSTRUCTION");
 
 let currRAM = ref([{address: -1}]);
 
@@ -18,6 +22,10 @@ let currRegisters = ref([
   {register:"PC", value:-1},
   {register:"SP", value:123},
 ]);
+
+function toggleTheme() {
+  theme.global.name = theme.global.current.dark ? 'light' : 'dark'
+}
 
 function greetWASM() {
   console.log("Greeting WASM")
@@ -55,14 +63,14 @@ function reset() {
   cpu_reset();
   refreshRAMState();
   refreshRegisters();
-  refreshCurrentInstr();
+  refreshInstructions();
 }
 
 function tick() {
   cpu_tick();
   refreshRAMState();
   refreshRegisters();
-  refreshCurrentInstr();
+  refreshInstructions();
 }
 
 function makeHex(value, hexlen) {
@@ -103,9 +111,10 @@ async function refreshRegisters() {
   currRegisters.value.push({register:"L", value:makeHex(regState[8], 4)});
 }
 
-async function refreshCurrentInstr() {
-  console.log("Refreshing current instruction...");
-  currInstr.value=cpu_curr_instr();
+async function refreshInstructions() {
+  console.log("Refreshing instructions...");
+  lastInstr.value=cpu_curr_instr();
+  nextInstr.value=cpu_next_instr();
 }
 
 init()
@@ -113,6 +122,7 @@ init()
 </script>
 
 <template>
+  <v-theme-provider theme="dark">
   <v-layout class="rounded rounded-md">
     <v-app-bar color="surface-variant" title="8080"></v-app-bar>
 
@@ -132,11 +142,12 @@ init()
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
           <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
           <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
+          <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>
         </v-list>
     </v-navigation-drawer>
 
     <v-navigation-drawer location="right"> 
-        <Registers :currRegisters=currRegisters :cpuState=cpuState :currInstr=currInstr />
+        <Registers :currRegisters=currRegisters :cpuState=cpuState :lastInstr=lastInstr :nextInstr=nextInstr />
     </v-navigation-drawer>
 
     <v-main class="d-flex" style="min-height: 300px;">
@@ -144,7 +155,7 @@ init()
     </v-main>
 
   </v-layout>
-
+  </v-theme-provider>
 </template>
 
 <style scoped>

@@ -133,6 +133,13 @@ pub fn cpu_curr_instr() -> String {
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
+pub fn cpu_next_instr() -> String {
+    unsafe { EMULATOR.cpu.next_instruction.to_string() }
+}
+
+#[wasm_bindgen]
+#[no_mangle]
+#[must_use]
 pub fn cpu_tick() -> bool {
     unsafe {
         match EMULATOR.cpu.tick() {

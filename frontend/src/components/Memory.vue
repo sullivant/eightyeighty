@@ -46,9 +46,12 @@ const memoryHeaders = [
             ></v-text-field>
           </template>
           
-          <v-data-table :headers="memoryHeaders" :items="currRAM" :search="search" density="compact">
+          <v-data-table 
+            :headers="memoryHeaders" 
+            :items="currRAM" 
+            :items-per-page="16"
+            :search="search" density="compact">
           </v-data-table>
-          Search is {{ search }}
       </v-card>
       </v-sheet>
 </template>

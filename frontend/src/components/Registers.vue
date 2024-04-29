@@ -3,7 +3,7 @@ import { ref, reactive, computed } from 'vue'
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
 
-defineProps(['currRegisters','cpuState','currInstr'])
+defineProps(['currRegisters','cpuState','lastInstr','nextInstr'])
 
 const registerHeaders = [
   { title: 'Register', value: 'register' },
@@ -21,10 +21,11 @@ const hideDefaultFooter = true;
           title="Details"
         />
         <v-divider/>
-          Last: {{  currInstr }}
+          Last: {{  lastInstr }}
         <v-divider/>
+          Next: {{ nextInstr }}
         <v-divider/>
-         Next: {{ cpuState }}
+         State: {{ cpuState }}
         <v-divider/>
         <v-data-table 
           :headers="registerHeaders" 
