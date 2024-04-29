@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+// import { onKeyStroke } from '@vueuse/core'
 import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
@@ -10,7 +11,7 @@ import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_w
 const theme = useTheme()
 
 var tab = null;
-const disassembleState = ref(false);
+const shouldAutoTick = ref(false);
 const cpuState = ref("CPU NOT READY");
 const lastInstr = ref("NO LAST INSTRUCTION");
 const nextInstr = ref("NO NEXT INSTRUCTION");
@@ -34,15 +35,6 @@ function toggleTheme() {
 function greetWASM() {
   console.log("Greeting WASM")
   cpu_greet()
-}
-
-// Toggles the dissassably state (which will update the latest instruction, etc)
-// and in doing so calls down to the wasm to actually implement the change.
-// (this is not just a local boolean flip.)
-function toggleDisassemble() {
-  // cpu_set_disassemble(!disassembleState.value)
-  disassembleState.value = !disassembleState.value
-  cpu_set_disassemble(disassembleState.value)
 }
 
 function loadROM() {
@@ -72,10 +64,19 @@ function reset() {
 }
 
 function tick() {
+  console.log("Ticking...");
   cpu_tick();
   refreshRAMState();
   refreshRegisters();
   refreshInstructions();
+}
+
+function autoTick() {
+  if (shouldAutoTick.value == true) { tick(); }
+}
+
+function toggleAutoTick() {
+  shouldAutoTick.value = !shouldAutoTick.value
 }
 
 function makeHex(value, hexlen) {
@@ -130,11 +131,11 @@ async function refreshInstructions() {
 
 init()
 
-// onMounted(() => {
-//   refreshRAMState();
-//   refreshInstructions();
-//   refreshRegisters();
-// })
+
+// Things we want to do after we've mounted.
+onMounted(async () => {
+  let pollInterval = setInterval(autoTick, 500) 
+})
 
 </script>
 
@@ -143,7 +144,7 @@ init()
   <v-layout class="rounded rounded-md">
     <v-app-bar color="surface-variant" title="8080"></v-app-bar>
 
-    <v-navigation-drawer expand-on-hover rail>
+    <v-navigation-drawer location="left" style="min-width: 250px" rail>
       <v-divider></v-divider>
 
         <v-list density="compact" nav>
@@ -154,9 +155,9 @@ init()
           <v-divider/>
           <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
           <v-list-item prepend-icon="mdi-restart" title="Rest CPU" @click="reset()"></v-list-item>          
-          <v-list-item v-if="disassembleState" prepend-icon="mdi-package-variant" title="Disassembling" @click="toggleDisassemble()"></v-list-item>
-          <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Disassembling" @click="toggleDisassemble()"></v-list-item>
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
+          <v-list-item v-if="shouldAutoTick" prepend-icon="mdi-package-variant" title="Auto Ticking" @click="toggleAutoTick()"></v-list-item>
+          <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Auto Ticking" @click="toggleAutoTick()"></v-list-item>
           <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
           <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
           <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>

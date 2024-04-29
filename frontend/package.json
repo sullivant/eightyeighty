@@ -16,6 +16,7 @@
   "dependencies": {
     "@babel/types": "^7.23.6",
     "@mdi/font": "7.0.96",
+    "@vueuse/core": "^10.9.0",
     "emulator": "file:../emulator/pkg",
     "vue": "^3.3.4",
     "vuetify": "^3.5.15"
