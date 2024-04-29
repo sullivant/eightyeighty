@@ -1,6 +1,6 @@
 use std::fmt;
 
-mod instructions;
+pub(crate) mod instructions;
 mod tests;
 
 use crate::{

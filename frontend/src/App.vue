@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
 import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_next_instr, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
+  cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
 
 const theme = useTheme()
 
@@ -17,10 +17,14 @@ const nextInstr = ref("NO NEXT INSTRUCTION");
 
 let currRAM = ref([{address: -1}]);
 
-// let currRegisters = ref(JSON.parse('[{"register":"PC", "value":-1}]'))
 let currRegisters = ref([
   {register:"PC", value:-1},
   {register:"SP", value:123},
+]);
+
+let instructions = ref([
+  {type:"C", opcode:makeHex("0",2), size:"0", cycles:"0", text: ""},
+  {type:"N", opcode:makeHex("0",2), size:"0", cycles:"0", text: ""},
 ]);
 
 function toggleTheme() {
@@ -42,6 +46,7 @@ function toggleDisassemble() {
 }
 
 function loadROM() {
+  reset();
   fetch('roms/INVADERS.COM')
     .then(i => i.arrayBuffer())
     .then(buffer => {
@@ -113,11 +118,23 @@ async function refreshRegisters() {
 
 async function refreshInstructions() {
   console.log("Refreshing instructions...");
-  lastInstr.value=cpu_curr_instr();
-  nextInstr.value=cpu_next_instr();
+
+  let instrs = cpu_instructions();
+  let curr = instrs[0];
+  let next = instrs[1];
+
+  instructions.value=[];
+  instructions.value.push({type:"C", opcode:makeHex(curr.opcode,2), size:curr.size, cycles:curr.cycles, text:curr.text});
+  instructions.value.push({type:"N", opcode:makeHex(next.opcode,2), size:next.size, cycles:next.cycles, text:next.text});
 }
 
 init()
+
+// onMounted(() => {
+//   refreshRAMState();
+//   refreshInstructions();
+//   refreshRegisters();
+// })
 
 </script>
 
@@ -146,8 +163,8 @@ init()
         </v-list>
     </v-navigation-drawer>
 
-    <v-navigation-drawer location="right"> 
-        <Registers :currRegisters=currRegisters :cpuState=cpuState :lastInstr=lastInstr :nextInstr=nextInstr />
+    <v-navigation-drawer location="right" style="min-width: 300px"> 
+        <Registers :currRegisters=currRegisters :instructions=instructions :cpuState=cpuState />
     </v-navigation-drawer>
 
     <v-main class="d-flex" style="min-height: 300px;">

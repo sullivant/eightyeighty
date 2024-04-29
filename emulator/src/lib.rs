@@ -7,8 +7,10 @@ mod memory;
 mod video;
 
 use crate::cpu::CPU;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::{self};
+use cpu::instructions::{self, Instruction};
 
 /**
  * This library is, at its heart, simply a WASM bound wrapper to the calls necessary to do
@@ -120,6 +122,19 @@ pub fn get_all_registers() -> String {
 pub fn cpu_state() -> String {
     unsafe { 
         EMULATOR.cpu.to_string() 
+    }
+}
+
+
+#[wasm_bindgen]
+#[no_mangle]
+#[must_use]
+pub fn cpu_instructions() -> JsValue {
+    unsafe {
+        let mut ret = Vec::with_capacity(2);
+        ret.push(EMULATOR.cpu.current_instruction);
+        ret.push(EMULATOR.cpu.next_instruction);
+        serde_wasm_bindgen::to_value(&ret).unwrap()
     }
 }
 

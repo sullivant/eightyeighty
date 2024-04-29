@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
 
-defineProps(['currRegisters','cpuState','lastInstr','nextInstr'])
+defineProps(['currRegisters','instructions'])
 
 const registerHeaders = [
   { title: 'Register', value: 'register' },
   { title: 'Value', value: 'value' },
+]
+
+const instructionHeaders = [
+  { title: '', value: 'type'},
+  { title: 'O', value: 'opcode' },
+  { title: 'S', value: 'size' },
+  { title: 'C', value: 'cycles' },
+  { title: 'Text', value: 'text'},
 ]
 
 const hideDefaultFooter = true;
@@ -21,11 +27,12 @@ const hideDefaultFooter = true;
           title="Details"
         />
         <v-divider/>
-          Last: {{  lastInstr }}
-        <v-divider/>
-          Next: {{ nextInstr }}
-        <v-divider/>
-         State: {{ cpuState }}
+        <v-data-table
+          :headers="instructionHeaders"
+          :items="instructions"
+          density="compact">
+          <template v-slot:bottom v-if="hideDefaultFooter"></template>
+        </v-data-table>
         <v-divider/>
         <v-data-table 
           :headers="registerHeaders" 

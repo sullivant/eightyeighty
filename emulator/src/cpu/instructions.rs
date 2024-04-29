@@ -4,11 +4,13 @@ mod artithmetic;
 mod jump_call;
 mod load_store_move;
 mod misc;
+use serde::{Deserialize, Serialize};
+
 #[allow(clippy::wildcard_imports)]
 use crate::constants::*;
 
 #[allow(unused)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Instruction {
     pub opcode: u8,         // The Hex value of the instruction
     pub size: usize,        // The size of the instruction, may include DH, DL
