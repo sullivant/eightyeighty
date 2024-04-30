@@ -5,16 +5,16 @@ import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
-import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
+import init, { run, cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
 
 const theme = useTheme()
 
+var showMemory = ref(true);
+
 var tab = null;
 const shouldAutoTick = ref(false);
 const cpuState = ref("CPU NOT READY");
-const lastInstr = ref("NO LAST INSTRUCTION");
-const nextInstr = ref("NO NEXT INSTRUCTION");
 
 let currRAM = ref([{address: -1}]);
 
@@ -144,7 +144,7 @@ onMounted(async () => {
   <v-layout class="rounded rounded-md">
     <v-app-bar color="surface-variant" title="8080"></v-app-bar>
 
-    <v-navigation-drawer location="left" style="min-width: 250px" rail>
+    <v-navigation-drawer location="left" rail expand-on-hover>
       <v-divider></v-divider>
 
         <v-list density="compact" nav>
@@ -164,12 +164,21 @@ onMounted(async () => {
         </v-list>
     </v-navigation-drawer>
 
-    <v-navigation-drawer location="right" style="min-width: 300px"> 
+    <v-navigation-drawer location="right" style="min-width: 300px" rail> 
         <Registers :currRegisters=currRegisters :instructions=instructions :cpuState=cpuState />
     </v-navigation-drawer>
 
-    <v-main class="d-flex" style="min-height: 300px;">
-      <Memory :currRAM=currRAM />
+    <v-main class="d-flex flex-wrap" >
+
+      <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
+        This is our display.
+      </v-sheet>
+
+      <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
+        <Memory :currRAM=currRAM />
+      </v-sheet>
+
+        
     </v-main>
 
   </v-layout>

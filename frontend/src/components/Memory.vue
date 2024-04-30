@@ -31,27 +31,24 @@ const memoryHeaders = [
 </script>
 
 <template>
-      <v-sheet rounded border>
-        <v-card title="" flat >
-
-          <template v-slot:text>
-            <v-text-field
-              v-model="search"
-              label="Search"
-              prepend-inner-icon="mdi-magnify"
-              variant="outlined"
-              hide-details
-              clearable
-              single-line
-            ></v-text-field>
-          </template>
-          
-          <v-data-table 
-            :headers="memoryHeaders" 
-            :items="currRAM" 
-            :items-per-page="16"
-            :search="search" density="compact">
-          </v-data-table>
-      </v-card>
-      </v-sheet>
+  <v-card title="" flat >
+    <template v-slot:text>
+      <v-text-field
+        v-model="search"
+        label="Search"
+        prepend-inner-icon="mdi-magnify"
+        variant="outlined"
+        hide-details
+        clearable
+        single-line
+      ></v-text-field>
+    </template>
+    
+    <v-data-table 
+      :headers="memoryHeaders" 
+      :items="currRAM" 
+      :items-per-page="16"
+      :search="search" density="compact">
+    </v-data-table>
+  </v-card>
 </template>

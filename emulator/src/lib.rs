@@ -181,3 +181,19 @@ pub fn cpu_reset() -> bool {
         }
     }
 }
+
+
+// // An example from 'the book' that shows dom interaction
+// // source: https://rustwasm.github.io/docs/book/
+// #[wasm_bindgen(start)]
+// fn run() -> Result<(), JsValue> {
+//     let window = web_sys::window().expect("No global window exists!");
+//     let document = window.document().expect("Should have a document on the window.");
+//     let body = document.body().expect("Document should have a body.");
+
+//     // Make the element
+//     let val = document.create_element("p")?;
+//     val.set_text_content(Some("Hello from rust!"));
+//     body.append_child(&val)?;
+//     Ok(())
+// }
