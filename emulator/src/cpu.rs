@@ -175,17 +175,15 @@ impl CPU {
     /// Will return an error if necessary
     /// # Panics
     /// Will panic if an error happens
-    pub fn tick(&mut self) -> Result<(), String> {
+    pub fn tick(&mut self) -> Result<(u8), String> {
         let opcode = self.read_instruction(); // Gather the current opcode to run, based on PC's location
         self.current_instruction = opcode;
 
         // If we are in a STOPPED state, no action is necessary
         // This will be "unstopped" when an interrupt occurs
         if self.nop {
-            return Ok(());
+            return Ok(0);
         }
-
-        // TODO: Make this respect "disassemble mode"
 
         // Print the opcode we are going to run with the current CPU state alongside.
         // TODO: Have this also gather potential DL,DH values
@@ -193,11 +191,11 @@ impl CPU {
             println!("{} @ {}", self.current_instruction, self);
         }
 
-        // While we are in single step mode, let's just return,
+        // While we are in single step mode, and it's not OK to step, let's just return,
         // changing nothing about the PC, etc.
         if self.single_step_mode && !self.ok_to_step {
             self.ok_to_print = false;
-            return Ok(());
+            return Ok(0);
         }
 
         // If we get this far, we need to reset "ok_to_step" to false for next run!
@@ -209,25 +207,25 @@ impl CPU {
         self.cycle_count += 1;
 
         // If we are not ok after running the opcode, we will error
-        let retCode = match self.run_opcode() {
-            Ok(_) => Ok(()),
+        let cycles_ran = match self.run_opcode() {
+            Ok(v) => Ok(v),
             Err(e) => Err(e),
         };
 
         // Store what we think our next instruction will be
         self.next_instruction = self.read_instruction();
 
-        return retCode;
+        return cycles_ran;
     }
 
     // Gathers the data necessary for the instruction and
     // calls out to the appropriate instruction operation to
     // perform the thing...
     #[allow(clippy::too_many_lines)]
-    pub fn run_opcode(&mut self) -> Result<(), String> {
+    pub fn run_opcode(&mut self) -> Result<u8, String> {
         let (dl, dh) = match self.get_data_pair() {
             Ok(value) => value,
-            Err(value) => return value,
+            Err(_) => return Err(format!("Unable to get data pair")),
         };
 
         // Do the actual run of the opcode and return the result
@@ -505,7 +503,7 @@ impl CPU {
         match opcode_result {
             Ok(()) => {
                 self.pc += self.current_instruction.size * OPCODE_SIZE;
-                Ok(())
+                Ok((self.current_instruction.cycles))
             }
             Err(e) => Err(e),
         }

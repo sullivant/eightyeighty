@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import init, { cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_curr_instr, cpu_tick } from 'emulator'
-  import { ref } from 'vue'
+import { ref } from 'vue'
 
 defineProps(['currRAM']);
 const search = ref('');

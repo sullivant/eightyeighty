@@ -38,6 +38,8 @@ features = [
   'HtmlElement',
   'Node',
   'Window',
+  'HtmlCanvasElement',
+  'CanvasRenderingContext2d'
 ]  
 
 [dev-dependencies]

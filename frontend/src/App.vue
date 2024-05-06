@@ -5,7 +5,7 @@ import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
-import init, { run, cpu_greet, cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
+import init, { cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
 
 const theme = useTheme()
@@ -28,13 +28,12 @@ let instructions = ref([
   {type:"N", opcode:makeHex("0",2), size:"0", cycles:"0", text: ""},
 ]);
 
-function toggleTheme() {
-  theme.global.name = theme.global.current.dark ? 'light' : 'dark'
+function sleep(ms) {
+  return new Promise (res => setTimeout(res, ms));
 }
 
-function greetWASM() {
-  console.log("Greeting WASM")
-  cpu_greet()
+function toggleTheme() {
+  theme.global.name = theme.global.current.dark ? 'light' : 'dark'
 }
 
 function loadROM() {
@@ -50,9 +49,7 @@ function loadROM() {
       }
     });
   console.log("Loaded INVADERS.COM");
-
-  refreshRAMState();
-  refreshRegisters();
+  sleep(500).then(() => { refreshRAMState(); refreshRegisters(); });
 }
 
 function reset() {
@@ -64,9 +61,9 @@ function reset() {
 }
 
 function tick() {
-  console.log("Ticking...");
-  cpu_tick();
-  refreshRAMState();
+  var cycles_used = cpu_tick();
+  console.log("Ticked "+cycles_used+" cycles.");
+  // refreshRAMState();
   refreshRegisters();
   refreshInstructions();
 }
@@ -134,7 +131,7 @@ init()
 
 // Things we want to do after we've mounted.
 onMounted(async () => {
-  let pollInterval = setInterval(autoTick, 500) 
+  let pollInterval = setInterval(autoTick, 5) 
 })
 
 </script>
@@ -154,10 +151,10 @@ onMounted(async () => {
           />
           <v-divider/>
           <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
-          <v-list-item prepend-icon="mdi-restart" title="Rest CPU" @click="reset()"></v-list-item>          
+          <v-list-item prepend-icon="mdi-restart" title="Reset CPU" @click="reset()"></v-list-item>          
           <v-list-item prepend-icon="mdi-bug" title="Tick" @click="tick()"></v-list-item>
-          <v-list-item v-if="shouldAutoTick" prepend-icon="mdi-package-variant" title="Auto Ticking" @click="toggleAutoTick()"></v-list-item>
-          <v-list-item v-else prepend-icon="mdi-package-variant-closed" title="Not Auto Ticking" @click="toggleAutoTick()"></v-list-item>
+          <v-list-item v-if="shouldAutoTick" prepend-icon="mdi-autorenew" title="Auto Ticking" @click="toggleAutoTick()"></v-list-item>
+          <v-list-item v-else prepend-icon="mdi-autorenew-off" title="Not Auto Ticking" @click="toggleAutoTick()"></v-list-item>
           <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
           <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
           <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>
@@ -170,7 +167,7 @@ onMounted(async () => {
 
     <v-main class="d-flex flex-wrap" >
 
-      <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
+      <v-sheet rounded border class="flex-1-0 ma-2 pa-2" id="canvas">
         This is our display.
       </v-sheet>
 

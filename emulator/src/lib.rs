@@ -35,11 +35,16 @@ static mut EMULATOR: Emulator = Emulator::new();
 #[must_use]
 extern "C" {
     fn alert(s: String);
-}
 
-#[wasm_bindgen]
-pub fn cpu_greet() {
-    alert("Hello from WASM!".to_string());
+    // Various forms of logging with different signatures
+    // Thank you  wasm-bindgen guide.  Of course we can also use
+    // console::log_2(...)
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_u32(a: u32);
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_many(a: &str, b: &str);
 }
 
 #[wasm_bindgen]
@@ -83,12 +88,9 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
 #[no_mangle]
 #[must_use]
 pub fn cpu_get_memory(start: usize) -> String {
-
     unsafe {
         format!("{:?}",EMULATOR.cpu.memory.get_slice(start))
     }
-
-    // unsafe { EMULATOR.cpu.memory.to_string() }
 }
 
 
@@ -141,27 +143,13 @@ pub fn cpu_instructions() -> JsValue {
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
-pub fn cpu_curr_instr() -> String {
-    unsafe { EMULATOR.cpu.current_instruction.to_string() }
-}
-
-#[wasm_bindgen]
-#[no_mangle]
-#[must_use]
-pub fn cpu_next_instr() -> String {
-    unsafe { EMULATOR.cpu.next_instruction.to_string() }
-}
-
-#[wasm_bindgen]
-#[no_mangle]
-#[must_use]
-pub fn cpu_tick() -> bool {
+pub fn cpu_tick() -> u8 {
     unsafe {
         match EMULATOR.cpu.tick() {
-            Ok(_) => true,
+            Ok(v) => v,
             Err(e) => {
                 console::log_1(&JsValue::from(e.to_string()));
-                false
+                0
             }
         }
     }
