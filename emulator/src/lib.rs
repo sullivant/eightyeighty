@@ -7,10 +7,12 @@ mod memory;
 mod video;
 
 use crate::cpu::CPU;
+use constants::{VRAM_SIZE, VRAM_START};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::{self};
 use cpu::instructions::{self, Instruction};
+use std::f64;
 
 /**
  * This library is, at its heart, simply a WASM bound wrapper to the calls necessary to do
@@ -82,7 +84,7 @@ pub fn cpu_memory_write(location: usize, data: u8) -> Result<bool, JsValue> {
     Ok(true)
 }
 
-/// This returns a slice of memory, based off of a starting
+/// This returns a 16 byte slice of memory, based off of a starting
 /// address and consists of an array that is formatted in address/value pairs like this: [[0,255], [1,128]]
 #[wasm_bindgen]
 #[no_mangle]
@@ -93,12 +95,11 @@ pub fn cpu_get_memory(start: usize) -> String {
     }
 }
 
-
 /// Returns an array containing all of the current register values as well as PC.
 #[wasm_bindgen]
 #[no_mangle]
 #[must_use]
-pub fn get_all_registers() -> String {
+pub fn cpu_registers() -> String {
     let mut ret: [usize; 9] = [0; 9];
 
     unsafe {
@@ -168,6 +169,91 @@ pub fn cpu_reset() -> bool {
             }
         }
     }
+}
+
+#[wasm_bindgen]
+#[no_mangle]
+pub fn cpu_get_vram() -> String {
+    unsafe {
+        format!("{:?}",EMULATOR.cpu.memory.get_vram())
+    }
+}
+
+#[wasm_bindgen]
+#[no_mangle]
+#[must_use]
+pub fn vram_update() {  
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document.get_element_by_id("canvas").unwrap();
+    let canvas: web_sys::HtmlCanvasElement = canvas
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| ())
+        .unwrap();
+
+    let context = canvas
+        .get_context("2d")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
+
+    context.save();
+    context.translate(0.0, 128.0).unwrap();
+    context.rotate(270.0*f64::consts::PI/180.0).unwrap();
+
+    context.set_fill_style(&JsValue::from("blue".to_string()));
+    context.fill_rect(0.00, 0.00, 256.0, 300.0);
+
+    context.set_fill_style(&JsValue::from("white".to_string()));
+
+    unsafe {
+        let mut pixel: u8 = 0;
+        let mut rectX: f64 = 0.0;
+        let mut rectY: f64 = 0.0;
+
+        // console::log_1(&JsValue::from(EMULATOR.cpu.memory.read(VRAM_START).unwrap().to_string()));
+        // EMULATOR.cpu.memory.write(VRAM_START as usize, 0xF).unwrap();
+        // EMULATOR.cpu.memory.write(VRAM_START+1 as usize, 0xF).unwrap();
+        // console::log_1(&JsValue::from(EMULATOR.cpu.memory.read(VRAM_START).unwrap().to_string()));
+
+        for y in 0 .. 256 {
+            for x in 0 .. 32 {
+                let loc = y * 32 + x + VRAM_START;
+                pixel = EMULATOR.cpu.memory.read(loc as usize).unwrap();
+                for b in 0 .. 8 {
+                    if (pixel >> b) & 1 > 0 { // 
+                        rectX = ((x*8)+b) as f64;
+                        rectY = y as f64;
+                        context.fill_rect(rectX, rectY, 1.0, 1.0);
+                    }
+                }
+            }
+        }
+    }
+
+    context.restore();
+
+
+    // The "smile" example
+    // context.begin_path();
+    // // Draw the outer circle.
+    // context
+    //     .arc(75.0, 75.0, 50.0, 0.0, f64::consts::PI * 2.0)
+    //     .unwrap();
+    // // Draw the mouth.
+    // context.move_to(110.0, 75.0);
+    // context.arc(75.0, 75.0, 35.0, 0.0, f64::consts::PI).unwrap();
+    // // Draw the left eye.
+    // context.move_to(65.0, 65.0);
+    // context
+    //     .arc(60.0, 65.0, 5.0, 0.0, f64::consts::PI * 2.0)
+    //     .unwrap();
+    // // Draw the right eye.
+    // context.move_to(95.0, 65.0);
+    // context
+    //     .arc(90.0, 65.0, 5.0, 0.0, f64::consts::PI * 2.0)
+    //     .unwrap();
+    // context.stroke();    
 }
 
 

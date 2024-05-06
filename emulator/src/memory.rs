@@ -4,7 +4,7 @@ use std::fmt;
 use serde::{Deserialize,Serialize};
 use serde_big_array::BigArray;
 
-use crate::constants::RAM_SIZE;
+use crate::constants::{RAM_SIZE, VRAM_END, VRAM_SIZE, VRAM_START};
 
 /// Memory
 ///
@@ -56,6 +56,13 @@ impl Memory {
         }
 
         return ret;
+    }
+
+    /// Returns the section of memory dedicated to Video.
+    pub fn get_vram(&self) -> &[u8] {
+        // let mut ret: [u8; VRAM_SIZE] = [0; VRAM_SIZE];
+
+        return &self.data[VRAM_START .. (VRAM_END+1)];
     }
 
     // Returns a cloned copy of the value in memory, or an error if unable to read

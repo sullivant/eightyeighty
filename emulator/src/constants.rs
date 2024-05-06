@@ -4,6 +4,10 @@
 pub const OPCODE_SIZE: usize = 1;
 pub const RAM_SIZE: usize = 0xFFFF;
 
+pub const VRAM_START: usize = 0x2400;
+pub const VRAM_END: usize = 0x3FFF;
+pub const VRAM_SIZE: usize = VRAM_END - VRAM_START;
+
 // Window and display concerns
 pub const DISP_WIDTH: u32 = 1024; // Overall width/height
 pub const DISP_HEIGHT: u32 = 768;

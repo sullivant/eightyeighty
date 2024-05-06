@@ -6,7 +6,7 @@ import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 
 import init, { cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, get_all_registers, cpu_reset } from 'emulator'
+  cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, cpu_registers, cpu_reset, cpu_get_vram, vram_update } from 'emulator'
 
 const theme = useTheme()
 
@@ -49,7 +49,7 @@ function loadROM() {
       }
     });
   console.log("Loaded INVADERS.COM");
-  sleep(500).then(() => { refreshRAMState(); refreshRegisters(); });
+  sleep(500).then(() => { refreshRAMState(); refreshRegisters(); refreshInstructions(); });
 }
 
 function reset() {
@@ -66,6 +66,7 @@ function tick() {
   // refreshRAMState();
   refreshRegisters();
   refreshInstructions();
+  refreshVRAM(); 
 }
 
 function autoTick() {
@@ -97,11 +98,16 @@ async function refreshRAMState() {
   }
 }
 
+async function refreshVRAM() {
+  console.log("Refreshing VRAM...");
+  vram_update();
+}
+
 async function refreshRegisters() {
   // (&self.pc, &self.sp, &self.a, &self.b, &self.c, &self.d, &self.e, &self.h, &self.l)
   console.log("Refreshing Registers...");
   currRegisters.value=[];
-  const regState = JSON.parse(get_all_registers());
+  const regState = JSON.parse(cpu_registers());
 
   currRegisters.value.push({register:"PC", value:makeHex(regState[0], 4)});
   currRegisters.value.push({register:"SP", value:makeHex(regState[1], 4)});
@@ -126,12 +132,15 @@ async function refreshInstructions() {
   instructions.value.push({type:"N", opcode:makeHex(next.opcode,2), size:next.size, cycles:next.cycles, text:next.text});
 }
 
-init()
-
+async function run() {
+  await init();
+  sleep(500).then(() => { loadROM(); });
+}
+run();
 
 // Things we want to do after we've mounted.
 onMounted(async () => {
-  let pollInterval = setInterval(autoTick, 5) 
+  let pollInterval = setInterval(autoTick, 1) 
 })
 
 </script>
@@ -167,8 +176,8 @@ onMounted(async () => {
 
     <v-main class="d-flex flex-wrap" >
 
-      <v-sheet rounded border class="flex-1-0 ma-2 pa-2" id="canvas">
-        This is our display.
+      <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
+        <canvas id="canvas" width="256" height="224"></canvas>
       </v-sheet>
 
       <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
