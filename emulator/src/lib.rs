@@ -201,7 +201,7 @@ pub fn vram_update() {
     context.translate(0.0, 128.0).unwrap();
     context.rotate(270.0*f64::consts::PI/180.0).unwrap();
 
-    context.set_fill_style(&JsValue::from("blue".to_string()));
+    context.set_fill_style(&JsValue::from("black".to_string()));
     context.fill_rect(0.00, 0.00, 256.0, 300.0);
 
     context.set_fill_style(&JsValue::from("white".to_string()));

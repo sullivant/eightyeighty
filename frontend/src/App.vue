@@ -161,7 +161,7 @@ onMounted(async () => {
       <v-app-bar-title>8080</v-app-bar-title>
     </v-app-bar>
 
-    <v-navigation-drawer v-model="drawer" location="right">
+    <v-navigation-drawer location="left" rail expand-on-hover>
       <v-divider></v-divider>
         <v-list density="compact" nav>
           <v-list-item

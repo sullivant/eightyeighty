@@ -10,10 +10,10 @@ const registerHeaders = [
 
 const instructionHeaders = [
   { title: '', value: 'type'},
-  { title: 'O', value: 'opcode' },
+  { title: 'Op', value: 'opcode' },
   { title: 'S', value: 'size' },
   { title: 'C', value: 'cycles' },
-  { title: 'Text', value: 'text'},
+  { title: 'Text', value: 'text' },
 ]
 
 const hideDefaultFooter = true;
