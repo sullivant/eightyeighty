@@ -11,12 +11,7 @@ import init, { cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write,
 
 const theme = useTheme();
 const drawer = ref(false);
-
-var showMemory = ref(true);
-
-var tab = null;
 const shouldAutoTick = ref(false);
-const cpuState = ref("CPU NOT READY");
 
 let currRAM = ref([{address: -1}]);
 
@@ -65,9 +60,6 @@ function reset() {
 function tick() {
   var cycles_used = cpu_tick();
   console.log("Ticked "+cycles_used+" cycles.");
-  // refreshRAMState();
-  // refreshRegisters();
-  // refreshInstructions();
 }
 
 function manualTick() {
@@ -156,37 +148,28 @@ onMounted(async () => {
 
 <template>
   <v-app id="8080">
-    <v-app-bar>
-      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-      <v-app-bar-title>8080</v-app-bar-title>
-    </v-app-bar>
 
-    <v-navigation-drawer location="left" rail expand-on-hover>
+    <v-navigation-drawer expand-on-hover rail>
+      <v-list-item prepend-icon="mdi-robot-love-outline" title="8080"/>
       <v-divider></v-divider>
-        <v-list density="compact" nav>
-          <v-list-item
-            prepend-icon="mdi-robot-love-outline"
-            title="Controls"
-          />
-          <v-divider/>
-          <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
-          <v-list-item prepend-icon="mdi-restart" title="Reset CPU" @click="reset()"></v-list-item>          
-          <v-list-item prepend-icon="mdi-bug" title="Tick" @click="manualTick()"></v-list-item>
-          <v-list-item v-if="shouldAutoTick" prepend-icon="mdi-autorenew" title="Auto Ticking" @click="toggleAutoTick()"></v-list-item>
-          <v-list-item v-else prepend-icon="mdi-autorenew-off" title="Not Auto Ticking" @click="toggleAutoTick()"></v-list-item>
-          <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
-          <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
-          <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Instructions" @click="refreshInstructions()"></v-list-item>
-          <v-list-item prepend-icon="mdi-monitor" title="Refresh Screen" @click="refreshVRAM()"></v-list-item>
-          <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>
-        </v-list>
+      <v-list density="compact" nav>
+        <v-list-item prepend-icon="mdi-play-circle-outline" title="Load ROM" @click="loadROM"></v-list-item>
+        <v-list-item prepend-icon="mdi-restart" title="Reset CPU" @click="reset()"></v-list-item>          
+        <v-list-item prepend-icon="mdi-bug" title="Tick" @click="manualTick()"></v-list-item>
+        <v-list-item v-if="shouldAutoTick" prepend-icon="mdi-autorenew" title="Auto Ticking" @click="toggleAutoTick()"></v-list-item>
+        <v-list-item v-else prepend-icon="mdi-autorenew-off" title="Not Auto Ticking" @click="toggleAutoTick()"></v-list-item>
+        <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
+        <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
+        <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Instructions" @click="refreshInstructions()"></v-list-item>
+        <v-list-item prepend-icon="mdi-monitor" title="Refresh Screen" @click="refreshVRAM()"></v-list-item>
+        <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>
+      </v-list>
     </v-navigation-drawer>
 
-
-
-    <v-navigation-drawer style="min-width:300px" permanent > 
-      <Registers :currRegisters=currRegisters :instructions=instructions :cpuState=cpuState />
+    <v-navigation-drawer permanent style="min-width:300px"> 
+      <Registers :currRegisters=currRegisters :instructions=instructions />
     </v-navigation-drawer>
+
     <v-main>
       <v-sheet rounded class="d-flex pt-4">
         <Display />
@@ -196,6 +179,7 @@ onMounted(async () => {
         <Memory :currRAM=currRAM />
       </v-sheet>
     </v-main>
+
   </v-app>
 </template>
 
