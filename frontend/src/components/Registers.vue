@@ -21,28 +21,17 @@ const hideDefaultFooter = true;
 </script>
 
 <template>
-      <v-list density="compact" nav>
-        <v-list-item
-          prepend-icon="mdi-puzzle-outline"
-          title="Details"
-        />
-        <v-divider/>
-        <v-data-table
-          :headers="instructionHeaders"
-          :items="instructions"
-          density="compact">
-          <template v-slot:bottom v-if="hideDefaultFooter"></template>
-        </v-data-table>
-        <v-divider/>
-        <v-data-table 
-          :headers="registerHeaders" 
-          :items="currRegisters"
-          density="compact">
-          <template v-slot:bottom v-if="hideDefaultFooter"></template>
-        </v-data-table>
-      </v-list>
-
-      <!-- <v-sheet rounded border> -->
-
-      <!-- </v-sheet> -->
+  <v-data-table
+    :headers="instructionHeaders"
+    :items="instructions"
+    density="compact">
+    <template v-slot:bottom v-if="hideDefaultFooter"></template>
+  </v-data-table>
+  
+  <v-data-table 
+    :headers="registerHeaders" 
+    :items="currRegisters"
+    density="compact">
+    <template v-slot:bottom v-if="hideDefaultFooter"></template>
+  </v-data-table>
 </template>
