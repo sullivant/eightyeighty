@@ -4,6 +4,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
+import Display from './components/Display.vue'
 
 import init, { cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
   cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, cpu_registers, cpu_reset, cpu_get_vram, vram_update } from 'emulator'
@@ -66,7 +67,6 @@ function tick() {
   // refreshRAMState();
   refreshRegisters();
   refreshInstructions();
-  refreshVRAM(); 
 }
 
 function autoTick() {
@@ -134,7 +134,7 @@ async function refreshInstructions() {
 
 async function run() {
   await init();
-  sleep(500).then(() => { loadROM(); });
+  sleep(500).then(() => { loadROM(); refreshVRAM(); });
 }
 run();
 
@@ -147,12 +147,11 @@ onMounted(async () => {
 
 <template>
   <v-theme-provider theme="light">
-  <v-layout class="rounded rounded-md">
+  <v-app>
     <v-app-bar color="surface-variant" title="8080"></v-app-bar>
 
-    <v-navigation-drawer location="left" rail expand-on-hover>
+    <v-navigation-drawer theme="dark" rail permanent expand-on-hover>
       <v-divider></v-divider>
-
         <v-list density="compact" nav>
           <v-list-item
             prepend-icon="mdi-robot-love-outline"
@@ -166,28 +165,26 @@ onMounted(async () => {
           <v-list-item v-else prepend-icon="mdi-autorenew-off" title="Not Auto Ticking" @click="toggleAutoTick()"></v-list-item>
           <v-list-item prepend-icon="mdi-memory" title="Refresh RAM" @click="refreshRAMState()"></v-list-item>
           <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
+          <v-list-item prepend-icon="mdi-monitor" title="Refresh Screen" @click="refreshVRAM()"></v-list-item>
           <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>
         </v-list>
     </v-navigation-drawer>
 
-    <v-navigation-drawer location="right" style="min-width: 300px" rail> 
-        <Registers :currRegisters=currRegisters :instructions=instructions :cpuState=cpuState />
+    <v-navigation-drawer style="min-width:300px" > 
+      <Registers :currRegisters=currRegisters :instructions=instructions :cpuState=cpuState />
     </v-navigation-drawer>
 
-    <v-main class="d-flex flex-wrap" >
-
-      <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
-        <canvas id="canvas" width="256" height="224"></canvas>
+    <v-main>
+      <v-sheet rounded border class="w-auto">
+        <Display />
       </v-sheet>
 
-      <v-sheet rounded border class="flex-1-0 ma-2 pa-2">
+      <v-sheet rounded border class="w-auto">
         <Memory :currRAM=currRAM />
       </v-sheet>
-
-        
     </v-main>
 
-  </v-layout>
+  </v-app>
   </v-theme-provider>
 </template>
 
