@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-// import { onKeyStroke } from '@vueuse/core'
+import { useMouse } from '@vueuse/core'
 import { useTheme } from 'vuetify'
 import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
@@ -21,16 +21,12 @@ let currRegisters = ref([
 ]);
 
 let instructions = ref([
-  {type:"C", opcode:makeHex("0",2), size:"0", cycles:"0", text: ""},
-  {type:"N", opcode:makeHex("0",2), size:"0", cycles:"0", text: ""},
+  {type:"C", opcode:makeHex(0,2), size:"0", cycles:"0", text: ""},
+  {type:"N", opcode:makeHex(0,2), size:"0", cycles:"0", text: ""},
 ]);
 
-function sleep(ms) {
+function sleep(ms: number) {
   return new Promise (res => setTimeout(res, ms));
-}
-
-function toggleTheme() {
-  theme.global.name = theme.global.current.dark ? 'light' : 'dark'
 }
 
 function loadROM() {
@@ -78,7 +74,7 @@ function toggleAutoTick() {
   shouldAutoTick.value = !shouldAutoTick.value
 }
 
-function makeHex(value, hexlen) {
+function makeHex(value: number, hexlen: number) {
   return "0x"+value.toString(16).toUpperCase().padStart(hexlen,'0');
 }
 
@@ -162,7 +158,6 @@ onMounted(async () => {
         <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Registers" @click="refreshRegisters()"></v-list-item>
         <v-list-item prepend-icon="mdi-ab-testing" title="Refresh Instructions" @click="refreshInstructions()"></v-list-item>
         <v-list-item prepend-icon="mdi-monitor" title="Refresh Screen" @click="refreshVRAM()"></v-list-item>
-        <v-list-item prepend-icon="mdi-globe-light" title="Toggle Light/Dark" @click="toggleTheme()"></v-list-item>
       </v-list>
     </v-navigation-drawer>
 
