@@ -85,6 +85,15 @@ impl Memory {
 
         Ok(())
     }
+
+    pub fn get_memory_ptr(&self) -> *const u8 {
+        self.data.as_ptr()
+    }
+
+    pub fn get_memory_size(&self) -> usize {
+        self.data.len()
+    }
+    
 }
 
 // Creates a simple table header used in displaying ram contents.

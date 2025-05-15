@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { useDateFormat, useTimestamp } from '@vueuse/core'
 defineProps(['currRegisters','instructions'])
 
 const registerHeaders = [
@@ -18,6 +18,9 @@ const instructionHeaders = [
 
 const hideDefaultFooter = true;
 
+const time = useTimestamp()
+const computedTime = useDateFormat(time, 'YYYY-MM-DD HH:mm:ss SSS')
+
 </script>
 
 <template>
@@ -34,4 +37,7 @@ const hideDefaultFooter = true;
     density="compact">
     <template v-slot:bottom v-if="hideDefaultFooter"></template>
   </v-data-table>
+  <v-sheet class="d-flex pt-4 text-center">
+    {{ computedTime }}
+  </v-sheet>
 </template>

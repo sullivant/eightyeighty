@@ -6,18 +6,20 @@ import Memory from './components/Memory.vue'
 import Registers from './components/Registers.vue'
 import Display from './components/Display.vue'
 
-import init, { cpu_set_disassemble, cpu_get_disassemble, cpu_memory_write, 
-  cpu_get_memory, cpu_state, cpu_instructions, cpu_tick, cpu_registers, cpu_reset, cpu_get_vram, vram_update } from 'emulator'
+import init, { Emulator } from 'emulator'
+
+let emulator: Emulator;
 
 const theme = useTheme();
 const drawer = ref(false);
 const shouldAutoTick = ref(false);
 
-let currRAM = ref([{address: -1}]);
+// let currRAM = ref([{address: -1}]);
+const currRAM = ref<Array<[string, Array<[string, number]>]>>([]);
 
 let currRegisters = ref([
-  {register:"PC", value:-1},
-  {register:"SP", value:123},
+  {register:"PC", value:makeHex(-1, 4)},
+  {register:"SP", value:makeHex(123, 4)},
 ]);
 
 let instructions = ref([
@@ -38,7 +40,7 @@ function loadROM() {
       const start_index = 0;
       const rom = new DataView(buffer, 0, buffer.byteLength);
       for (let i = 0; i < rom.byteLength; i++) {
-        cpu_memory_write(start_index+i, rom.getUint8(i));
+        emulator.cpu_memory_write(start_index+i, rom.getUint8(i));
       }
     });
   console.log("Loaded INVADERS.COM");
@@ -47,14 +49,14 @@ function loadROM() {
 
 function reset() {
   console.log("Resetting CPU");
-  cpu_reset();
+  emulator.cpu_reset();
   refreshRAMState();
   refreshRegisters();
   refreshInstructions();
 }
 
 function tick() {
-  var cycles_used = cpu_tick();
+  var cycles_used = emulator.cpu_tick();
   console.log("Ticked "+cycles_used+" cycles.");
 }
 
@@ -81,30 +83,18 @@ function makeHex(value: number, hexlen: number) {
 async function refreshRAMState() {
   console.log("Refreshing CPU memory...");
   currRAM.value=[];
-
-  //Walk through each slice, incrementing address by 0x0F each time and insert it into currRAM.value[]
-  for(let i = 0; i < 4096; i++){
-    var thisAddress = (i*16);
-    const ramState = JSON.parse(cpu_get_memory(thisAddress));   // i*16
-    var currSlice = {};
-    currSlice["address"] = "0x"+thisAddress.toString(16).toUpperCase().padStart(4,'0');
-    ramState.forEach((element, idx) => {
-      currSlice["0x"+idx.toString(16).toUpperCase()] = element.toString(16).toUpperCase().padStart(1,'0');
-    });
-    currRAM.value.push(currSlice);
-  }
 }
 
 async function refreshVRAM() {
-  console.log("Refreshing VRAM...");
-  vram_update();
+  let ramSize = emulator.cpu_get_memory_size(); 
+  console.log("Refreshing VRAM... size is: "+ramSize);
 }
 
 async function refreshRegisters() {
   // (&self.pc, &self.sp, &self.a, &self.b, &self.c, &self.d, &self.e, &self.h, &self.l)
   console.log("Refreshing Registers...");
   currRegisters.value=[];
-  const regState = JSON.parse(cpu_registers());
+  const regState = JSON.parse(emulator.cpu_registers());
 
   currRegisters.value.push({register:"PC", value:makeHex(regState[0], 4)});
   currRegisters.value.push({register:"SP", value:makeHex(regState[1], 4)});
@@ -120,7 +110,7 @@ async function refreshRegisters() {
 async function refreshInstructions() {
   console.log("Refreshing instructions...");
 
-  let instrs = cpu_instructions();
+  let instrs = emulator.cpu_instructions();
   let curr = instrs[0];
   let next = instrs[1];
 
@@ -131,6 +121,8 @@ async function refreshInstructions() {
 
 async function run() {
   await init();
+  emulator = new Emulator();
+
   sleep(500).then(() => { loadROM(); refreshVRAM(); });
 }
 run();
