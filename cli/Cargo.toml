@@ -1,8 +1,7 @@
 [package]
-name = "eightyeighty"
+name = "cli"
 version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 emulator = { path = "../emulator" }
-anyhow = "1"
