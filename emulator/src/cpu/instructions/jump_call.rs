@@ -31,75 +31,84 @@ impl CPU {
     /// return is performed
     pub fn rpo(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_PARITY) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Parity bit is one (indicating even parity), a
     /// return is performed
     pub fn rpe(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_PARITY) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Sign bit is one (indicating a minus result, a
     /// return is performed
     pub fn rm(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_SIGN) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Sign bit is zero, a return is performed
     pub fn rp(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_SIGN) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Carry bit is one, a return operation is performed
     pub fn rc(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_CARRY) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     // If the Carry bit is zero, a return operation is performed
     pub fn rnc(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_CARRY) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
 
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Zero bit is one, a return operation is performed
     pub fn rz(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_ZERO) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Zero bit is zero, a return operation is performed
     pub fn rnz(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_ZERO) {
-            return self.ret();
+            self.ret()?;
+            Ok(11)
+        } else {
+            Ok(5)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// Performs an immediate return command
@@ -208,19 +217,21 @@ impl CPU {
     /// If the Carry bit is one, a call operation is performed
     pub fn cc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_CARRY) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Carry bit is zero, a call operation is performed
     pub fn cnc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_CARRY) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else { 
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the Zero bit is one, a call is performed
@@ -236,46 +247,51 @@ impl CPU {
     /// If the Zero bit is zero, a call is performed
     pub fn cz(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_ZERO) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the sign bit is one, a call is performed
     pub fn cm(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_SIGN) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the sign bit is zero, a call is performed
     pub fn cp(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_SIGN) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the parity bit is one, a call is performed
     pub fn cpe(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_PARITY) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// If the parity bit is zero, a call is performed
     pub fn cpo(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_PARITY) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(self.current_instruction.cycles)
     }
 
     /// Contents of the H regsiter replace the 8MSB of the PC and the contents
