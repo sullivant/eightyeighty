@@ -9,41 +9,41 @@ impl CPU {
     /// Would send the contents of accumulator to the device sent
     /// as the data portion of this command
     /// TODO: If data out is needed, this needs to be finished
-    pub fn data_out(&self, device: u8) -> Result<(), String> {
+    pub fn data_out(&self, device: u8) -> Result<u8, String> {
         let data = self.a;
         println!("Setting Accumulator value '{data:#04X}' to device: {device:#04X}");
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// IN
     /// An 8 bit data byte is read from device number (exp) and
     /// replaces the contents of the accumulator
-    pub fn data_in(&mut self, device: u8) -> Result<(), String> {
+    pub fn data_in(&mut self, device: u8) -> Result<u8, String> {
         //TODO: This needs to read from a device...
         let data: u8 = 0x00;
         self.a = data;
         println!("Read value '{data:#04X}' from device {device:#04X}");
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// `ProgramCounter` is incremented and then the CPU enters a
     /// STOPPED state and no further activity takes place until
     /// an interrupt occurrs
-    pub fn hlt(&mut self) -> Result<(), String> {
+    pub fn hlt(&mut self) -> Result<u8, String> {
         self.nop(true);
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Enables interrupts
-    pub fn ei(&mut self) -> Result<(), String> {
+    pub fn ei(&mut self) -> Result<u8, String> {
         self.interrupts = true;
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Disables interrupts
-    pub fn di(&mut self) -> Result<(), String> {
+    pub fn di(&mut self) -> Result<u8, String> {
         self.interrupts = false;
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 }
 
@@ -63,12 +63,12 @@ mod tests {
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
 
         // Try to run a tick, PC should not move
-        cpu.tick().unwrap();
+        cpu.step().unwrap();
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
 
         // "unhalt" and see if pc moves next tick
         cpu.nop(false);
-        cpu.tick().unwrap();
+        cpu.step().unwrap();
         assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
     }
 }

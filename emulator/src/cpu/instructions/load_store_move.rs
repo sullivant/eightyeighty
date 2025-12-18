@@ -6,15 +6,16 @@ use crate::{
 /// This contains any instructions of the LOAD / STORE / MOVE category
 impl CPU {
     /// The registers HL replace the contents of the SP
-    pub fn sphl(&mut self) {
+    pub fn sphl(&mut self) -> Result<u8, String> {
         self.sp = make_pointer(self.l, self.h);
+        Ok(self.current_instruction.cycles)
     }
 
     /// Contents of L are exchanged with contents of memory byte whose
     /// address is held in the stack pointer SP.  The contents of H are
     /// exchanged with the contents of the memory byte whose address is
     /// one greater than that held in the stack pointer SP.
-    pub fn xthl(&mut self) -> Result<(), String> {
+    pub fn xthl(&mut self) -> Result<u8, String> {
         // Store away our temp values
         let ch = self.h;
         let cl = self.l;
@@ -31,12 +32,12 @@ impl CPU {
             Err(e) => return Err(e),
         };
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Exchanges the contents of the H and L registers with the contents of the
     /// D and E registers.
-    pub fn xchg(&mut self) {
+    pub fn xchg(&mut self) -> Result<u8, String> {
         let oh = self.h;
         let ol = self.l;
 
@@ -45,6 +46,7 @@ impl CPU {
 
         self.d = oh;
         self.e = ol;
+        Ok(self.current_instruction.cycles)
     }
 
     /// Pushes onto the stack the values provided to this function.  They are,
@@ -52,7 +54,7 @@ impl CPU {
     ///
     /// They are pushed on like this:
     /// (sp-1)<-dh; (sp-2)<-dl; sp <- sp - 2
-    pub fn push(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn push(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         self.sp -= 1;
         match self.memory.write(self.sp.into(), dh) {
             Ok(_) => (),
@@ -75,12 +77,12 @@ impl CPU {
             }
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Pops from the stack according to the register pair requested
     /// L <- (sp); H <- (sp+1); sp <- sp+2
-    pub fn pop(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn pop(&mut self, reg: Registers) -> Result<u8, String> {
         // Gather our two values we're popping
         let source_a = match self.memory.read(self.sp.into()) {
             Ok(v) => v,
@@ -123,13 +125,13 @@ impl CPU {
 
         self.sp += 2;
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Stores a copy of the L register in the memory location specified in bytes
     /// two and three of this instruction and then stores a copy of the H register
     /// in the next higher memory location.
-    pub fn shld(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn shld(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         let addr: u16 = make_pointer(dl, dh);
 
         match self.memory.write(addr as usize, self.l) {
@@ -149,12 +151,12 @@ impl CPU {
             }
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Rotates accumulator left (RLC), if `through_carry` is true, it
     /// will roate accumulator left, through the carry bit (RAL), too.
-    pub fn rlc_ral(&mut self, through_carry: bool) {
+    pub fn rlc_ral(&mut self, through_carry: bool) -> Result<u8, String> {
         // Store off our current carry bit
         let carry_bit = self.test_flag(FLAG_CARRY);
 
@@ -181,12 +183,14 @@ impl CPU {
         }
 
         self.a = new_accum;
+
+        Ok(self.current_instruction.cycles)
     }
 
     /// LDA
     /// Loads the accumulator with a copy of the byte at the location specified
     /// in bytes 2 and 3 of the instruction
-    pub fn lda(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn lda(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         let addr: u16 = make_pointer(dl, dh);
         self.a = match self.memory.read(addr as usize) {
             Ok(v) => v,
@@ -197,13 +201,13 @@ impl CPU {
             }
         };
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// LDAX
     /// Loads the accumulator with the contents of the memory location indicated by
     /// the register pair (B or D).
-    pub fn ldax(&mut self, target: Registers) -> Result<(), String> {
+    pub fn ldax(&mut self, target: Registers) -> Result<u8, String> {
         let addr: u16 = match target {
             Registers::BC => self.get_register_pair(Registers::BC),
             Registers::DE => self.get_register_pair(Registers::DE),
@@ -219,31 +223,32 @@ impl CPU {
             Err(_) => return Err(format!("LDAX: Unable to read memory at {addr:#04X}")),
         };
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// LXI (target pair), D16
     /// Loads into the target pair the source data (dl and dh)
-    pub fn lxi(&mut self, target: Registers, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn lxi(&mut self, target: Registers, dl: u8, dh: u8) -> Result<u8, String> {
+        let cycles = self.current_instruction.cycles;
         match target {
             Registers::BC => {
                 self.b = dh;
                 self.c = dl;
-                Ok(())
+                Ok(cycles)
             }
             Registers::DE => {
                 self.d = dh;
                 self.e = dl;
-                Ok(())
+                Ok(cycles)
             }
             Registers::HL => {
                 self.h = dh;
                 self.l = dl;
-                Ok(())
+                Ok(cycles)
             }
             Registers::SP => {
                 self.sp = make_pointer(dl, dh);
-                Ok(())
+                Ok(cycles)
             }
             _ => Err(format!(
                 "Register {target} is NOT IMPLEMENTED in OP_LXI, Cannot Execute"
@@ -252,7 +257,7 @@ impl CPU {
     }
 
     // LHLD - loads into HL pair the values in the location at the supplied address
-    pub fn lhld(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn lhld(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         let mut addr: u16 = u16::from(dh) << 8 | u16::from(dl);
         self.l = match self.memory.read(addr as usize) {
             Ok(v) => v,
@@ -272,12 +277,12 @@ impl CPU {
             }
         };
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     // MOV T(arget), Registers::X
     // Moves into T(arget) the value in register specified by the enum Registers
-    pub fn mov(&mut self, target: Registers, source: Registers) -> Result<(), String> {
+    pub fn mov(&mut self, target: Registers, source: Registers) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
         let val = match source {
             Registers::A => self.a,
@@ -313,18 +318,19 @@ impl CPU {
             }
         };
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     // Store accumulator direct to location in memory specified
     // by address dhdl
-    pub fn sta(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn sta(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         let addr: usize = usize::from(u16::from(dh) << 8 | u16::from(dl));
-        self.memory.write(addr, self.a)
+        self.memory.write(addr, self.a)?;
+        Ok(self.current_instruction.cycles)
     }
 
     // Stores accumulator at memory location of supplied register
-    pub fn stax(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn stax(&mut self, reg: Registers) -> Result<u8, String> {
         // Get our location first
         let location = match reg {
             Registers::BC => Some(self.get_register_pair(Registers::BC)),
@@ -334,7 +340,8 @@ impl CPU {
 
         // Update memory with the value of the accumulator
         if let Some(l) = location {
-            return self.memory.write(l as usize, self.a);
+            self.memory.write(l as usize, self.a)?;
+            return Ok(self.current_instruction.cycles);
         }
 
         Err(format!(
@@ -343,7 +350,7 @@ impl CPU {
     }
 
     // Performs the MVI functionality
-    pub fn mvi(&mut self, x: u8) -> Result<(), String> {
+    pub fn mvi(&mut self, x: u8) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
 
         match self.current_instruction.opcode {
@@ -357,7 +364,7 @@ impl CPU {
             0x3E => self.a = x,                    // 0x3E
             _ => (),                               // Do nothing
         };
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 }
 

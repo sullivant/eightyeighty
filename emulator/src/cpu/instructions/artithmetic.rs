@@ -4,7 +4,7 @@ use crate::{
 };
 
 impl CPU {
-    pub fn inx(&mut self, target: Registers) {
+    pub fn inx(&mut self, target: Registers) -> Result<u8, String> {
         match target {
             Registers::SP | Registers::BC | Registers::DE | Registers::HL => {
                 let mut pair: u16 = self.get_register_pair(target);
@@ -12,14 +12,16 @@ impl CPU {
                 self.set_register_pair(target, pair);
             }
             _ => (),
-        }
+        };
+        Ok(self.current_instruction.cycles)
     }
 
     // DCX
-    pub fn dcx(&mut self, reg: Registers) {
+    pub fn dcx(&mut self, reg: Registers) -> Result<u8, String> {
         let mut val = self.get_register_pair(reg);
         val = val.overflowing_sub(1).0;
         self.set_register_pair(reg, val);
+        Ok(self.current_instruction.cycles)
     }
 
     /// The specified byte is compared to the contents of the accumulator.
@@ -29,7 +31,7 @@ impl CPU {
     /// Since a subtract operation is performed, the Carry bit will be set if there is no
     /// carry out of bit 7, indicating that the contents of REG are greater than the
     /// contents of the accumulator, and reset otherwise.
-    pub fn cmp(&mut self) -> Result<(), String> {
+    pub fn cmp(&mut self) -> Result<u8, String> {
         let min = self.a;
         let addr = self.get_addr_pointer();
 
@@ -50,13 +52,13 @@ impl CPU {
         let ac = will_ac(min.wrapping_neg(), sub.wrapping_neg()); // Because it's a subtraction
         self.update_flags(res, Some(sub > min), Some(ac));
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     // INR Reg
     // Flags affected: Z,S,P,AC
     #[allow(clippy::similar_names)]
-    pub fn inr(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn inr(&mut self, reg: Registers) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
         let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -112,13 +114,13 @@ impl CPU {
             }
             _ => (),
         }
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     // DCR Reg
     // Flags affected: Z,S,P,AC
     #[allow(clippy::similar_names)]
-    pub fn dcr(&mut self, reg: Registers) -> Result<(), String> {
+    pub fn dcr(&mut self, reg: Registers) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
         let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -173,12 +175,12 @@ impl CPU {
             _ => (),
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// The specified byte is localled ``ORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn ora(&mut self) -> Result<(), String> {
+    pub fn ora(&mut self) -> Result<u8, String> {
         let opcode = self.current_instruction.opcode;
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
@@ -198,13 +200,13 @@ impl CPU {
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, None);
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// The specified byte is logically ``ANDed`` bit
     /// by bit with the contents of the accumulator. The Carry bit
     /// is reset to zero.
-    pub fn ana(&mut self) -> Result<(), String> {
+    pub fn ana(&mut self) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -222,21 +224,22 @@ impl CPU {
 
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, None);
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// The byte of immediate data is logically ```ANDed``` with the contents of the
     /// accumulator.  The carry bit is reset to zero.
     /// Bits affected: Carry, Zero, Sign, Parity
-    pub fn ani(&mut self, dl: u8) {
+    pub fn ani(&mut self, dl: u8) -> Result<u8, String> {
         self.a &= dl;
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, None);
+        Ok(self.current_instruction.cycles)
     }
 
     /// The specified byte is locally ``XORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn xra(&mut self) -> Result<(), String> {
+    pub fn xra(&mut self) -> Result<u8, String> {
         let orig_value = self.a;
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
@@ -258,7 +261,7 @@ impl CPU {
         self.reset_flag(FLAG_CARRY);
         self.update_flags(self.a, None, Some(ac));
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// SUB  / SBB (Subtract register param from A with borrow if necessary)
@@ -269,7 +272,7 @@ impl CPU {
     /// register to use.
     ///
     /// Flags affected: Z, S, P, CY, AC
-    pub fn sub(&mut self) -> Result<(), String> {
+    pub fn sub(&mut self) -> Result<u8, String> {
         let opcode = self.current_instruction.opcode;
         let sub = self.get_flag(FLAG_CARRY);
 
@@ -301,7 +304,7 @@ impl CPU {
         //self.update_flags(o.0, o.1, (1 & 0x0F) > (self.a & 0x0F));
         self.update_flags(o.0, Some(o.1), Some(ac));
         self.a = o.0;
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Decimal Adjust Accumulator
@@ -310,7 +313,7 @@ impl CPU {
     ///
     /// If the most significant four bits of the accumulator have a value greater than nine,
     /// or if the carry flag IS ON, DAA adds six to the most significant four bits of the accumulator.
-    pub fn daa(&mut self) {
+    pub fn daa(&mut self) -> Result<u8, String> {
         // Find the LS4B of the accumulator
         let mut ac = false;
         let mut carry = false;
@@ -328,12 +331,14 @@ impl CPU {
         }
 
         self.update_flags(self.a, Some(carry), Some(ac));
+
+        Ok(self.current_instruction.cycles)
     }
 
     /// Performs the Double Add (DAD) functionality
     /// Sets H to the value according to the supplied register
     /// Basically: HL = HL+<Selected register pair>
-    pub fn dad(&mut self) {
+    pub fn dad(&mut self) -> Result<u8, String> {
         //let val = usize::from(u16::from(self.h) << 8 | u16::from(self.l));
         let val = usize::from(self.get_register_pair(Registers::HL));
 
@@ -353,15 +358,19 @@ impl CPU {
         if of {
             self.set_flag(FLAG_CARRY);
         }
+
+        Ok(self.current_instruction.cycles)
     }
 
     /// CPI - Compare D8 to Accum, set flags accordingly
-    pub fn cpi(&mut self, data: u8) {
+    pub fn cpi(&mut self, data: u8) -> Result<u8, String> {
         // Subtract the data from register A and set flags on the result
         let (res, overflow) = self.a.overflowing_sub(data);
         let aux_carry = (self.a & 0x0F).wrapping_sub(data & 0x0F) > 0x0F;
 
         self.update_flags(res, Some(overflow), Some(aux_carry));
+        
+        Ok(self.current_instruction.cycles)
     }
 
     /// Add to the accumulator the supplied data byte after
@@ -372,7 +381,7 @@ impl CPU {
     /// addition.
     ///
     /// Condition bits affected: Carry, Sign, Zero, Parity, Aux Carry
-    pub fn adi_aci(&mut self, dl: u8) {
+    pub fn adi_aci(&mut self, dl: u8) -> Result<u8, String> {
         let mut to_add = dl;
 
         // If the current opcode is 0xCE we use the value of the carry flag.
@@ -384,12 +393,14 @@ impl CPU {
         let (res, of) = self.a.overflowing_add(to_add);
         self.a = res;
         self.update_flags(res, Some(of), Some(ac));
+
+        Ok(self.current_instruction.cycles)
     }
 
     /// Add to the accumulator the supplied register
     /// along with the CARRY flag's value
     /// as well as update flags
-    pub fn adc(&mut self) -> Result<(), String> {
+    pub fn adc(&mut self) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -413,12 +424,12 @@ impl CPU {
         self.a = res;
         self.update_flags(res, Some(of), Some(ac));
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Add to the accumulator the supplied register
     /// as well as update flags
-    pub fn add(&mut self) -> Result<(), String> {
+    pub fn add(&mut self) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
         let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
 
@@ -439,11 +450,11 @@ impl CPU {
         self.a = res;
         self.update_flags(res, Some(of), Some(ac));
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Rotates right, if `through_carry` is true, it does that.
-    pub fn rrc_rar(&mut self, through_carry: bool) {
+    pub fn rrc_rar(&mut self, through_carry: bool) -> Result<u8, String> {
         // Store off our current carry bit
         let carry_bit = self.test_flag(FLAG_CARRY);
         let low_order = self.a & 0x01; // Save off the low order bit so we can rotate it.
@@ -464,6 +475,8 @@ impl CPU {
         } else {
             self.reset_flag(FLAG_CARRY);
         }
+
+        Ok(self.current_instruction.cycles)
     }
 }
 

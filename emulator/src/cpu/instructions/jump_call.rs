@@ -13,7 +13,7 @@ impl CPU {
     /// later use by a RETURN instruction.
     /// Program execution continues at memory address:
     /// `OOOOOOOO_OOEXPOOOB`
-    pub fn rst(&mut self, loc: u8) -> Result<(), String> {
+    pub fn rst(&mut self, loc: u8) -> Result<u8, String> {
         let dl = (self.pc as u16 & 0xFF) as u8;
         let dh = (self.pc as u16 >> 8) as u8;
         match self.push(dl, dh) {
@@ -29,81 +29,81 @@ impl CPU {
 
     /// If the Parity bit is zero (indicating odd parity), a
     /// return is performed
-    pub fn rpo(&mut self) -> Result<(), String> {
+    pub fn rpo(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_PARITY) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Parity bit is one (indicating even parity), a
     /// return is performed
-    pub fn rpe(&mut self) -> Result<(), String> {
+    pub fn rpe(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_PARITY) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Sign bit is one (indicating a minus result, a
     /// return is performed
-    pub fn rm(&mut self) -> Result<(), String> {
+    pub fn rm(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_SIGN) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Sign bit is zero, a return is performed
-    pub fn rp(&mut self) -> Result<(), String> {
+    pub fn rp(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_SIGN) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Carry bit is one, a return operation is performed
-    pub fn rc(&mut self) -> Result<(), String> {
+    pub fn rc(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_CARRY) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     // If the Carry bit is zero, a return operation is performed
-    pub fn rnc(&mut self) -> Result<(), String> {
+    pub fn rnc(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_CARRY) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Zero bit is one, a return operation is performed
-    pub fn rz(&mut self) -> Result<(), String> {
+    pub fn rz(&mut self) -> Result<u8, String> {
         if self.test_flag(FLAG_ZERO) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Zero bit is zero, a return operation is performed
-    pub fn rnz(&mut self) -> Result<(), String> {
+    pub fn rnz(&mut self) -> Result<u8, String> {
         if !self.test_flag(FLAG_ZERO) {
             return self.ret();
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Performs an immediate return command
-    pub fn ret(&mut self) -> Result<(), String> {
+    pub fn ret(&mut self) -> Result<u8, String> {
         // RET (PC.lo <- (sp); PC.hi<-(sp+1); SP <- SP+2)
         let pc_lo = self.memory.read(usize::from(self.sp)).unwrap_or(0);
         let pc_hi = self.memory.read(usize::from(self.sp + 1)).unwrap_or(0);
@@ -111,182 +111,177 @@ impl CPU {
         self.sp += 2;
 
         // And do an immediate jump
-        self.jmp(pc_lo, pc_hi)
+        self.jmp(pc_lo, pc_hi);
+
+        Ok(self.current_instruction.cycles)
     }
 
     /// Performs a JUMP (JMP) - Program execution continues unconditionally <br>
     /// at the memory address made by combining (dh) with (dl) (concatenation) and
     /// then updating the `ProgramCounter` value.
-    pub fn jmp(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jmp(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         self.pc = make_pointer(dl, dh) as usize;
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_CARRY` is set to 1 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jc(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_CARRY) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_CARRY` is set to 0 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jnc(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jnc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_CARRY) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_ZERO` is set to 1 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jz(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jz(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_ZERO) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_ZERO` is set to 0 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jnz(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jnz(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_ZERO) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_SIGN` is set to 1 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jm(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jm(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_SIGN) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_SIGN` is set to 0 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jp(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jp(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_SIGN) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_PARITY` is set to 1 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jpe(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jpe(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_PARITY) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If `FLAG_PARITY` is set to 0 this will jump to the address specified
     /// when calling the instruction.
-    pub fn jpo(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn jpo(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_PARITY) {
-            self.current_instruction.size = 0;
             return self.jmp(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Carry bit is one, a call operation is performed
-    pub fn cc(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_CARRY) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Carry bit is zero, a call operation is performed
-    pub fn cnc(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cnc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_CARRY) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the Zero bit is one, a call is performed
-    pub fn cnz(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cnz(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_ZERO) {
-            return self.call(dl, dh);
+            self.call(dl, dh)?;
+            Ok(17)
+        } else {
+            Ok(11)
         }
-
-        Ok(())
     }
 
     /// If the Zero bit is zero, a call is performed
-    pub fn cz(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cz(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_ZERO) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the sign bit is one, a call is performed
-    pub fn cm(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cm(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_SIGN) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the sign bit is zero, a call is performed
-    pub fn cp(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cp(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_SIGN) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the parity bit is one, a call is performed
-    pub fn cpe(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cpe(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if self.test_flag(FLAG_PARITY) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// If the parity bit is zero, a call is performed
-    pub fn cpo(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn cpo(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         if !self.test_flag(FLAG_PARITY) {
             return self.call(dl, dh);
         }
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 
     /// Contents of the H regsiter replace the 8MSB of the PC and the contents
     /// of the L register replace the 8LSB of the PC.  Program execution continues
     /// at the new location of the PC.  Basically a "jump to the HL register"
-    pub fn pchl(&mut self) -> Result<(), String> {
+    pub fn pchl(&mut self) -> Result<u8, String> {
         self.jmp(self.l, self.h)
     }
 
@@ -294,7 +289,7 @@ impl CPU {
     /// instruction and then pushes the contents of the PC onto the stack and
     /// then jumps to the address specified in the instruction by setting
     /// the PC to the supplied address.
-    pub fn call(&mut self, dl: u8, dh: u8) -> Result<(), String> {
+    pub fn call(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         // Set the PC to the next sequential instruction
         self.pc += self.current_instruction.size;
 
@@ -312,10 +307,9 @@ impl CPU {
         };
 
         // Now do our jump by setting the PC to the supplied address.
-        self.current_instruction.size = 0; // And make a pointer
         self.pc = make_pointer(dl, dh) as usize;
 
-        Ok(())
+        Ok(self.current_instruction.cycles)
     }
 }
 

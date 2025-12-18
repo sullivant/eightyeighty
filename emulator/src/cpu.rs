@@ -49,6 +49,55 @@ pub struct CPU {
     pub next_instruction: Instruction,      // Populated after run_opcode() but before next tick()
 }
 
+/// Will describe the output of a single tick's step
+#[derive(Debug, Clone)]
+pub struct StepResult {
+    pub pc: usize,
+    pub opcode: u8,
+    pub bytes: Vec<u8>,
+    pub mnemonic: String,
+    pub cycles: u8,
+    pub registers: RegistersSnapshot,
+}
+
+
+impl fmt::Display for StepResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "PC: 0x{:04X}  Opcode: 0x{:02X}  Mnemonic: {}", self.pc, self.opcode, self.mnemonic)?;
+        write!(f, "Bytes:")?;
+        for b in &self.bytes {
+            write!(f, " {:02X}", b)?;
+        }
+        writeln!(f)?;
+        writeln!(f, "Cycles: {}", self.cycles)?;
+        writeln!(f, "{}", self.registers)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RegistersSnapshot {
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub h: u8,
+    pub l: u8,
+    pub sp: u16,
+    pub pc: u16,
+    pub flags: u8,
+}
+
+impl fmt::Display for RegistersSnapshot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Registers:")?;
+        writeln!(f, "  A:  0x{:02X}  B: 0x{:02X}  C: 0x{:02X}", self.a, self.b, self.c)?;
+        writeln!(f, "  D:  0x{:02X}  E: 0x{:02X}  H: 0x{:02X}", self.d, self.e, self.h)?;
+        writeln!(f, "  L:  0x{:02X}  SP: 0x{:04X}  PC: 0x{:04X}", self.l, self.sp, self.pc)?;
+        writeln!(f, "  Flags: 0x{:02X}", self.flags)
+    }
+}
+
 #[allow(unused)]
 #[derive(Clone, Copy)]
 pub enum Registers {
@@ -166,56 +215,47 @@ impl CPU {
         Instruction::new(opcode) // new() will fill in the rest..
     }
 
-    /// Gathers a word from memory based on program counter location,
-    /// then passes it along to the ``run_opcode()`` function
-    /// On successful tick, returns the program counter value that was run
-    /// On unsuccessful tick, returns an error
-    ///
-    /// # Errors
-    /// Will return an error if necessary
-    /// # Panics
-    /// Will panic if an error happens
-    pub fn tick(&mut self) -> Result<(u8), String> {
+    pub fn step(&mut self) -> Result<StepResult , String> {
+        let pc_start = self.pc; // Where we are starting from
+
+        // Fetch opcode Instruction and set it to "current"
         let opcode = self.read_instruction(); // Gather the current opcode to run, based on PC's location
-        self.current_instruction = opcode;
+        self.current_instruction = opcode.clone();
 
-        // If we are in a STOPPED state, no action is necessary
-        // This will be "unstopped" when an interrupt occurs
-        if self.nop {
-            return Ok(0);
+        // Capture what this instruction is, so we can debug with StepResult
+        let mut bytes = Vec::with_capacity(opcode.size);
+        for i in 0..opcode.size {
+            bytes.push (
+                self.memory.read(self.pc + i).map_err(|e| format!("Memory read error: {}", e))?,
+            );
         }
 
-        // Print the opcode we are going to run with the current CPU state alongside.
-        // TODO: Have this also gather potential DL,DH values
-        if self.ok_to_print {
-            println!("{} @ {}", self.current_instruction, self);
-        }
+        // Execute the opcode
+        let cycles_ran = self.run_opcode()?;
 
-        // While we are in single step mode, and it's not OK to step, let's just return,
-        // changing nothing about the PC, etc.
-        if self.single_step_mode && !self.ok_to_step {
-            self.ok_to_print = false;
-            return Ok(0);
-        }
-
-        // If we get this far, we need to reset "ok_to_step" to false for next run!
-        if self.single_step_mode {
-            self.ok_to_print = true;
-            self.ok_to_step = false;
-        }
-
-        self.cycle_count += 1;
-
-        // If we are not ok after running the opcode, we will error
-        let cycles_ran = match self.run_opcode() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e),
+        // Snapshot of the registers after execution
+        let registers = RegistersSnapshot {
+            a: self.a,
+            b: self.b,
+            c: self.c,
+            d: self.d,
+            e: self.e,
+            h: self.h,
+            l: self.l,
+            sp: self.sp,
+            pc: self.pc as u16,
+            flags: self.flags,
         };
 
-        // Store what we think our next instruction will be
-        self.next_instruction = self.read_instruction();
+        Ok(StepResult {
+            pc: pc_start,
+            opcode: opcode.opcode,
+            bytes,
+            mnemonic: opcode.text.to_string(),
+            cycles: cycles_ran,
+            registers
+        })
 
-        return cycles_ran;
     }
 
     // Gathers the data necessary for the instruction and
@@ -228,108 +268,71 @@ impl CPU {
             Err(_) => return Err(format!("Unable to get data pair")),
         };
 
+        // Used in determining if PC actually changed in the opcode, like in a jump, etc.
+        let pc_before = self.pc;
+
+        // Returned from each opcode.  Sometimes modified in the opcode operation, so that may
+        // be overridden in a particular opcode such as jump, etc.
+        let mut code_cycles = self.current_instruction.cycles;
+
         // Do the actual run of the opcode and return the result
-        let opcode_result = match self.current_instruction.opcode {
-            0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(()),
+        let opcode_result: Result<u8, String> = match self.current_instruction.opcode {
+            0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(code_cycles),
 
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.mvi(dl),
 
-            0x09 | 0x19 | 0x29 | 0x39 => {
-                self.dad();
-                Ok(())
-            }
+            0x09 | 0x19 | 0x29 | 0x39 => self.dad(),
 
             0x01 => self.lxi(Registers::BC, dl, dh),
             0x02 => self.stax(Registers::BC), // STAX (BC)
-            0x03 => {
-                self.inx(Registers::BC);
-                Ok(())
-            }
+            0x03 => self.inx(Registers::BC),
             0x04 => self.inr(Registers::B),
             0x05 => self.dcr(Registers::B),
-            0x07 => {
-                self.rlc_ral(false);
-                Ok(())
-            }
+            0x07 => self.rlc_ral(false),
             0x0A => self.ldax(Registers::BC),
-            0x0B => {
-                self.dcx(Registers::BC);
-                Ok(())
-            }
+            0x0B => self.dcx(Registers::BC),
             0x0C => self.inr(Registers::C),
             0x0D => self.dcr(Registers::C),
-
-            0x0F => {
-                self.rrc_rar(true);
-                Ok(())
-            } // RRC
+            0x0F => self.rrc_rar(true),
 
             0x11 => self.lxi(Registers::DE, dl, dh),
             0x12 => self.stax(Registers::DE), // STAX (DE)
-            0x13 => {
-                self.inx(Registers::DE);
-                Ok(())
-            }
+            0x13 => self.inx(Registers::DE),
             0x14 => self.inr(Registers::D),
             0x15 => self.dcr(Registers::D),
-            0x17 => {
-                self.rlc_ral(true);
-                Ok(())
-            }
+            0x17 => self.rlc_ral(true),
             0x1A => self.ldax(Registers::DE),
-            0x1B => {
-                self.dcx(Registers::DE);
-                Ok(())
-            }
+            0x1B => self.dcx(Registers::DE),
             0x1C => self.inr(Registers::E),
             0x1D => self.dcr(Registers::E),
-            0x1F => {
-                self.rrc_rar(false);
-                Ok(())
-            } // RAR
+            0x1F => self.rrc_rar(false),
 
             0x21 => self.lxi(Registers::HL, dl, dh),
             0x22 => self.shld(dl, dh),
             0x2A => self.lhld(dl, dh),
-            0x23 => {
-                self.inx(Registers::HL);
-                Ok(())
-            }
+            0x23 => self.inx(Registers::HL),
             0x24 => self.inr(Registers::H),
             0x25 => self.dcr(Registers::H),
-            0x27 => {
-                self.daa();
-                Ok(())
-            }
-            0x2B => {
-                self.dcx(Registers::HL);
-                Ok(())
-            }
+            0x27 => self.daa(),
+            0x2B => self.dcx(Registers::HL),
             0x2C => self.inr(Registers::L),
             0x2D => self.dcr(Registers::L),
             0x2F => {
-                // Complement the accumulator
-                self.a = !self.a;
-                Ok(())
+                self.a = !self.a; // Complement the accumulator
+                Ok(code_cycles)
             }
 
             0x31 => self.lxi(Registers::SP, dl, dh),
             0x32 => self.sta(dl, dh), // STA (adr)<-A
-            0x33 => {
-                self.inx(Registers::SP);
-                Ok(())
-            }
+            0x33 => self.inx(Registers::SP),
             0x34 => self.inr(Registers::HL),
             0x35 => self.dcr(Registers::HL),
             0x37 => {
                 self.set_flag(FLAG_CARRY);
-                Ok(())
+                Ok(code_cycles)
             }
             0x3A => self.lda(dl, dh),
-            0x3B => {
-                self.dcx(Registers::SP);
-                Ok(())
-            }
+            0x3B => self.dcx(Registers::SP),
             0x3C => self.inr(Registers::A),
             0x3D => self.dcr(Registers::A),
             0x3F => {
@@ -339,7 +342,7 @@ impl CPU {
                 } else {
                     self.set_flag(FLAG_CARRY);
                 }
-                Ok(())
+                Ok(code_cycles)
             }
 
             0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
@@ -427,10 +430,7 @@ impl CPU {
             0xC3 | 0xCB => self.jmp(dl, dh),
             0xC4 => self.cnz(dl, dh),
             0xC5 => self.push(self.c, self.b),
-            0xC6 | 0xCE => {
-                self.adi_aci(dl);
-                Ok(())
-            }
+            0xC6 | 0xCE =>  self.adi_aci(dl),
             0xC7 => self.rst(0),
             0xC8 => self.rz(),
             0xC9 | 0xD9 => self.ret(),
@@ -458,18 +458,12 @@ impl CPU {
             0xE3 => self.xthl(),
             0xE4 => self.cpo(dl, dh),
             0xE5 => self.push(self.l, self.h),
-            0xE6 => {
-                self.ani(dl);
-                Ok(())
-            }
+            0xE6 => self.ani(dl),
             0xE7 => self.rst(4),
             0xE8 => self.rpe(),
             0xE9 => self.pchl(),
             0xEA => self.jpe(dl, dh),
-            0xEB => {
-                self.xchg();
-                Ok(())
-            }
+            0xEB => self.xchg(),
             0xEC => self.cpe(dl, dh),
             0xEF => self.rst(5),
 
@@ -481,17 +475,11 @@ impl CPU {
             0xF5 => self.push(self.get_flags(), self.a),
             0xF7 => self.rst(6),
             0xF8 => self.rm(),
-            0xF9 => {
-                self.sphl();
-                Ok(())
-            }
+            0xF9 => self.sphl(),
             0xFA => self.jm(dl, dh),
             0xFB => self.ei(),
             0xFC => self.cm(dl, dh),
-            0xFE => {
-                self.cpi(dl);
-                Ok(())
-            }
+            0xFE => self.cpi(dl),
             0xFF => self.rst(7),
 
             _ => Err(format!(
@@ -501,9 +489,13 @@ impl CPU {
         };
 
         match opcode_result {
-            Ok(()) => {
-                self.pc += self.current_instruction.size * OPCODE_SIZE;
-                Ok((self.current_instruction.cycles))
+            Ok(cycles_ran) => {
+                // If PC has not changed due to a jump, etc, let's advance it like normal:
+                if self.pc == pc_before {
+                    self.pc += self.current_instruction.size;
+                }
+ 
+                Ok(cycles_ran)
             }
             Err(e) => Err(e),
         }

@@ -45,6 +45,7 @@ impl Memory {
         }
     }
 
+    /// Returns a slice (16) of ram beginning at the provided starting point
     pub fn get_slice(&self, start: usize) -> [u8; 16] {
         let mut ret: [u8; 16] = [0; 16];
 
@@ -94,15 +95,6 @@ impl Memory {
         self.data.len()
     }
     
-}
-
-// Creates a simple table header used in displaying ram contents.
-pub fn table_header() -> String {
-    let mut header = [0; 16];
-    for (i, item) in header.iter_mut().enumerate() {
-        *item = i;
-    }
-    format!("0000 {header:02X?}")
 }
 
 #[cfg(test)]
