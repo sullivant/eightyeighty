@@ -5,6 +5,9 @@ use rustyline::DefaultEditor;
 
 use emulator::{self, Emulator, cpu::CPU};
 
+// A simple test rom with a few instructions
+const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl = DefaultEditor::new()?;
     let prompt = "8080> ";
@@ -13,14 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let history_path = ".history";
     let _ = rl.load_history(history_path);
 
-    // A simple test rom with a few instructions
-    const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
-
-    // Put this in a setup fn
-    println!("Creating emulator...");
-    let mut emu: Emulator = Emulator::new();
-    println!("Loading rom...");
-    emu.load_rom(ROM_TST)?;
+    let mut emu: Emulator = setup_emu()?;
 
     println!("Starting REPL...");
     loop {
@@ -59,6 +55,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn setup_emu() -> Result<Emulator, String> {
+    // Put this in a setup fn
+    println!("Creating emulator...");
+    let mut emu: Emulator = Emulator::new();
+    println!("Inserting ROM and loading...");
+    emu.load_rom(ROM_TST.to_vec())?;
+
+    return Ok(emu);
+}
+
+
 fn handle_command(emu: &mut Emulator, line: &str) -> bool {
 
     let parts: Vec<&str> = line.split_whitespace().collect();
@@ -82,6 +89,14 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
         ["mem", _, _] => mem(&mut emu.cpu, line),
 
         ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
+
+        ["reset"] => {
+            println!("Resetting Emulator");
+            if let Err(_) = emu.reset() {
+                println!("Error in resetting!");
+                return false;
+            }
+        },
 
         _ => println!("Unknown command: {}", line),
     }

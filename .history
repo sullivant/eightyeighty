@@ -13,3 +13,7 @@ quit
 mem 0 2
 quit
 mem 0 20
+quit
+reset
+mem 0 20
+quit
