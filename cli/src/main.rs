@@ -1,12 +1,12 @@
 use std::io::{self};
 use std::fs;
 
-use rustyline::{error::ReadlineError, history};
+use rustyline::{error::ReadlineError};
 use rustyline::DefaultEditor;
 
 use emulator::{self, Emulator, cpu::CPU};
 
-// A simple test rom with a few instructions
+// A simple test rom with a few instructions to load at the start
 const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -56,6 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Will create the emulator machine, and insert the "default" ROM
 fn setup_emu() -> Result<Emulator, String> {
     // Put this in a setup fn
     println!("Creating emulator...");
@@ -66,7 +67,7 @@ fn setup_emu() -> Result<Emulator, String> {
     return Ok(emu);
 }
 
-
+/// Actually handles processing the REPL command
 fn handle_command(emu: &mut Emulator, line: &str) -> bool {
 
     let parts: Vec<&str> = line.split_whitespace().collect();
@@ -134,6 +135,7 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
 }
 
 
+/// Displays registers
 fn regs(cpu: &CPU) {
     println!(
         "A:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X}",
@@ -141,6 +143,7 @@ fn regs(cpu: &CPU) {
     );
 }
 
+/// Displays a portion of memory
 fn mem(cpu: &CPU, cmd: &str) {
     let parts: Vec<_> = cmd.split_whitespace().collect();
     if parts.len() != 3 {
@@ -150,13 +153,49 @@ fn mem(cpu: &CPU, cmd: &str) {
 
     let addr = usize::from_str_radix(parts[1], 16).unwrap_or(0);
     let len = parts[2].parse::<usize>().unwrap_or(0);
+    let bytes_per_line = 16;
 
-    for i in 0..len {
-        let v = cpu.memory.read(addr + i).unwrap_or(0);
-        println!("{:04X}: {:02X}", addr + i, v);
+    for line_start in (0..len).step_by(bytes_per_line) {
+        // Print the address at start of line
+        print!("{:04X}:  ", addr + line_start);
+
+        // Print hex bytes for this line
+        for i in 0..bytes_per_line {
+            let idx = line_start + i;
+            if idx < len {
+                let byte = cpu.memory.read(addr + idx).unwrap_or(0);
+                print!("{:02X} ", byte);
+            } else {
+                // Padding for incomplete line
+                print!("   ");
+            }
+        }
+
+        // Print ASCII characters for this line
+        print!(" ");
+
+        for i in 0..bytes_per_line {
+            let idx = line_start + i;
+            if idx < len {
+                let byte = cpu.memory.read(addr + idx).unwrap_or(0);
+                // Show printable ASCII or '.' for non-printable
+                let ch = if byte.is_ascii_graphic() || byte == b' ' {
+                    byte as char
+                } else {
+                    '.'
+                };
+                print!("{}", ch);
+            } else {
+                // Padding for incomplete line
+                print!(" ");
+            }
+        }
+
+        println!();
     }
 }
 
+/// Prints the currently loaded ROM in case one is curious
 fn print_rom(emu: &Emulator) {
     match emu.rom() {
         Some(rom) => {
@@ -170,7 +209,7 @@ fn print_rom(emu: &Emulator) {
     }
 }
 
-
+/// Issues a single step command and shows what happened and how many cycles it took
 fn step(cpu: &mut CPU) {
     match cpu.step() {
         Ok(result) => {
@@ -186,6 +225,7 @@ fn step(cpu: &mut CPU) {
     }
 }
 
+/// Runs for a certain number of cycles
 fn run(cpu: &mut CPU, target_cycles: u64) {
     let mut cycles_run = 0u64;
     let mut instr_count = 0;
@@ -214,7 +254,6 @@ fn run(cpu: &mut CPU, target_cycles: u64) {
         instr_count, cycles_run, target_cycles
     );
 }
-
 
 /// Just loads provided filepath into a vec.
 fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
