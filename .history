@@ -5,3 +5,11 @@ step
 run 20
 ?
 exit
+mem
+mem 0 2
+quit
+mem 0 2
+quit
+mem 0 2
+quit
+mem 0 20

@@ -78,6 +78,9 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
 
         ["regs"] => regs(&emu.cpu),
 
+        // Will resend the line, to be properly parsed in the mem fn.
+        ["mem", _, _] => mem(&mut emu.cpu, line),
+
         ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
 
         _ => println!("Unknown command: {}", line),
