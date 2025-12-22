@@ -1,4 +1,7 @@
-/resources/roms
+resources/roms/*
+!resources/roms/
+!resources/roms/test.rom
+
 /resources/fonts
 **/.history
 

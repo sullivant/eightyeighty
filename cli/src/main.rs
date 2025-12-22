@@ -1,4 +1,5 @@
-use std::io::{Write, stdin, stdout};
+use std::io::{self};
+use std::fs;
 
 use rustyline::{error::ReadlineError, history};
 use rustyline::DefaultEditor;
@@ -27,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 }
 
-                rl.add_history_entry(line);
+                rl.add_history_entry(line)?;
 
                 if !handle_command(&mut emu, line) {
                     break;
@@ -88,12 +89,40 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
         // Will resend the line, to be properly parsed in the mem fn.
         ["mem", _, _] => mem(&mut emu.cpu, line),
 
+        ["rom"] => print_rom(&emu),
+
         ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
+
+        ["insert", rom_name] => {
+            let file = if rom_name.ends_with(".rom") {
+                rom_name.to_string()
+            } else {
+                format!("{}.rom", rom_name)
+            };
+
+            let path = format!("resources/roms/{}", file);
+            println!("Inserting ROM: {}", path);
+
+            // If it loads from the file, stuff it into the Emulator
+            match load_rom_file(&path) {
+                Ok(bytes) => {
+                    emu.insert_rom(bytes);
+                }
+                Err(e) => {
+                    println!("File error: {}", e);
+                }
+            }
+        },
+
+        ["remove"] => {
+            println!("Removing ROM from Emulator");
+            emu.remove_rom();
+        },
 
         ["reset"] => {
             println!("Resetting Emulator");
-            if let Err(_) = emu.reset() {
-                println!("Error in resetting!");
+            if let Err(e) = emu.reset() {
+                println!("Error in resetting: {}",e);
                 return false;
             }
         },
@@ -125,6 +154,19 @@ fn mem(cpu: &CPU, cmd: &str) {
     for i in 0..len {
         let v = cpu.memory.read(addr + i).unwrap_or(0);
         println!("{:04X}: {:02X}", addr + i, v);
+    }
+}
+
+fn print_rom(emu: &Emulator) {
+    match emu.rom() {
+        Some(rom) => {
+            for (addr, byte) in rom.iter().enumerate() {
+                println!("{:04X}: {:02X}", addr, byte);
+            }
+        }
+        None => {
+            println!("No ROM loaded.");
+        }
     }
 }
 
@@ -171,4 +213,10 @@ fn run(cpu: &mut CPU, target_cycles: u64) {
         "Ran {} instructions, {} cycles (target {})",
         instr_count, cycles_run, target_cycles
     );
+}
+
+
+/// Just loads provided filepath into a vec.
+fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
+    fs::read(path)
 }

@@ -30,6 +30,16 @@ impl Emulator {
         self.rom = Some(rom);
     }
 
+    /// Removes the ROM from the machine.
+    pub fn remove_rom(&mut self) {
+        self.rom = None;
+    }
+
+    /// Returns contents of ROM
+    pub fn rom(&self) -> Option<&[u8]> {
+        self.rom.as_deref()
+    }
+
     /// Resets ("reboots") the emulator and loads the ROM into memory
     pub fn reset(&mut self) -> Result<(), String> {
         let rom = self.rom.as_ref().ok_or("No ROM Inserted")?;

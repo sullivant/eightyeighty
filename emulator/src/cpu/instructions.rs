@@ -70,7 +70,7 @@ impl Instruction {
             0x1E => (2, 7, OP_MVI_E),
             0x1F => (1, 4, OP_RAR),
 
-            0x21 => (2, 10, OP_LXI_H),
+            0x21 => (3, 10, OP_LXI_H),
             0x22 => (3, 16, OP_SHLD),
             0x23 => (1, 5, OP_INX_H),
             0x24 => (1, 5, OP_INR_H),
