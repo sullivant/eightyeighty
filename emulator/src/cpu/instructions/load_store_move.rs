@@ -24,13 +24,13 @@ impl CPU {
         match self.pop(Registers::HL) {
             Ok(_) => (),
             Err(e) => return Err(e),
-        };
+        }
 
         // Push the "old" ones
         match self.push(cl, ch) {
             Ok(_) => (),
             Err(e) => return Err(e),
-        };
+        }
 
         Ok(self.current_instruction.cycles)
     }
@@ -57,7 +57,7 @@ impl CPU {
     pub fn push(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
         self.sp -= 1;
         match self.memory.write(self.sp.into(), dh) {
-            Ok(_) => (),
+            Ok(()) => (),
             Err(e) => {
                 return Err(format!(
                     "PUSH: Unable to write to SP location {0}, error is: {e}",
@@ -68,7 +68,7 @@ impl CPU {
 
         self.sp -= 1;
         match self.memory.write(self.sp.into(), dl) {
-            Ok(_) => (),
+            Ok(()) => (),
             Err(e) => {
                 return Err(format!(
                     "PUSH: Unable to write to SP location {0}, error is: {e}",
@@ -121,7 +121,7 @@ impl CPU {
                 self.a = source_b;
             }
             _ => return Err(format!("POP: Invalid source register requested: {reg}")),
-        };
+        }
 
         self.sp += 2;
 
@@ -141,7 +141,7 @@ impl CPU {
                     "SHLD: Unable to write L to memory at {addr:#04X}, error is: {e}"
                 ))
             }
-        };
+        }
         match self.memory.write((addr + 1) as usize, self.h) {
             Ok(_v) => (),
             Err(e) => {
@@ -292,10 +292,7 @@ impl CPU {
             Registers::E => self.e,
             Registers::L => self.l,
             Registers::H => self.h,
-            Registers::HL => match self.memory.read(addr) {
-                Ok(v) => v,
-                Err(e) => return Err(e),
-            },
+            Registers::HL => self.memory.read(addr)?,
             _ => {
                 return Err(format!("Cannot MOV from unimplemented register: {source}"));
             }
@@ -316,7 +313,7 @@ impl CPU {
             _ => {
                 return Err(format!("Cannot MOV into unimplemented register: {source}"));
             }
-        };
+        }
 
         Ok(self.current_instruction.cycles)
     }
@@ -363,7 +360,7 @@ impl CPU {
             0x36 => self.memory().write(addr, x)?, // 0x36
             0x3E => self.a = x,                    // 0x3E
             _ => (),                               // Do nothing
-        };
+        }
         Ok(self.current_instruction.cycles)
     }
 }

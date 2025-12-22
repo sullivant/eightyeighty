@@ -4,7 +4,7 @@ pub(crate) mod instructions;
 mod tests;
 
 use crate::{
-    constants::{FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE},
+    constants::{FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO},
     memory::Memory,
 };
 use instructions::Instruction;
@@ -66,7 +66,7 @@ impl fmt::Display for StepResult {
         writeln!(f, "PC: 0x{:04X}  Opcode: 0x{:02X}  Mnemonic: {}", self.pc, self.opcode, self.mnemonic)?;
         write!(f, "Bytes:")?;
         for b in &self.bytes {
-            write!(f, " {:02X}", b)?;
+            write!(f, " {b:02X}")?;
         }
         writeln!(f)?;
         writeln!(f, "Cycles: {}", self.cycles)?;
@@ -220,13 +220,13 @@ impl CPU {
 
         // Fetch opcode Instruction and set it to "current"
         let opcode = self.read_instruction(); // Gather the current opcode to run, based on PC's location
-        self.current_instruction = opcode.clone();
+        self.current_instruction = opcode;
 
         // Capture what this instruction is, so we can debug with StepResult
         let mut bytes = Vec::with_capacity(opcode.size);
         for i in 0..opcode.size {
             bytes.push (
-                self.memory.read(self.pc + i).map_err(|e| format!("Memory read error: {}", e))?,
+                self.memory.read(self.pc + i).map_err(|e| format!("Memory read error: {e}"))?,
             );
         }
 
@@ -263,17 +263,18 @@ impl CPU {
     // perform the thing...
     #[allow(clippy::too_many_lines)]
     pub fn run_opcode(&mut self) -> Result<u8, String> {
-        let (dl, dh) = match self.get_data_pair() {
-            Ok(value) => value,
-            Err(_) => return Err(format!("Unable to get data pair")),
-        };
+        // let (dl, dh) = match self.get_data_pair() {
+        //     Ok(value) => value,
+        //     Err(_) => return Err("Unable to get data pair".to_string()),
+        // };
+        let Ok((dl, dh)) = self.get_data_pair() else { return Err("Unable to get data pair".to_string()) };
 
         // Used in determining if PC actually changed in the opcode, like in a jump, etc.
         let pc_before = self.pc;
 
         // Returned from each opcode.  Sometimes modified in the opcode operation, so that may
         // be overridden in a particular opcode such as jump, etc.
-        let mut code_cycles = self.current_instruction.cycles;
+        let code_cycles = self.current_instruction.cycles;
 
         // Do the actual run of the opcode and return the result
         let opcode_result: Result<u8, String> = match self.current_instruction.opcode {
@@ -587,7 +588,7 @@ impl CPU {
                 self.sp = val;
             }
             _ => (),
-        };
+        }
     }
 
     /// Sets a flag to a provided boolean value
@@ -663,7 +664,7 @@ impl CPU {
             } else {
                 self.reset_flag(FLAG_CARRY);
             }
-        };
+        }
 
         if let Some(ac) = aux_carry {
             if ac {
@@ -671,7 +672,7 @@ impl CPU {
             } else {
                 self.reset_flag(FLAG_AUXCARRY);
             }
-        };
+        }
     }
 }
 
@@ -689,7 +690,7 @@ pub fn make_pointer(dl: u8, dh: u8) -> u16 {
 #[must_use]
 #[allow(unused)]
 pub fn get_parity(v: u16) -> bool {
-    v.count_ones() % 2 == 0
+    v.count_ones().is_multiple_of(2)
 }
 
 // Returns true if MSB = 1

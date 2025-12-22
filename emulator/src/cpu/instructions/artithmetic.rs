@@ -12,7 +12,7 @@ impl CPU {
                 self.set_register_pair(target, pair);
             }
             _ => (),
-        };
+        }
         Ok(self.current_instruction.cycles)
     }
 
@@ -165,7 +165,7 @@ impl CPU {
                 let (res, of) = mem.overflowing_sub(1);
                 self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
                 match self.memory().write(addr, res) {
-                    Ok(_) => (),
+                    Ok(()) => (),
                     Err(_) => {
                         return Err("Unable to write to memory value at addr pointer".to_string());
                     }
@@ -387,7 +387,7 @@ impl CPU {
         // If the current opcode is 0xCE we use the value of the carry flag.
         if self.current_instruction.opcode == 0xCE && self.test_flag(FLAG_CARRY) {
             to_add = to_add.overflowing_add(1).0; // Do we need to care about overflow here?
-        };
+        }
 
         let ac = will_ac(to_add, self.a);
         let (res, of) = self.a.overflowing_add(to_add);
@@ -466,7 +466,7 @@ impl CPU {
         } else {
             // Normal carry
             new_accum |= low_order << 7; // Low order replaces high order
-        };
+        }
 
         self.a = new_accum;
 

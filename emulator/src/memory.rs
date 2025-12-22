@@ -50,20 +50,17 @@ impl Memory {
         let mut ret: [u8; 16] = [0; 16];
 
         for n in 0..16 {
-            ret[n] = match self.read(n + start) {
-                Ok(x) => x,
-                Err(_) => 0
-            };
+            ret[n] = self.read(n + start).unwrap_or_default();
         }
 
-        return ret;
+        ret
     }
 
     /// Returns the section of memory dedicated to Video.
     pub fn get_vram(&self) -> &[u8] {
         // let mut ret: [u8; VRAM_SIZE] = [0; VRAM_SIZE];
 
-        return &self.data[VRAM_START .. (VRAM_END+1)];
+        &self.data[VRAM_START..=VRAM_END]
     }
 
     // Returns a cloned copy of the value in memory, or an error if unable to read

@@ -19,7 +19,7 @@ impl CPU {
         match self.push(dl, dh) {
             Ok(_) => (),
             Err(e) => return Err(e),
-        };
+        }
 
         // Jump to the location specified in the opcode.  Example:
         // OP 0xD7 is "RST 2" so the destination ends up being
@@ -30,11 +30,11 @@ impl CPU {
     /// If the Parity bit is zero (indicating odd parity), a
     /// return is performed
     pub fn rpo(&mut self) -> Result<u8, String> {
-        if !self.test_flag(FLAG_PARITY) {
+        if self.test_flag(FLAG_PARITY) {
+            Ok(5)
+        } else {
             self.ret()?;
             Ok(11)
-        } else {
-            Ok(5)
         }
     }
 
@@ -62,11 +62,11 @@ impl CPU {
 
     /// If the Sign bit is zero, a return is performed
     pub fn rp(&mut self) -> Result<u8, String> {
-        if !self.test_flag(FLAG_SIGN) {
+        if self.test_flag(FLAG_SIGN) {
+            Ok(5)
+        } else {
             self.ret()?;
             Ok(11)
-        } else {
-            Ok(5)
         }
     }
 
@@ -82,11 +82,11 @@ impl CPU {
 
     // If the Carry bit is zero, a return operation is performed
     pub fn rnc(&mut self) -> Result<u8, String> {
-        if !self.test_flag(FLAG_CARRY) {
+        if self.test_flag(FLAG_CARRY) {
+            Ok(5)
+        } else {
             self.ret()?;
             Ok(11)
-        } else {
-            Ok(5)
         }
 
     }
@@ -103,11 +103,11 @@ impl CPU {
 
     /// If the Zero bit is zero, a return operation is performed
     pub fn rnz(&mut self) -> Result<u8, String> {
-        if !self.test_flag(FLAG_ZERO) {
+        if self.test_flag(FLAG_ZERO) {
+            Ok(5)
+        } else {
             self.ret()?;
             Ok(11)
-        } else {
-            Ok(5)
         }
     }
 
@@ -226,11 +226,11 @@ impl CPU {
 
     /// If the Carry bit is zero, a call operation is performed
     pub fn cnc(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
-        if !self.test_flag(FLAG_CARRY) {
+        if self.test_flag(FLAG_CARRY) { 
+            Ok(11)
+        } else {
             self.call(dl, dh)?;
             Ok(17)
-        } else { 
-            Ok(11)
         }
     }
 
@@ -246,11 +246,11 @@ impl CPU {
 
     /// If the Zero bit is zero, a call is performed
     pub fn cz(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
-        if !self.test_flag(FLAG_ZERO) {
+        if self.test_flag(FLAG_ZERO) {
+            Ok(11)
+        } else {
             self.call(dl, dh)?;
             Ok(17)
-        } else {
-            Ok(11)
         }
     }
 
@@ -266,11 +266,11 @@ impl CPU {
 
     /// If the sign bit is zero, a call is performed
     pub fn cp(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
-        if !self.test_flag(FLAG_SIGN) {
+        if self.test_flag(FLAG_SIGN) {
+            Ok(11)
+        } else {
             self.call(dl, dh)?;
             Ok(17)
-        } else {
-            Ok(11)
         }
     }
 
@@ -286,11 +286,11 @@ impl CPU {
 
     /// If the parity bit is zero, a call is performed
     pub fn cpo(&mut self, dl: u8, dh: u8) -> Result<u8, String> {
-        if !self.test_flag(FLAG_PARITY) {
+        if self.test_flag(FLAG_PARITY) {
+            Ok(11)
+        } else {
             self.call(dl, dh)?;
             Ok(17)
-        } else {
-            Ok(11)
         }
     }
 
@@ -320,7 +320,7 @@ impl CPU {
                     "CALL: Unable to push PC {pc_hi}, {pc_lo} onto stack. error is: {e}"
                 ))
             }
-        };
+        }
 
         // Now do our jump by setting the PC to the supplied address.
         self.pc = make_pointer(dl, dh) as usize;
