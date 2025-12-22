@@ -4,7 +4,7 @@ use std::fmt;
 use serde::{Deserialize,Serialize};
 use serde_big_array::BigArray;
 
-use crate::constants::{RAM_SIZE, VRAM_END, VRAM_SIZE, VRAM_START};
+use crate::constants::{RAM_SIZE, VRAM_END, VRAM_START};
 
 /// Memory
 ///

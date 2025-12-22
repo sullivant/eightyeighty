@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 emulator = { path = "../emulator" }
+rustyline = "17.0.2"

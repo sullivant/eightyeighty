@@ -120,7 +120,7 @@ impl CPU {
         self.sp += 2;
 
         // And do an immediate jump
-        self.jmp(pc_lo, pc_hi);
+        self.jmp(pc_lo, pc_hi)?;
 
         Ok(self.current_instruction.cycles)
     }

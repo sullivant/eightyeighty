@@ -6,20 +6,7 @@ pub const RAM_SIZE: usize = 0xFFFF;
 
 pub const VRAM_START: usize = 0x2400;
 pub const VRAM_END: usize = 0x3FFF;
-pub const VRAM_SIZE: usize = VRAM_END - VRAM_START;
-
-// Window and display concerns
-pub const DISP_WIDTH: u32 = 1024; // Overall width/height
-pub const DISP_HEIGHT: u32 = 768;
-// pub const EMU_WIDTH: u16 = 224; // Emulator display area width/height
-// pub const EMU_HEIGHT: u16 = 256;
-// pub const CELL_SIZE: u16 = 2; // The size of a "cell" or pixel
-//                               // pub const LINE_SPACE: u16 = 20; // Space between lines of text
-// pub const WHITE: Color = Color::RGB(255, 255, 255);
-// pub const BLACK: Color = Color::RGB(0, 0, 0);
-
-// pub const HEADER: &str =
-//     "CYCLE  PC       Ins  S  l,   h,   sp      SZ0A0P1C  data(l,h)  B    Halt? : Command";
+// pub const VRAM_SIZE: usize = VRAM_END - VRAM_START;
 
 // Flags and their order/bitmasks
 // S - Sign Flag

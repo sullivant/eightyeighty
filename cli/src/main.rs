@@ -1,45 +1,91 @@
 use std::io::{Write, stdin, stdout};
 
+use rustyline::{error::ReadlineError, history};
+use rustyline::DefaultEditor;
+
 use emulator::{self, Emulator, cpu::CPU};
 
-use crate::{
-    emulator::cpu::StepResult,
-};
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut rl = DefaultEditor::new()?;
+    let prompt = "8080> ";
 
-fn main() -> Result<(), String> {
+    // Store REPL history
+    let history_path = ".history";
+    let _ = rl.load_history(history_path);
+
+    // A simple test rom with a few instructions
     const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
 
+    // Put this in a setup fn
     println!("Creating emulator...");
     let mut emu: Emulator = Emulator::new();
-
     println!("Loading rom...");
     emu.load_rom(ROM_TST)?;
 
-
     println!("Starting REPL...");
-
     loop {
-        print!("> ");
-        stdout().flush().unwrap();
+        match rl.readline(prompt) {
+            Ok(line) => {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
 
-        let mut input = String::new();
-        stdin().read_line(&mut input).unwrap();
-        let input = input.trim();
-        
-        match input {
-            "quit" | "exit" => break,
-            "step" => step(&mut emu.cpu),
-            cmd if cmd.starts_with("run ") => run(&mut emu.cpu, cmd),
-            cmd if cmd.starts_with("mem ") => mem(&mut emu.cpu, cmd),
-            "regs" => regs(&emu.cpu),
-            "pc" => println!("PC = {:04X}", emu.cpu.pc),
-            _ => println!("Unknown command"),
+                rl.add_history_entry(line);
+
+                if !handle_command(&mut emu, line) {
+                    break;
+                }
+            }
+
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+                continue;
+            }
+
+            Err(ReadlineError::Eof) => {
+                println!("^D");
+                break;
+            }
+
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break;
+            }
         }
-
     }
 
+    let _ = rl.save_history(history_path);
     Ok(())
 }
+
+fn handle_command(emu: &mut Emulator, line: &str) -> bool {
+
+    let parts: Vec<&str> = line.split_whitespace().collect();
+
+    match parts.as_slice() {
+        ["quit"] | ["exit"] => return false,
+
+        ["step"] => {
+            step(&mut emu.cpu);
+        },
+
+        ["run", cycles] => {
+            if let Ok(c) = cycles.parse::<u64>() {
+                run(&mut emu.cpu, c);
+            }
+        },
+
+        ["regs"] => regs(&emu.cpu),
+
+        ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
+
+        _ => println!("Unknown command: {}", line),
+    }
+
+    true
+}
+
 
 fn regs(cpu: &CPU) {
     println!(
@@ -80,16 +126,7 @@ fn step(cpu: &mut CPU) {
     }
 }
 
-fn run(cpu: &mut CPU, cmd: &str) {
-    let parts: Vec<_> = cmd.split_whitespace().collect();
-    let target_cycles: u64 = match parts.get(1).and_then(|s| s.parse().ok()) {
-        Some(v) => v,
-        None => {
-            println!("Usage: run <cycles>");
-            return;
-        }
-    };
-
+fn run(cpu: &mut CPU, target_cycles: u64) {
     let mut cycles_run = 0u64;
     let mut instr_count = 0;
 
