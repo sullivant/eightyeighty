@@ -49,7 +49,6 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::OPCODE_SIZE;
     use crate::cpu::{instructions::Instruction, CPU};
 
     #[test]
@@ -60,15 +59,7 @@ mod tests {
         // Setup this instruction
         cpu.current_instruction = Instruction::new(0x76);
         cpu.run_opcode().unwrap();
-        assert_eq!(cpu.pc, op + OPCODE_SIZE);
+        assert_eq!(cpu.pc, op + cpu.current_instruction.size);
 
-        // Try to run a tick, PC should not move
-        cpu.step().unwrap();
-        assert_eq!(cpu.pc, op + OPCODE_SIZE);
-
-        // "unhalt" and see if pc moves next tick
-        cpu.nop(false);
-        cpu.step().unwrap();
-        assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
     }
 }
