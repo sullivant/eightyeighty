@@ -64,7 +64,7 @@ fn setup_emu() -> Result<Emulator, String> {
     println!("Inserting ROM and loading...");
     emu.load_rom(ROM_TST.to_vec())?;
 
-    return Ok(emu);
+    Ok(emu)
 }
 
 /// Actually handles processing the REPL command

@@ -53,7 +53,7 @@ impl Emulator {
         Ok(())
     }
  
-    /// Inserts a rom and then ensures it loads into the CPU properly.  A convenience fn for "insert_rom(); reset()"
+    /// Inserts a rom and then ensures it loads into the CPU properly.  A convenience fn for "`insert_rom()`; `reset()`"
     pub fn load_rom(&mut self, rom: Vec<u8>) -> Result<(), String> {
         self.insert_rom(rom);
         self.reset()
