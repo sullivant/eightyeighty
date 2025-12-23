@@ -26,6 +26,7 @@ pub struct Bus {
 
 impl Bus {
     // Initial bus creation has no mapped IO device
+    #[must_use]
     pub fn new(memory: Memory) -> Self{
         Self {
             memory,
@@ -34,17 +35,16 @@ impl Bus {
     }
 
     // Create a bus with an IO device if wanted
+    #[must_use]
     pub fn with_io(memory: Memory, io: Box<dyn IoDevice>) -> Self {
         Self { memory, io }
     }
 
     // Memory related stuff
     #[inline]
+    #[must_use]
     pub fn read(&self, addr: usize) -> u8 {
-        match self.memory.read(addr) {
-            Ok(v) => v,
-            Err(_) => 0x00, // Failed read
-        }
+        self.memory.read(addr).unwrap_or_default()
     }
 
     #[inline]
@@ -53,6 +53,7 @@ impl Bus {
     }
 
     // Allows larger access
+    #[must_use]
     pub fn memory(&self) -> &Memory {
         &self.memory
     }

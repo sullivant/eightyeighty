@@ -54,7 +54,7 @@ mod tests {
         // Setup PC is 0x00.  So let's set PC+1 (DL) and PC+2 (DH)
         bus.write(cpu.pc + 1, 0x10); // DL
         bus.write(cpu.pc + 2, 0x01); // DH
-        assert_eq!(cpu.get_data_pair(&bus).unwrap(), (0x10, 0x01));
+        assert_eq!(cpu.get_data_pair(&bus), (0x10, 0x01));
     }
 
     #[test]

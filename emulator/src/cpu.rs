@@ -250,7 +250,7 @@ impl CPU {
         //     Ok(value) => value,
         //     Err(_) => return Err("Unable to get data pair".to_string()),
         // };
-        let Ok((dl, dh)) = self.get_data_pair(bus) else { return Err("Unable to get data pair".to_string()) };
+        let (dl, dh) = self.get_data_pair(bus);
 
         // Used in determining if PC actually changed in the opcode, like in a jump, etc.
         let pc_before = self.pc;
@@ -492,10 +492,10 @@ impl CPU {
 
     // Returns a tuple with dl and dh populated, if able to.  Uses the values
     // located in memory at PC+1 and PC+2
-    fn get_data_pair(&mut self, bus: &Bus) -> Result<(u8, u8), Result<(), String>> {
+    fn get_data_pair(&mut self, bus: &Bus) -> (u8, u8) {
         let dl = bus.read(self.pc + 1);
         let dh = bus.read(self.pc + 2);
-        Ok((dl, dh))
+        (dl, dh)
     }
 
     pub fn toggle_single_step_mode(&mut self) {
