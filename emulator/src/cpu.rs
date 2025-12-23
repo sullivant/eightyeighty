@@ -204,6 +204,7 @@ impl CPU {
         // let's take it and then process it.
         if self.interrupts_enabled {
             if let Some(rst) = bus.take_interrupt() {
+                println!("Interrupted.");
                 return Ok(self.process_interrupt(bus, rst));
             }
         }

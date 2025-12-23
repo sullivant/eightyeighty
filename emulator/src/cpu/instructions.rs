@@ -238,7 +238,7 @@ impl Instruction {
             0xC0 => (1, 11, OP_RNZ),
             0xC1 => (1, 10, OP_POP_B),
             0xC2 => (3, 10, OP_JNZ),
-            0xC3 | 0xCB => (3, 10, OP_JMP_16), // Always going to jump, no size needed
+            0xC3 | 0xCB => (0, 10, OP_JMP_16), // Always going to jump, no size needed
             0xC4 => (3, 17, OP_CNZ),
             0xC5 => (1, 11, OP_PUSH_B),
             0xC6 => (2, 7, OP_ADI),

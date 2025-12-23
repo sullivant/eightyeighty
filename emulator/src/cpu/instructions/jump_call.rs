@@ -114,9 +114,9 @@ impl CPU {
     pub fn ret(&mut self, bus: &Bus) -> Result<u8, String> {
         // RET (PC.lo <- (sp); PC.hi<-(sp+1); SP <- SP+2)
         let pc_lo = bus.read(usize::from(self.sp));
-        let pc_hi = bus.read(usize::from(self.sp + 1));
+        let pc_hi = bus.read(usize::from(self.sp.wrapping_add(1)));
 
-        self.sp += 2;
+        self.sp = self.sp.wrapping_add(2);
 
         // And do an immediate jump
         self.jmp(pc_lo, pc_hi)?;
