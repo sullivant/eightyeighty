@@ -199,11 +199,12 @@ impl CPU {
         }
     }
 
-
     pub fn step(&mut self, bus: &mut Bus) -> Result<StepResult , String> {
+        // If there is an interrupt in the queue and we are watching for them,
+        // let's take it and then process it.
         if self.interrupts_enabled {
             if let Some(rst) = bus.take_interrupt() {
-                self.process_interrupt(bus, rst);
+                return Ok(self.process_interrupt(bus, rst));
             }
         }
 
