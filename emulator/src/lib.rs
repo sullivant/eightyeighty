@@ -13,9 +13,29 @@ use cpu::StepResult;
 use crate::bus::Bus;
 use crate::memory::Memory;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunState {
+    Stopped,
+    Running
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStopReason {
+    Halted,
+    CycleBudgetExhausted,
+    Breakpoint(u16),
+    Error,
+}
+
 pub struct Emulator {
-    pub cpu: CPU,
-    pub bus: Bus,
+    pub cpu: CPU,       // The meat
+    pub bus: Bus,       // And potatoes
+
+    // Related to the state of the machine, its cycles, and budget.
+    run_state: RunState,
+    cycles: u64,
+    cycle_budget: Option<u64>,
+
     rom: Option<Vec<u8>>, // Storing the initial untouched rom, used when loading from new, or resetting.
 }
 
@@ -32,8 +52,17 @@ impl Emulator {
         Emulator { 
             cpu: CPU::new(),
             bus: Bus::new(Memory::new()),
+
+            run_state: RunState::Stopped,
+            cycles: 0,
+            cycle_budget: None,
+
             rom: None,      
         }        
+    }
+
+    pub fn run_state(&mut self) -> RunState {
+        self.run_state
     }
 
     /// Inserts (readies) a rom into the machine.  But does not write anything to memory or reset the CPU.
@@ -75,12 +104,100 @@ impl Emulator {
         self.reset()
     }
 
-    /// Steps the CPU forward
-    pub fn step(&mut self) -> Result<StepResult, String> {
-        let result: StepResult = self.cpu.step(&mut self.bus)?;
+    // /// Ticks the CPU and such until run state says to stop, or cpu cycle budget is expended
+    // pub fn tick(&mut self) {
+    //     if self.run_state != RunState::Running {
+    //         return;
+    //     }
 
-        Ok(result)
+    //     // Run a small bit so we don't keep focus away from the REPL, ui, etc.
+    //     for _ in 0..1_000 {
+    //         if self.cpu.is_halted() {
+    //             self.stop(Some("Halted".to_string()));
+    //             break;
+    //         }
+
+    //         if let Some(remaining) = self.cycle_budget {
+    //             if remaining == 0 {
+    //                 self.stop(Some("Cycle Budget Already Zero".to_string()));
+    //                 break;
+    //             }
+    //         }
+
+    //         let step = match self.cpu.step(&mut self.bus) {
+    //             Ok(s) => s,
+    //             Err(e) => {
+    //                 eprintln!("CPU error: {e}");
+    //                 self.stop(Some("CPU Error".to_string()));
+    //                 break;
+    //             }
+    //         };
+
+    //         self.cycles += step.cycles as u64; // How much did we run in cycles?
+    //         if let Some(ref mut remaining) = self.cycle_budget {
+    //             *remaining = remaining.saturating_sub(step.cycles as u64);
+
+    //             if *remaining == 0 {
+    //                 self.stop(Some("Cycle Budget Exhausted".to_string()));
+    //             }
+    //         }
+    //     }
+    // }
+
+    // Control functions
+    pub fn run(&mut self, cycles: Option<u64>) {
+        self.cycle_budget = cycles;
+        self.run_state = RunState::Running;
     }
 
+    // Runs in a blocking fashion, until RunState tells it to stop
+    pub fn run_blocking(&mut self, target_cycles: Option<u64>) -> RunStopReason {
+        self.run(target_cycles);
+
+        while self.run_state == RunState::Running {
+            if self.cpu.is_halted() {
+                self.stop();
+                return RunStopReason::Halted;
+            }
+
+            let step = match self.cpu.step(&mut self.bus) {
+                Ok(s) => s,
+                Err(_) => {
+                    self.stop();
+                    return RunStopReason::Error;
+                }
+            };
+
+            self.cycles += step.cycles as u64;
+
+            if let Some(ref mut remaining) = self.cycle_budget {
+                *remaining = remaining.saturating_sub(step.cycles as u64);
+                if *remaining == 0 {
+                    self.stop();
+                    return RunStopReason::CycleBudgetExhausted;
+                }
+            }
+        }
+
+        RunStopReason::Error
+    }
+    
+    pub fn stop(&mut self) {
+        self.run_state = RunState::Stopped;
+        self.cycle_budget = None;
+    }
+
+    pub fn step(&mut self) -> Option<StepResult> {
+        if self.cpu.is_halted() {
+            return None;
+        }
+
+        if let Ok(step) = self.cpu.step(&mut self.bus) {
+            self.cycles += step.cycles as u64;
+            return Some(step);
+        }
+
+        return None;
+    }
 
 }

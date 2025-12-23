@@ -5,14 +5,6 @@ mod tests {
     };
 
     #[test]
-    fn test_nop() {
-        let mut cpu = CPU::new();
-        cpu.nop = false;
-        cpu.nop(true);
-        assert!(cpu.nop);
-    }
-
-    #[test]
     fn test_cpu_default() {
         let mut cpu = CPU::new();
         cpu.pc = 0x201;

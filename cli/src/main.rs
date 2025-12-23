@@ -1,6 +1,7 @@
 use std::io::{self};
 use std::fs;
 
+use emulator::{RunState, RunStopReason};
 use rustyline::{error::ReadlineError};
 use rustyline::DefaultEditor;
 
@@ -76,16 +77,17 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
         ["quit"] | ["exit"] => return false,
 
         ["step"] => {
-            step(&mut emu.cpu, &mut emu.bus);
+            step(emu);
         },
 
         ["run", cycles] => {
             if let Ok(c) = cycles.parse::<u64>() {
-                run(&mut emu.cpu, &mut emu.bus, c);
+                run(emu, c);
             }
         },
 
         ["regs"] => regs(&emu.cpu),
+        ["emu"] => emu_state(emu),
 
         // Will resend the line, to be properly parsed in the mem fn.
         ["mem", _, _] => mem(&emu.bus, line),
@@ -141,6 +143,14 @@ fn regs(cpu: &CPU) {
         "A:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X}",
         cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.h, cpu.l, cpu.sp, cpu.pc
     );
+}
+
+/// Displays emulator state
+fn emu_state(emu: &mut Emulator) {
+    match emu.run_state() {
+        RunState::Running => { println!("State: Running");},
+        RunState::Stopped => { println!("State: Stopped");},
+    }
 }
 
 /// Displays a portion of memory
@@ -210,9 +220,9 @@ fn print_rom(emu: &Emulator) {
 }
 
 /// Issues a single step command and shows what happened and how many cycles it took
-fn step(cpu: &mut CPU, bus: &mut Bus) {
-    match cpu.step(bus) {
-        Ok(result) => {
+fn step(emu: &mut Emulator) {
+    match emu.step() {
+        Some(result) => {
             println!(
                 "{:04X}: {:02X}  {:<10}  +{} cycles",
                 result.pc,
@@ -221,38 +231,18 @@ fn step(cpu: &mut CPU, bus: &mut Bus) {
                 result.cycles
             );
         }
-        Err(e) => println!("Error: {e}"),
+        _ => (),
     }
 }
 
-/// Runs for a certain number of cycles
-fn run(cpu: &mut CPU, bus: &mut Bus, target_cycles: u64) {
-    let mut cycles_run = 0u64;
-    let mut instr_count = 0;
-
-    while cycles_run < target_cycles {
-        match cpu.step(bus) {
-            Ok(result) => {
-                cycles_run += result.cycles as u64;
-                instr_count += 1;
-
-                // Stop on HLT
-                if result.opcode == 0x76 {
-                    println!("HLT encountered");
-                    break;
-                }
-            }
-            Err(e) => {
-                println!("CPU error: {e}");
-                break;
-            }
-        }
+/// Runs for a certain number of cycles; handled by the emulator
+fn run(emu: &mut Emulator, target_cycles: u64) {
+    match emu.run_blocking(Some(target_cycles)) {
+        RunStopReason::CycleBudgetExhausted => { println!("Stopped: Cycle budget exhausted.");},
+        RunStopReason::Halted => { println!("Stopped: Halted.");},
+        _ => { println!("Stopped: Unknown reason.");}
     }
-
-    println!(
-        "Ran {} instructions, {} cycles (target {})",
-        instr_count, cycles_run, target_cycles
-    );
+    
 }
 
 /// Just loads provided filepath into a vec.

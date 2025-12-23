@@ -26,19 +26,9 @@ pub struct CPU {
     // Flags Z,S,P,AC
     pub flags: u8,
 
-    // A flag that indicates we wish to print human readable command references
-    pub disassemble: bool,
+    halted: bool, 
 
-    // If we are in single step mode, we wait until "ok_to_step" is true
-    pub single_step_mode: bool,
-    pub ok_to_step: bool,
-    pub ok_to_print: bool,
-    pub tick_happened: bool, // Did we actually process a tick last time?  Used when single stepping
-
-    // A flag to indicate that we do not wish to execute, probably just printing disassembly
-    pub nop: bool,
-
-    pub interrupts: bool,                   // A flag to indicate we respond to interrupts (see: opcodes EI/DI)
+    interrupts_enabled: bool,
 
     pub cycle_count: usize,                 // Cycle count
     pub current_instruction: Instruction,   // Used in cpu.run_opcode()
@@ -150,15 +140,10 @@ impl CPU {
             h: 0x00,
             l: 0x00,
             flags: 0x02, // 00000010 is the default starting point
-            disassemble: false,
 
-            single_step_mode: false,
-            ok_to_step: true,
-            ok_to_print: true,
-            tick_happened: false,
+            halted: false,
+            interrupts_enabled: true,
 
-            nop: false,
-            interrupts: false,
             cycle_count: 1,
             current_instruction: Instruction::new(0x00), 
             next_instruction: Instruction::new(0x00) 
@@ -177,13 +162,7 @@ impl CPU {
         self.h = 0x00;
         self.l = 0x00;
         self.flags = 0x02;
-        self.disassemble = false;
-        self.single_step_mode = false;
-        self.ok_to_step = true;
-        self.ok_to_step = true;
-        self.tick_happened = false;
-        self.nop = false;
-        self.interrupts = false;
+        self.halted = false;
         self.cycle_count = 1;
         self.current_instruction = Instruction::new(0x00);
         self.next_instruction = Instruction::new(0x00);
@@ -498,21 +477,6 @@ impl CPU {
         (dl, dh)
     }
 
-    pub fn toggle_single_step_mode(&mut self) {
-        self.single_step_mode = !self.single_step_mode;
-
-        self.ok_to_print = true;
-    }
-
-    pub fn disassemble(&mut self, val: bool) -> bool {
-        self.disassemble = val;
-        self.disassemble
-    }
-
-    pub fn nop(&mut self, val: bool) {
-        self.nop = val;
-    }
-
     // This function simply provides convenience when testing and we need to
     // execute an instruction along with its DL and DH values, which will be read
     // when the cpu gets to the whole "run opcode" ...thing.
@@ -645,6 +609,10 @@ impl CPU {
                 self.reset_flag(FLAG_AUXCARRY);
             }
         }
+    }
+
+    pub fn is_halted(&self) -> bool {
+        self.halted
     }
 }
 

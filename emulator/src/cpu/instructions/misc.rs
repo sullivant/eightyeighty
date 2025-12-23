@@ -30,19 +30,19 @@ impl CPU {
     /// STOPPED state and no further activity takes place until
     /// an interrupt occurrs
     pub fn hlt(&mut self) -> Result<u8, String> {
-        self.nop(true);
+        self.halted = true;
         Ok(self.current_instruction.cycles)
     }
 
     /// Enables interrupts
     pub fn ei(&mut self) -> Result<u8, String> {
-        self.interrupts = true;
+        self.interrupts_enabled = true;
         Ok(self.current_instruction.cycles)
     }
 
     /// Disables interrupts
     pub fn di(&mut self) -> Result<u8, String> {
-        self.interrupts = false;
+        self.interrupts_enabled = false;
         Ok(self.current_instruction.cycles)
     }
 }
