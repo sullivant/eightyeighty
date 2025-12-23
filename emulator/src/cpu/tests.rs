@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        constants::{FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO},
-        cpu::{make_pointer, will_ac, Registers, CPU},
+        bus::Bus, constants::{FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO}, cpu::{CPU, Registers, make_pointer, will_ac}, memory::Memory
     };
 
     #[test]
@@ -36,12 +35,13 @@ mod tests {
     #[test]
     fn test_prep_instr_and_data() {
         let mut cpu = CPU::new();
-        cpu.prep_instr_and_data(0x76, 0x10, 0x01);
+        let mut bus: Bus = Bus::new(Memory::new());
+        cpu.prep_instr_and_data(&mut bus, 0x76, 0x10, 0x01);
 
         // our initial PC will be 0x00, so after this test, our DL and DH values will
         // be stored at PC+1 and PC+2, respectively.
-        assert_eq!(cpu.memory.read(cpu.pc + 1).unwrap(), 0x10);
-        assert_eq!(cpu.memory.read(cpu.pc + 2).unwrap(), 0x01);
+        assert_eq!(bus.read(cpu.pc + 1), 0x10);
+        assert_eq!(bus.read(cpu.pc + 2), 0x01);
 
         // This will also setup current_instruction's value to be of the opcode specified
         assert_eq!(cpu.current_instruction.opcode, 0x76);
@@ -50,11 +50,11 @@ mod tests {
     #[test]
     fn test_get_data_pair() {
         let mut cpu = CPU::new();
+        let mut bus: Bus = Bus::new(Memory::new());
         // Setup PC is 0x00.  So let's set PC+1 (DL) and PC+2 (DH)
-        cpu.memory.write(cpu.pc + 1, 0x10).unwrap(); // DL
-        cpu.memory.write(cpu.pc + 2, 0x01).unwrap(); // DH
-
-        assert_eq!(cpu.get_data_pair().unwrap(), (0x10, 0x01));
+        bus.write(cpu.pc + 1, 0x10); // DL
+        bus.write(cpu.pc + 2, 0x01); // DH
+        assert_eq!(cpu.get_data_pair(&bus).unwrap(), (0x10, 0x01));
     }
 
     #[test]

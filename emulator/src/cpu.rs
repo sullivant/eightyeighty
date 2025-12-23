@@ -4,8 +4,7 @@ pub(crate) mod instructions;
 mod tests;
 
 use crate::{
-    constants::{FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO},
-    memory::Memory,
+    bus::Bus, constants::{FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO}
 };
 use instructions::Instruction;
 
@@ -13,9 +12,6 @@ use instructions::Instruction;
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Clone)]
 pub struct CPU {
-    // Memory
-    pub memory: Memory,
-
     // Registers
     pub pc: usize, // Program Counter
     pub sp: u16,   // Stack Pointer
@@ -134,16 +130,6 @@ impl fmt::Display for Registers {
     }
 }
 
-impl fmt::Display for CPU {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "CYCLES:{:#08X} PC:{:#06X} SP:{:#06X} A:{:#06X} B:{:#04X} C:{:#04X} D:{:#04X} E:{:#04X} H:{:#04X} L:{:#04X} sp $[{:#06X}]={:#04X} sp+1 $[{:06X}]={:#04X} sp+2 $[{:06X}]={:#04X}",
-            self.cycle_count, self.pc, self.sp, self.a, self.b, self.c, self.d, self.e, self.h, self.l,self.sp,self.memory.read(usize::from(self.sp)).unwrap(),self.sp+1,self.memory.read(usize::from(self.sp+1)).unwrap(),self.sp+2,self.memory.read(usize::from(self.sp+2)).unwrap()
-        )
-    }
-}
-
 impl Default for CPU {
     fn default() -> Self {
         Self::new()
@@ -154,8 +140,6 @@ impl CPU {
     #[must_use]
     pub const fn new() -> CPU {
         CPU {
-            //memory: [0; RAM_SIZE],
-            memory: Memory::new(),
             pc: 0x00,
             sp: 0x00,
             a: 0x00,
@@ -183,7 +167,6 @@ impl CPU {
 
     /// Performs a basic CPU reset without the need to re-create the entire CPU
     pub fn reset(&mut self) -> Result<(), String> {
-        self.memory = Memory::new();
         self.pc = 0x00;
         self.sp = 0x00;
         self.a = 0x00;
@@ -209,29 +192,29 @@ impl CPU {
     }
 
     // Reads an instruction at ProgramCounter
-    pub fn read_instruction(&mut self) -> Instruction {
-        let opcode = self.memory.read(self.pc).unwrap_or(0);
+    pub fn read_instruction(&mut self, bus: &Bus) -> Instruction {
+        let opcode = bus.read(self.pc);
 
         Instruction::new(opcode) // new() will fill in the rest..
     }
 
-    pub fn step(&mut self) -> Result<StepResult , String> {
+    pub fn step(&mut self, bus: &mut Bus) -> Result<StepResult , String> {
         let pc_start = self.pc; // Where we are starting from
 
         // Fetch opcode Instruction and set it to "current"
-        let opcode = self.read_instruction(); // Gather the current opcode to run, based on PC's location
+        let opcode = self.read_instruction(bus); // Gather the current opcode to run, based on PC's location
         self.current_instruction = opcode;
 
         // Capture what this instruction is, so we can debug with StepResult
         let mut bytes = Vec::with_capacity(opcode.size);
         for i in 0..opcode.size {
             bytes.push (
-                self.memory.read(self.pc + i).map_err(|e| format!("Memory read error: {e}"))?,
+                bus.read(self.pc + i),
             );
         }
 
         // Execute the opcode
-        let cycles_ran = self.run_opcode()?;
+        let cycles_ran = self.run_opcode(bus)?;
 
         // Snapshot of the registers after execution
         let registers = RegistersSnapshot {
@@ -262,12 +245,12 @@ impl CPU {
     // calls out to the appropriate instruction operation to
     // perform the thing...
     #[allow(clippy::too_many_lines)]
-    pub fn run_opcode(&mut self) -> Result<u8, String> {
+    pub fn run_opcode(&mut self, bus: &mut Bus) -> Result<u8, String> {
         // let (dl, dh) = match self.get_data_pair() {
         //     Ok(value) => value,
         //     Err(_) => return Err("Unable to get data pair".to_string()),
         // };
-        let Ok((dl, dh)) = self.get_data_pair() else { return Err("Unable to get data pair".to_string()) };
+        let Ok((dl, dh)) = self.get_data_pair(bus) else { return Err("Unable to get data pair".to_string()) };
 
         // Used in determining if PC actually changed in the opcode, like in a jump, etc.
         let pc_before = self.pc;
@@ -280,62 +263,62 @@ impl CPU {
         let opcode_result: Result<u8, String> = match self.current_instruction.opcode {
             0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => Ok(code_cycles),
 
-            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.mvi(dl),
+            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.mvi(dl, bus),
 
             0x09 | 0x19 | 0x29 | 0x39 => self.dad(),
 
             0x01 => self.lxi(Registers::BC, dl, dh),
-            0x02 => self.stax(Registers::BC), // STAX (BC)
+            0x02 => self.stax(Registers::BC, bus), // STAX (BC)
             0x03 => self.inx(Registers::BC),
-            0x04 => self.inr(Registers::B),
-            0x05 => self.dcr(Registers::B),
+            0x04 => self.inr(Registers::B, bus),
+            0x05 => self.dcr(Registers::B, bus),
             0x07 => self.rlc_ral(false),
-            0x0A => self.ldax(Registers::BC),
+            0x0A => self.ldax(Registers::BC, bus),
             0x0B => self.dcx(Registers::BC),
-            0x0C => self.inr(Registers::C),
-            0x0D => self.dcr(Registers::C),
+            0x0C => self.inr(Registers::C, bus),
+            0x0D => self.dcr(Registers::C, bus),
             0x0F => self.rrc_rar(true),
 
             0x11 => self.lxi(Registers::DE, dl, dh),
-            0x12 => self.stax(Registers::DE), // STAX (DE)
+            0x12 => self.stax(Registers::DE, bus), // STAX (DE)
             0x13 => self.inx(Registers::DE),
-            0x14 => self.inr(Registers::D),
-            0x15 => self.dcr(Registers::D),
+            0x14 => self.inr(Registers::D, bus),
+            0x15 => self.dcr(Registers::D, bus),
             0x17 => self.rlc_ral(true),
-            0x1A => self.ldax(Registers::DE),
+            0x1A => self.ldax(Registers::DE, bus),
             0x1B => self.dcx(Registers::DE),
-            0x1C => self.inr(Registers::E),
-            0x1D => self.dcr(Registers::E),
+            0x1C => self.inr(Registers::E, bus),
+            0x1D => self.dcr(Registers::E, bus),
             0x1F => self.rrc_rar(false),
 
             0x21 => self.lxi(Registers::HL, dl, dh),
-            0x22 => self.shld(dl, dh),
-            0x2A => self.lhld(dl, dh),
+            0x22 => self.shld(dl, dh, bus),
+            0x2A => self.lhld(dl, dh, bus),
             0x23 => self.inx(Registers::HL),
-            0x24 => self.inr(Registers::H),
-            0x25 => self.dcr(Registers::H),
+            0x24 => self.inr(Registers::H, bus),
+            0x25 => self.dcr(Registers::H, bus),
             0x27 => self.daa(),
             0x2B => self.dcx(Registers::HL),
-            0x2C => self.inr(Registers::L),
-            0x2D => self.dcr(Registers::L),
+            0x2C => self.inr(Registers::L, bus),
+            0x2D => self.dcr(Registers::L, bus),
             0x2F => {
                 self.a = !self.a; // Complement the accumulator
                 Ok(code_cycles)
             }
 
             0x31 => self.lxi(Registers::SP, dl, dh),
-            0x32 => self.sta(dl, dh), // STA (adr)<-A
+            0x32 => self.sta(dl, dh, bus), // STA (adr)<-A
             0x33 => self.inx(Registers::SP),
-            0x34 => self.inr(Registers::HL),
-            0x35 => self.dcr(Registers::HL),
+            0x34 => self.inr(Registers::HL, bus),
+            0x35 => self.dcr(Registers::HL, bus),
             0x37 => {
                 self.set_flag(FLAG_CARRY);
                 Ok(code_cycles)
             }
-            0x3A => self.lda(dl, dh),
+            0x3A => self.lda(dl, dh, bus),
             0x3B => self.dcx(Registers::SP),
-            0x3C => self.inr(Registers::A),
-            0x3D => self.dcr(Registers::A),
+            0x3C => self.inr(Registers::A, bus),
+            0x3D => self.dcr(Registers::A, bus),
             0x3F => {
                 // Complement the carry flag
                 if self.test_flag(FLAG_CARRY) {
@@ -346,142 +329,142 @@ impl CPU {
                 Ok(code_cycles)
             }
 
-            0x40 => self.mov(Registers::B, Registers::B), // MOV B <- B
-            0x41 => self.mov(Registers::B, Registers::C), // MOV B <- C
-            0x42 => self.mov(Registers::B, Registers::D), // MOV B <- D
-            0x43 => self.mov(Registers::B, Registers::E), // MOV B <- E
-            0x44 => self.mov(Registers::B, Registers::H), // MOV B <- H
-            0x45 => self.mov(Registers::B, Registers::L), // MOV B <- L
-            0x46 => self.mov(Registers::B, Registers::HL), // MOV B <- (HL)
-            0x47 => self.mov(Registers::B, Registers::A), // MOV B <- A
-            0x48 => self.mov(Registers::C, Registers::B), // MOV C <- B
-            0x49 => self.mov(Registers::C, Registers::C), // MOV C <- C
-            0x4A => self.mov(Registers::C, Registers::D), // MOV C <- D
-            0x4B => self.mov(Registers::C, Registers::E), // MOV C <- E
-            0x4C => self.mov(Registers::C, Registers::H), // MOV C <- H
-            0x4D => self.mov(Registers::C, Registers::L), // MOV C <- L
-            0x4E => self.mov(Registers::C, Registers::HL), // MOV C <- HL
-            0x4F => self.mov(Registers::C, Registers::A), // MOV C <- A
+            0x40 => self.mov(Registers::B, Registers::B, bus), // MOV B <- B
+            0x41 => self.mov(Registers::B, Registers::C, bus), // MOV B <- C
+            0x42 => self.mov(Registers::B, Registers::D, bus), // MOV B <- D
+            0x43 => self.mov(Registers::B, Registers::E, bus), // MOV B <- E
+            0x44 => self.mov(Registers::B, Registers::H, bus), // MOV B <- H
+            0x45 => self.mov(Registers::B, Registers::L, bus), // MOV B <- L
+            0x46 => self.mov(Registers::B, Registers::HL, bus), // MOV B <- (HL)
+            0x47 => self.mov(Registers::B, Registers::A, bus), // MOV B <- A
+            0x48 => self.mov(Registers::C, Registers::B, bus), // MOV C <- B
+            0x49 => self.mov(Registers::C, Registers::C, bus), // MOV C <- C
+            0x4A => self.mov(Registers::C, Registers::D, bus), // MOV C <- D
+            0x4B => self.mov(Registers::C, Registers::E, bus), // MOV C <- E
+            0x4C => self.mov(Registers::C, Registers::H, bus), // MOV C <- H
+            0x4D => self.mov(Registers::C, Registers::L, bus), // MOV C <- L
+            0x4E => self.mov(Registers::C, Registers::HL, bus), // MOV C <- HL
+            0x4F => self.mov(Registers::C, Registers::A, bus), // MOV C <- A
 
-            0x50 => self.mov(Registers::D, Registers::B), // MOV D <- B
-            0x51 => self.mov(Registers::D, Registers::C), // MOV D <- C
-            0x52 => self.mov(Registers::D, Registers::D), // MOV D <- D
-            0x53 => self.mov(Registers::D, Registers::E), // MOV D <- E
-            0x54 => self.mov(Registers::D, Registers::H), // MOV D <- H
-            0x55 => self.mov(Registers::D, Registers::L), // MOV D <- L
-            0x56 => self.mov(Registers::D, Registers::HL), // MOV D <- (HL)
-            0x57 => self.mov(Registers::D, Registers::A), // MOV D <- A
-            0x58 => self.mov(Registers::E, Registers::B), // MOV E <- B
-            0x59 => self.mov(Registers::E, Registers::C), // MOV E <- C
-            0x5A => self.mov(Registers::E, Registers::D), // MOV E <- D
-            0x5B => self.mov(Registers::E, Registers::E), // MOV E <- E
-            0x5C => self.mov(Registers::E, Registers::H), // MOV E <- H
-            0x5D => self.mov(Registers::E, Registers::L), // MOV E <- L
-            0x5E => self.mov(Registers::E, Registers::HL), // MOV E <- HL
-            0x5F => self.mov(Registers::E, Registers::A), // MOV E <- A
+            0x50 => self.mov(Registers::D, Registers::B, bus), // MOV D <- B
+            0x51 => self.mov(Registers::D, Registers::C, bus), // MOV D <- C
+            0x52 => self.mov(Registers::D, Registers::D, bus), // MOV D <- D
+            0x53 => self.mov(Registers::D, Registers::E, bus), // MOV D <- E
+            0x54 => self.mov(Registers::D, Registers::H, bus), // MOV D <- H
+            0x55 => self.mov(Registers::D, Registers::L, bus), // MOV D <- L
+            0x56 => self.mov(Registers::D, Registers::HL, bus), // MOV D <- (HL)
+            0x57 => self.mov(Registers::D, Registers::A, bus), // MOV D <- A
+            0x58 => self.mov(Registers::E, Registers::B, bus), // MOV E <- B
+            0x59 => self.mov(Registers::E, Registers::C, bus), // MOV E <- C
+            0x5A => self.mov(Registers::E, Registers::D, bus), // MOV E <- D
+            0x5B => self.mov(Registers::E, Registers::E, bus), // MOV E <- E
+            0x5C => self.mov(Registers::E, Registers::H, bus), // MOV E <- H
+            0x5D => self.mov(Registers::E, Registers::L, bus), // MOV E <- L
+            0x5E => self.mov(Registers::E, Registers::HL, bus), // MOV E <- HL
+            0x5F => self.mov(Registers::E, Registers::A, bus), // MOV E <- A
 
-            0x60 => self.mov(Registers::H, Registers::B), // MOV H <- B
-            0x61 => self.mov(Registers::H, Registers::C), // MOV H <- C
-            0x62 => self.mov(Registers::H, Registers::D), // MOV H <- D
-            0x63 => self.mov(Registers::H, Registers::E), // MOV H <- E
-            0x64 => self.mov(Registers::H, Registers::H), // MOV H <- H
-            0x65 => self.mov(Registers::H, Registers::L), // MOV H <- L
-            0x66 => self.mov(Registers::H, Registers::HL), // MOV H <- (HL)
-            0x67 => self.mov(Registers::H, Registers::A), // MOV H <- A
-            0x68 => self.mov(Registers::L, Registers::B), // MOV L <- B
-            0x69 => self.mov(Registers::L, Registers::C), // MOV L <- C
-            0x6A => self.mov(Registers::L, Registers::D), // MOV L <- D
-            0x6B => self.mov(Registers::L, Registers::E), // MOV L <- E
-            0x6C => self.mov(Registers::L, Registers::H), // MOV L <- H
-            0x6D => self.mov(Registers::L, Registers::L), // MOV L <- L
-            0x6E => self.mov(Registers::L, Registers::HL), // MOV L <- HL
-            0x6F => self.mov(Registers::L, Registers::A), // MOV L <- A
+            0x60 => self.mov(Registers::H, Registers::B, bus), // MOV H <- B
+            0x61 => self.mov(Registers::H, Registers::C, bus), // MOV H <- C
+            0x62 => self.mov(Registers::H, Registers::D, bus), // MOV H <- D
+            0x63 => self.mov(Registers::H, Registers::E, bus), // MOV H <- E
+            0x64 => self.mov(Registers::H, Registers::H, bus), // MOV H <- H
+            0x65 => self.mov(Registers::H, Registers::L, bus), // MOV H <- L
+            0x66 => self.mov(Registers::H, Registers::HL, bus), // MOV H <- (HL)
+            0x67 => self.mov(Registers::H, Registers::A, bus), // MOV H <- A
+            0x68 => self.mov(Registers::L, Registers::B, bus), // MOV L <- B
+            0x69 => self.mov(Registers::L, Registers::C, bus), // MOV L <- C
+            0x6A => self.mov(Registers::L, Registers::D, bus), // MOV L <- D
+            0x6B => self.mov(Registers::L, Registers::E, bus), // MOV L <- E
+            0x6C => self.mov(Registers::L, Registers::H, bus), // MOV L <- H
+            0x6D => self.mov(Registers::L, Registers::L, bus), // MOV L <- L
+            0x6E => self.mov(Registers::L, Registers::HL, bus), // MOV L <- HL
+            0x6F => self.mov(Registers::L, Registers::A, bus), // MOV L <- A
 
-            0x70 => self.mov(Registers::HL, Registers::B), // MOV M,B	1		(HL) <- B
-            0x71 => self.mov(Registers::HL, Registers::C), // MOV M,C	1		(HL) <- C
-            0x72 => self.mov(Registers::HL, Registers::D), // MOV M,D	1		(HL) <- D
-            0x73 => self.mov(Registers::HL, Registers::E), // MOV M,E	1		(HL) <- E
-            0x74 => self.mov(Registers::HL, Registers::H), // MOV M,H	1		(HL) <- H
-            0x75 => self.mov(Registers::HL, Registers::L), // MOV M,L	1		(HL) <- L
+            0x70 => self.mov(Registers::HL, Registers::B, bus), // MOV M,B	1		(HL) <- B
+            0x71 => self.mov(Registers::HL, Registers::C, bus), // MOV M,C	1		(HL) <- C
+            0x72 => self.mov(Registers::HL, Registers::D, bus), // MOV M,D	1		(HL) <- D
+            0x73 => self.mov(Registers::HL, Registers::E, bus), // MOV M,E	1		(HL) <- E
+            0x74 => self.mov(Registers::HL, Registers::H, bus), // MOV M,H	1		(HL) <- H
+            0x75 => self.mov(Registers::HL, Registers::L, bus), // MOV M,L	1		(HL) <- L
             0x76 => self.hlt(),
-            0x77 => self.mov(Registers::HL, Registers::A), // MOV M,A
-            0x78 => self.mov(Registers::A, Registers::B),  // MOV A,B
-            0x79 => self.mov(Registers::A, Registers::C),  // MOV A,C
-            0x7A => self.mov(Registers::A, Registers::D),  // MOV A,D
-            0x7B => self.mov(Registers::A, Registers::E),  // MOV A,E
-            0x7C => self.mov(Registers::A, Registers::H),  // MOV A,H
-            0x7D => self.mov(Registers::A, Registers::L),  // MOV A,L
-            0x7E => self.mov(Registers::A, Registers::HL), // MOV A,(HL)
-            0x7F => self.mov(Registers::A, Registers::A),  // MOV A,A
+            0x77 => self.mov(Registers::HL, Registers::A, bus), // MOV M,A
+            0x78 => self.mov(Registers::A, Registers::B, bus),  // MOV A,B
+            0x79 => self.mov(Registers::A, Registers::C, bus),  // MOV A,C
+            0x7A => self.mov(Registers::A, Registers::D, bus),  // MOV A,D
+            0x7B => self.mov(Registers::A, Registers::E, bus),  // MOV A,E
+            0x7C => self.mov(Registers::A, Registers::H, bus),  // MOV A,H
+            0x7D => self.mov(Registers::A, Registers::L, bus),  // MOV A,L
+            0x7E => self.mov(Registers::A, Registers::HL, bus), // MOV A,(HL)
+            0x7F => self.mov(Registers::A, Registers::A, bus),  // MOV A,A
 
-            0x80..=0x87 => self.add(),
-            0x88..=0x8F => self.adc(),
+            0x80..=0x87 => self.add(bus),
+            0x88..=0x8F => self.adc(bus),
 
-            0x90..=0x9F => self.sub(), // This includes SUB and SBB (subtrahend included in fn)
+            0x90..=0x9F => self.sub(bus), // This includes SUB and SBB (subtrahend included in fn)
 
-            0xA0..=0xA7 => self.ana(),
-            0xA8..=0xAF => self.xra(),
+            0xA0..=0xA7 => self.ana(bus),
+            0xA8..=0xAF => self.xra(bus),
 
-            0xB0..=0xB7 => self.ora(),
-            0xB8..=0xBF => self.cmp(),
+            0xB0..=0xB7 => self.ora(bus),
+            0xB8..=0xBF => self.cmp(bus),
 
-            0xC0 => self.rnz(),                             // 11 or 5 cycles
-            0xC1 => self.pop(Registers::BC),
+            0xC0 => self.rnz(bus),                             // 11 or 5 cycles
+            0xC1 => self.pop(Registers::BC, bus),
             0xC2 => self.jnz(dl, dh),
             0xC3 | 0xCB => self.jmp(dl, dh),
-            0xC4 => self.cnz(dl, dh),                       // 17 or 11 cycles
-            0xC5 => self.push(self.c, self.b),
+            0xC4 => self.cnz(dl, dh, bus),                       // 17 or 11 cycles
+            0xC5 => self.push(self.c, self.b, bus),
             0xC6 | 0xCE =>  self.adi_aci(dl),
-            0xC7 => self.rst(0),
-            0xC8 => self.rz(),                              // 11 or 5 cycles
-            0xC9 | 0xD9 => self.ret(),
+            0xC7 => self.rst(0, bus),
+            0xC8 => self.rz(bus),                              // 11 or 5 cycles
+            0xC9 | 0xD9 => self.ret(bus),
             0xCA => self.jz(dl, dh),
-            0xCC => self.cz(dl, dh),                        // 17 or 11 cycles
-            0xCD | 0xDD | 0xED | 0xFD => self.call(dl, dh),
-            0xCF => self.rst(1),
+            0xCC => self.cz(dl, dh, bus),                        // 17 or 11 cycles
+            0xCD | 0xDD | 0xED | 0xFD => self.call(dl, dh, bus),
+            0xCF => self.rst(1, bus),
 
-            0xD0 => self.rnc(),                             // 11 or 5 cycles
-            0xD1 => self.pop(Registers::DE),
+            0xD0 => self.rnc(bus),                             // 11 or 5 cycles
+            0xD1 => self.pop(Registers::DE, bus),
             0xD2 => self.jnc(dl, dh),
             0xD3 => self.data_out(dl),
-            0xD4 => self.cnc(dl, dh),                       // 17 or 11 cycles
-            0xD5 => self.push(self.e, self.d),
-            0xD7 => self.rst(2),
-            0xD8 => self.rc(),                              // 11 or 5 cycles
+            0xD4 => self.cnc(dl, dh, bus),                       // 17 or 11 cycles
+            0xD5 => self.push(self.e, self.d, bus),
+            0xD7 => self.rst(2, bus),
+            0xD8 => self.rc(bus),                              // 11 or 5 cycles
             0xDA => self.jc(dl, dh),
             0xDB => self.data_in(dl),               
-            0xDC => self.cc(dl, dh),                        // 17 or 11 cycles
-            0xDF => self.rst(3),
+            0xDC => self.cc(dl, dh, bus),                        // 17 or 11 cycles
+            0xDF => self.rst(3, bus),
 
-            0xE0 => self.rpo(),                             // 11 or 5 cycles
-            0xE1 => self.pop(Registers::HL),
+            0xE0 => self.rpo(bus),                             // 11 or 5 cycles
+            0xE1 => self.pop(Registers::HL, bus),
             0xE2 => self.jpo(dl, dh),
-            0xE3 => self.xthl(),
-            0xE4 => self.cpo(dl, dh),                       // 17 or 11 cycles
-            0xE5 => self.push(self.l, self.h),
+            0xE3 => self.xthl(bus),
+            0xE4 => self.cpo(dl, dh, bus),                       // 17 or 11 cycles
+            0xE5 => self.push(self.l, self.h, bus),
             0xE6 => self.ani(dl),
-            0xE7 => self.rst(4),
-            0xE8 => self.rpe(),                             // 11 or 5 cycles
+            0xE7 => self.rst(4, bus),
+            0xE8 => self.rpe(bus),                             // 11 or 5 cycles
             0xE9 => self.pchl(),
             0xEA => self.jpe(dl, dh),
             0xEB => self.xchg(),
-            0xEC => self.cpe(dl, dh),                       // 17 or 11 cycles
-            0xEF => self.rst(5),
+            0xEC => self.cpe(dl, dh, bus),                       // 17 or 11 cycles
+            0xEF => self.rst(5, bus),
 
-            0xF0 => self.rp(),                              // 11 or 5 cycles
-            0xF1 => self.pop(Registers::SW),
+            0xF0 => self.rp(bus),                              // 11 or 5 cycles
+            0xF1 => self.pop(Registers::SW, bus),
             0xF2 => self.jp(dl, dh),
             0xF3 => self.di(),
-            0xF4 => self.cp(dl, dh),                        // 17 or 11 cycles
-            0xF5 => self.push(self.get_flags(), self.a),
-            0xF7 => self.rst(6),
-            0xF8 => self.rm(),                              // 11 or 5 cycles
+            0xF4 => self.cp(dl, dh, bus),                        // 17 or 11 cycles
+            0xF5 => self.push(self.get_flags(), self.a, bus),
+            0xF7 => self.rst(6, bus),
+            0xF8 => self.rm(bus),                              // 11 or 5 cycles
             0xF9 => self.sphl(),
             0xFA => self.jm(dl, dh),
             0xFB => self.ei(),
-            0xFC => self.cm(dl, dh),                        // 17 or 11 cycles
+            0xFC => self.cm(dl, dh, bus),                        // 17 or 11 cycles
             0xFE => self.cpi(dl),
-            0xFF => self.rst(7),
+            0xFF => self.rst(7, bus),
 
             _ => Err(format!(
                 "Unable to process UNKNOWN OPCODE: {}",
@@ -509,15 +492,9 @@ impl CPU {
 
     // Returns a tuple with dl and dh populated, if able to.  Uses the values
     // located in memory at PC+1 and PC+2
-    fn get_data_pair(&mut self) -> Result<(u8, u8), Result<(), String>> {
-        let dl = match self.memory.read(self.pc + 1) {
-            Ok(v) => v,
-            Err(e) => return Err(Err(e)),
-        };
-        let dh = match self.memory.read(self.pc + 2) {
-            Ok(v) => v,
-            Err(e) => return Err(Err(e)),
-        };
+    fn get_data_pair(&mut self, bus: &Bus) -> Result<(u8, u8), Result<(), String>> {
+        let dl = bus.read(self.pc + 1);
+        let dh = bus.read(self.pc + 2);
         Ok((dl, dh))
     }
 
@@ -541,16 +518,11 @@ impl CPU {
     // when the cpu gets to the whole "run opcode" ...thing.
     // This will overwrite what is in PC, etc.
     #[allow(unused)] // It's used in testing...
-    pub fn prep_instr_and_data(&mut self, opcode: u8, dl: u8, dh: u8) {
+    pub fn prep_instr_and_data(&mut self, bus: &mut Bus, opcode: u8, dl: u8, dh: u8) {
         // TODO: Make this use memory as a module with ability to write by range, and freakout.
         self.current_instruction = Instruction::new(opcode);
-        self.memory.write(self.pc + 1, dl);
-        self.memory.write(self.pc + 2, dh);
-    }
-
-    // This allows for access to memory, by reference, from outside of the CPU
-    pub fn memory(&mut self) -> &mut Memory {
-        &mut self.memory
+        bus.write(self.pc + 1, dl);
+        bus.write(self.pc + 2, dh);
     }
 
     // Returns a paired register such as HL or BC.

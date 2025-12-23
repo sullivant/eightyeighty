@@ -49,16 +49,17 @@ impl CPU {
 
 #[cfg(test)]
 mod tests {
-    use crate::cpu::{instructions::Instruction, CPU};
+    use crate::{bus::Bus, cpu::{CPU, instructions::Instruction}, memory::Memory};
 
     #[test]
     fn test_op_hlt() {
         let mut cpu = CPU::new();
+        let mut bus: Bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         // Setup this instruction
         cpu.current_instruction = Instruction::new(0x76);
-        cpu.run_opcode().unwrap();
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.pc, op + cpu.current_instruction.size);
 
     }

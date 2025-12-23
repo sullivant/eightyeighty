@@ -3,14 +3,19 @@
 
 mod constants;
 pub mod cpu;
+pub mod bus;
 mod memory;
 mod video;
 
 use cpu::CPU;
 use cpu::StepResult;
 
+use crate::bus::Bus;
+use crate::memory::Memory;
+
 pub struct Emulator {
     pub cpu: CPU,
+    pub bus: Bus,
     rom: Option<Vec<u8>>, // Storing the initial untouched rom, used when loading from new, or resetting.
 }
 
@@ -26,6 +31,7 @@ impl Emulator {
     pub fn new() -> Self {
         Emulator { 
             cpu: CPU::new(),
+            bus: Bus::new(Memory::new()),
             rom: None,      
         }        
     }
@@ -57,7 +63,7 @@ impl Emulator {
         self.cpu.reset()?; // Registers, memory, etc.
 
         for (i, &b) in rom.iter().enumerate() {
-            self.cpu.memory.write(i, b)?;
+            self.bus.write(i, b);
         }
 
         Ok(())
@@ -71,7 +77,7 @@ impl Emulator {
 
     /// Steps the CPU forward
     pub fn step(&mut self) -> Result<StepResult, String> {
-        let result: StepResult = self.cpu.step()?;
+        let result: StepResult = self.cpu.step(&mut self.bus)?;
 
         Ok(result)
     }

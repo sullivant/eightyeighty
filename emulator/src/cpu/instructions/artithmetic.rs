@@ -1,6 +1,5 @@
 use crate::{
-    constants::FLAG_CARRY,
-    cpu::{will_ac, Registers, CPU},
+    bus::Bus, constants::FLAG_CARRY, cpu::{CPU, Registers, will_ac}
 };
 
 impl CPU {
@@ -31,11 +30,11 @@ impl CPU {
     /// Since a subtract operation is performed, the Carry bit will be set if there is no
     /// carry out of bit 7, indicating that the contents of REG are greater than the
     /// contents of the accumulator, and reset otherwise.
-    pub fn cmp(&mut self) -> Result<u8, String> {
+    pub fn cmp(&mut self, bus: &Bus) -> Result<u8, String> {
         let min = self.a;
         let addr = self.get_addr_pointer();
 
-        let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let value = bus.read(addr); // Basically used for 0xBE
 
         let sub = match self.current_instruction.opcode {
             0xB8 => self.b,
@@ -58,9 +57,9 @@ impl CPU {
     // INR Reg
     // Flags affected: Z,S,P,AC
     #[allow(clippy::similar_names)]
-    pub fn inr(&mut self, reg: Registers) -> Result<u8, String> {
+    pub fn inr(&mut self, reg: Registers, bus: &mut Bus) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
-        let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let value = bus.read(addr);
 
         match reg {
             Registers::B => {
@@ -104,7 +103,7 @@ impl CPU {
                 let ac = will_ac(1, val);
                 let (res, of) = val.overflowing_add(1);
                 self.update_flags(res, Some(of), Some(ac));
-                self.memory().write(value.into(), res).unwrap();
+                bus.write(value.into(), res);
             }
             Registers::A => {
                 let (res, of) = self.a.overflowing_add(1);
@@ -120,9 +119,9 @@ impl CPU {
     // DCR Reg
     // Flags affected: Z,S,P,AC
     #[allow(clippy::similar_names)]
-    pub fn dcr(&mut self, reg: Registers) -> Result<u8, String> {
+    pub fn dcr(&mut self, reg: Registers, bus: &mut Bus) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
-        let Ok(value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let value = bus.read(addr);
 
         match reg {
             Registers::A => {
@@ -164,12 +163,7 @@ impl CPU {
                 let mem = value;
                 let (res, of) = mem.overflowing_sub(1);
                 self.update_flags(res, Some(of), Some((1 & 0x0F) > (mem & 0x0F)));
-                match self.memory().write(addr, res) {
-                    Ok(()) => (),
-                    Err(_) => {
-                        return Err("Unable to write to memory value at addr pointer".to_string());
-                    }
-                }
+                bus.write(addr, res);
             }
 
             _ => (),
@@ -180,10 +174,10 @@ impl CPU {
 
     /// The specified byte is localled ``ORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn ora(&mut self) -> Result<u8, String> {
+    pub fn ora(&mut self, bus: &Bus) -> Result<u8, String> {
         let opcode = self.current_instruction.opcode;
         let addr = self.get_addr_pointer();
-        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let mem_value = bus.read(addr);
 
         self.a |= match opcode {
             0xB0 => self.b,
@@ -206,9 +200,9 @@ impl CPU {
     /// The specified byte is logically ``ANDed`` bit
     /// by bit with the contents of the accumulator. The Carry bit
     /// is reset to zero.
-    pub fn ana(&mut self) -> Result<u8, String> {
+    pub fn ana(&mut self, bus: &Bus) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
-        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let mem_value = bus.read(addr);
 
         self.a &= match self.current_instruction.opcode {
             0xA0 => self.b,
@@ -239,10 +233,10 @@ impl CPU {
 
     /// The specified byte is locally ``XORed`` bit by bit with the contents
     /// of the accumulator.  The carry bit is reset to zero.
-    pub fn xra(&mut self) -> Result<u8, String> {
+    pub fn xra(&mut self, bus: &Bus) -> Result<u8, String> {
         let orig_value = self.a;
         let addr = self.get_addr_pointer();
-        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let mem_value= bus.read(addr);
 
         let source_value = match self.current_instruction.opcode {
             0xA8 => self.b,
@@ -272,12 +266,12 @@ impl CPU {
     /// register to use.
     ///
     /// Flags affected: Z, S, P, CY, AC
-    pub fn sub(&mut self) -> Result<u8, String> {
+    pub fn sub(&mut self, bus: &Bus) -> Result<u8, String> {
         let opcode = self.current_instruction.opcode;
         let sub = self.get_flag(FLAG_CARRY);
 
         let addr = self.get_addr_pointer();
-        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let mem_value = bus.read(addr);
 
         let o: (u8, bool) = match opcode {
             0x90 => self.a.overflowing_sub(self.b.overflowing_add(0).0),
@@ -400,9 +394,9 @@ impl CPU {
     /// Add to the accumulator the supplied register
     /// along with the CARRY flag's value
     /// as well as update flags
-    pub fn adc(&mut self) -> Result<u8, String> {
+    pub fn adc(&mut self, bus: &Bus) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
-        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let mem_value= bus.read(addr);
 
         let op = self.current_instruction.opcode;
 
@@ -429,9 +423,9 @@ impl CPU {
 
     /// Add to the accumulator the supplied register
     /// as well as update flags
-    pub fn add(&mut self) -> Result<u8, String> {
+    pub fn add(&mut self, bus: &Bus) -> Result<u8, String> {
         let addr = self.get_addr_pointer();
-        let Ok(mem_value) = self.memory().read(addr) else { return Err("Invalid memory value at addr pointer".to_string()); };
+        let mem_value = bus.read(addr);
 
         let to_add: u8 = match self.current_instruction.opcode {
             0x80 => self.b,
@@ -486,36 +480,41 @@ mod tests {
         FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO, OPCODE_SIZE,
     };
     use crate::cpu::CPU;
+    use crate::bus::Bus;
+    use crate::memory::Memory;
 
     #[test]
     fn test_op_cmd() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
+        
         let op = cpu.pc;
 
         // If the flag is set, it should end up reset
         cpu.set_flag(FLAG_CARRY);
         assert!(cpu.test_flag(FLAG_CARRY));
-        cpu.prep_instr_and_data(0x3F, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus, 0x3F, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert!(!cpu.test_flag(FLAG_CARRY));
         assert_eq!(cpu.pc, (op + OPCODE_SIZE));
 
         // If the flag is reset, it should end up set
         cpu.reset_flag(FLAG_CARRY);
         assert!(!cpu.test_flag(FLAG_CARRY));
-        cpu.prep_instr_and_data(0x3F, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus, 0x3F, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert!(cpu.test_flag(FLAG_CARRY));
     }
 
     #[test]
     fn test_op_cma() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0x51;
-        cpu.prep_instr_and_data(0x2F, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x2F, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
 
         assert_eq!(cpu.pc, (op + OPCODE_SIZE));
         assert_eq!(cpu.a, 0x0AE);
@@ -524,12 +523,13 @@ mod tests {
     #[test]
     fn test_op_inx() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.b = 0x18;
         cpu.c = 0xff;
-        cpu.prep_instr_and_data(0x03, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x03, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
 
         assert_eq!(cpu.pc, (op + OPCODE_SIZE));
         assert_eq!(cpu.b, 0x19);
@@ -538,8 +538,8 @@ mod tests {
         // try again with the overflow protection
         cpu.b = 0xff;
         cpu.c = 0xff;
-        cpu.prep_instr_and_data(0x03, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x03, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
 
         assert_eq!(cpu.b, 0x00);
         assert_eq!(cpu.c, 0x00);
@@ -548,49 +548,51 @@ mod tests {
     #[test]
     fn test_dcx() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.d = 0x20;
         cpu.e = 0x00;
         cpu.sp = 0x1234;
 
-        cpu.prep_instr_and_data(0x1B, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x1B, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.d, 0x1F);
         assert_eq!(cpu.e, 0xFF);
         assert_eq!(cpu.pc, op + (OPCODE_SIZE));
 
-        cpu.prep_instr_and_data(0x3B, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x3B, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.sp, 0x1233);
     }
 
     #[test]
     fn test_op_cmp() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0x0A;
         cpu.e = 0x05;
         cpu.set_flag(FLAG_CARRY);
 
-        cpu.prep_instr_and_data(0xBB, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xBB, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x0A);
         assert_eq!(cpu.e, 0x05);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
 
         cpu.a = 0x02;
-        cpu.prep_instr_and_data(0xBB, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xBB, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x02);
         assert_eq!(cpu.e, 0x05);
         assert_eq!(cpu.test_flag(FLAG_CARRY), true);
 
         cpu.a = !0x1B;
-        cpu.prep_instr_and_data(0xBB, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xBB, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, !0x1B);
         assert_eq!(cpu.e, 0x05);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
@@ -599,11 +601,12 @@ mod tests {
     #[test]
     fn test_op_inr() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.e = 0x99;
-        cpu.prep_instr_and_data(0x1C, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x1C, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.e, 0x9A);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
     }
@@ -611,30 +614,31 @@ mod tests {
     #[test]
     fn test_op_dcr() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         // A simple decrement
         cpu.b = 0x02;
-        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x05, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.b, 0x01);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
         assert_eq!(cpu.test_flag(FLAG_ZERO), false);
-        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x05, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.b, 0x00);
         assert_eq!(cpu.test_flag(FLAG_ZERO), true);
 
         // A wrapping decrement
         cpu.b = 0x00;
-        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x05, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.b, 0xFF);
         assert_eq!(cpu.test_flag(FLAG_SIGN), true);
 
         cpu.b = 0x04;
-        cpu.prep_instr_and_data(0x05, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x05, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.b, 0x03);
         assert_eq!(cpu.test_flag(FLAG_PARITY), true);
     }
@@ -642,26 +646,28 @@ mod tests {
     #[test]
     fn test_op_xra() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0xFC;
 
         // Should zero out the A register
-        cpu.prep_instr_and_data(0xAF, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xAF, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x00);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
 
         cpu.a = 0xFF;
         cpu.b = 0b0000_1010;
-        cpu.prep_instr_and_data(0xA8, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xA8, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0b1111_0101);
     }
 
     #[test]
     fn test_op_ora() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0x33;
@@ -669,8 +675,8 @@ mod tests {
         cpu.set_flag(FLAG_CARRY);
 
         // Should zero out the A register
-        cpu.prep_instr_and_data(0xB1, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xB1, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x3F);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
@@ -679,29 +685,31 @@ mod tests {
     #[test]
     fn test_op_ana() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0xFC;
         cpu.c = 0x0F;
 
-        cpu.prep_instr_and_data(0xA1, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xA1, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.pc, op + OPCODE_SIZE);
     }
 
     #[test]
     fn test_op_ani() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
 
         // Setup the accumulator with 0x3A
-        cpu.prep_instr_and_data(0x3E, 0x3A, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x3E, 0x3A, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x3A);
         let op = cpu.pc;
 
         // Try ANI with 0xFF for the data
-        cpu.prep_instr_and_data(0xE6, 0x0F, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xE6, 0x0F, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x0A);
 
         assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
@@ -710,34 +718,36 @@ mod tests {
     #[test]
     fn test_sub() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
         cpu.a = 0x12;
         cpu.c = 0x02;
 
-        cpu.prep_instr_and_data(0x91, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x91, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.pc, op + (OPCODE_SIZE));
         assert_eq!(cpu.a, 0x10);
 
         cpu.a = 0x3E;
-        cpu.prep_instr_and_data(0x97, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x97, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x00);
         assert_eq!(cpu.test_flag(FLAG_PARITY), true);
         assert_eq!(cpu.test_flag(FLAG_ZERO), true);
 
-        cpu.memory().write(0x2400, 0x01).unwrap();
+        bus.write(0x2400, 0x01);
         cpu.h = 0x24;
         cpu.l = 0x00;
         cpu.a = 0x0B;
-        cpu.prep_instr_and_data(0x96, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x96, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x0A);
     }
 
     #[test]
     fn test_op_daa() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         // Setup the accum with 0x9B and reset both carry bits
@@ -745,8 +755,8 @@ mod tests {
         cpu.reset_flag(FLAG_AUXCARRY);
         cpu.reset_flag(FLAG_CARRY);
 
-        cpu.prep_instr_and_data(0x27, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x27, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
 
         assert_eq!(cpu.a, 0x01);
         assert!(cpu.test_flag(FLAG_CARRY));
@@ -757,15 +767,16 @@ mod tests {
     #[test]
     fn test_op_adi() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
 
         // Set the accumulator to 0x14
-        cpu.prep_instr_and_data(0x3E, 0x14, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x3E, 0x14, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x14);
 
         let op = cpu.pc;
-        cpu.prep_instr_and_data(0xC6, 0x42, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xC6, 0x42, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
 
         // Accumulator should now be 0x56 (0x14 + 0x42 = 0x56)
         assert_eq!(cpu.a, 0x56);
@@ -775,8 +786,8 @@ mod tests {
         assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
 
         // Bring us back to the original accumulator value
-        cpu.prep_instr_and_data(0xC6, 0xBE, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xC6, 0xBE, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x14);
         assert_eq!(cpu.test_flag(FLAG_CARRY), true);
         assert_eq!(cpu.test_flag(FLAG_AUXCARRY), true);
@@ -788,36 +799,38 @@ mod tests {
     #[test]
     fn test_op_aci() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
-        cpu.prep_instr_and_data(0x3E, 0x56, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x3E, 0x56, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x56);
         assert_eq!(cpu.pc, op + OPCODE_SIZE * 2);
 
         cpu.reset_flag(FLAG_CARRY);
-        cpu.prep_instr_and_data(0xCE, 0xBE, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xCE, 0xBE, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x14);
         assert_eq!(cpu.test_flag(FLAG_CARRY), true);
 
         // Now, let's do one with a carry flag
-        cpu.prep_instr_and_data(0xCE, 0x42, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0xCE, 0x42, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x57);
     }
 
     #[test]
     fn test_adc() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0x42;
         cpu.b = 0x3D;
         cpu.set_flag(FLAG_CARRY);
         // Add the register B to the Accum with the Carry bit, too
-        cpu.prep_instr_and_data(0x88, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x88, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x80);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.pc, op + (OPCODE_SIZE));
@@ -826,14 +839,15 @@ mod tests {
     #[test]
     fn test_add() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.a = 0x6C;
         cpu.d = 0x2E;
         cpu.set_flag(FLAG_CARRY);
         // Add the register B to the Accum with the Carry bit, too
-        cpu.prep_instr_and_data(0x82, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x82, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.a, 0x9A);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
         assert_eq!(cpu.test_flag(FLAG_PARITY), true);
@@ -845,6 +859,7 @@ mod tests {
     #[test]
     fn test_op_dad() {
         let mut cpu = CPU::new();
+        let mut bus = Bus::new(Memory::new());
         let op = cpu.pc;
 
         cpu.b = 0x33;
@@ -852,8 +867,8 @@ mod tests {
         cpu.h = 0xA1;
         cpu.l = 0x7B;
 
-        cpu.prep_instr_and_data(0x09, 0x00, 0x00);
-        cpu.run_opcode().unwrap();
+        cpu.prep_instr_and_data(&mut bus,0x09, 0x00, 0x00);
+        cpu.run_opcode(&mut bus).unwrap();
         assert_eq!(cpu.h, 0xD5);
         assert_eq!(cpu.l, 0x1A);
         assert_eq!(cpu.test_flag(FLAG_CARRY), false);
@@ -867,12 +882,12 @@ mod tests {
     //     let op = cpu.pc;
 
     //     // Prepare the accumulator
-    //     cpu.prep_instr_and_data(0x3E, 0x4A, 0x00);
-    //     cpu.run_opcode().unwrap();
+    //     cpu.prep_instr_and_data(&mut bus,0x3E, 0x4A, 0x00);
+    //     cpu.run_opcode(&mut bus).unwrap();
     //     assert_eq!(cpu.a, 0x4A);
 
-    //     cpu.prep_instr_and_data(0xFE, 0x40, 0x00);
-    //     cpu.run_opcode().unwrap();
+    //     cpu.prep_instr_and_data(&mut bus,0xFE, 0x40, 0x00);
+    //     cpu.run_opcode(&mut bus).unwrap();
     //     assert_eq!(cpu.a, 0x4A);
     //     assert_eq!(cpu.test_flag(FLAG_CARRY), true);
     //     assert_eq!(cpu.pc, op + (OPCODE_SIZE));

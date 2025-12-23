@@ -73,15 +73,12 @@ impl Memory {
     }
 
     // Writes to a location in memory
-    // TODO: Make this respect things a little more, maybe write via range instead?
-    pub fn write(&mut self, loc: usize, val: u8) -> Result<(), String> {
+    pub fn write(&mut self, loc: usize, val: u8) {
         if loc > RAM_SIZE - 1 {
-            return Err(format!("Unable to write to memory location: {loc:04X}"));
+            return
         }
 
         self.data[loc] = val;
-
-        Ok(())
     }
 
     pub fn get_memory_ptr(&self) -> *const u8 {

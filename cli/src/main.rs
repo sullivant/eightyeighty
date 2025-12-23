@@ -4,7 +4,7 @@ use std::fs;
 use rustyline::{error::ReadlineError};
 use rustyline::DefaultEditor;
 
-use emulator::{self, Emulator, cpu::CPU};
+use emulator::{self, Emulator, cpu::CPU, bus::Bus};
 
 // A simple test rom with a few instructions to load at the start
 const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
@@ -76,19 +76,19 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
         ["quit"] | ["exit"] => return false,
 
         ["step"] => {
-            step(&mut emu.cpu);
+            step(&mut emu.cpu, &mut emu.bus);
         },
 
         ["run", cycles] => {
             if let Ok(c) = cycles.parse::<u64>() {
-                run(&mut emu.cpu, c);
+                run(&mut emu.cpu, &mut emu.bus, c);
             }
         },
 
         ["regs"] => regs(&emu.cpu),
 
         // Will resend the line, to be properly parsed in the mem fn.
-        ["mem", _, _] => mem(&emu.cpu, line),
+        ["mem", _, _] => mem(&emu.bus, line),
 
         ["rom"] => print_rom(emu),
 
@@ -144,7 +144,7 @@ fn regs(cpu: &CPU) {
 }
 
 /// Displays a portion of memory
-fn mem(cpu: &CPU, cmd: &str) {
+fn mem(bus: &Bus, cmd: &str) {
     let parts: Vec<_> = cmd.split_whitespace().collect();
     if parts.len() != 3 {
         println!("Usage: mem <addr> <len>");
@@ -163,7 +163,7 @@ fn mem(cpu: &CPU, cmd: &str) {
         for i in 0..bytes_per_line {
             let idx = line_start + i;
             if idx < len {
-                let byte = cpu.memory.read(addr + idx).unwrap_or(0);
+                let byte = bus.read(addr + idx);
                 print!("{:02X} ", byte);
             } else {
                 // Padding for incomplete line
@@ -177,7 +177,7 @@ fn mem(cpu: &CPU, cmd: &str) {
         for i in 0..bytes_per_line {
             let idx = line_start + i;
             if idx < len {
-                let byte = cpu.memory.read(addr + idx).unwrap_or(0);
+                let byte = bus.read(addr + idx);
                 // Show printable ASCII or '.' for non-printable
                 let ch = if byte.is_ascii_graphic() || byte == b' ' {
                     byte as char
@@ -210,8 +210,8 @@ fn print_rom(emu: &Emulator) {
 }
 
 /// Issues a single step command and shows what happened and how many cycles it took
-fn step(cpu: &mut CPU) {
-    match cpu.step() {
+fn step(cpu: &mut CPU, bus: &mut Bus) {
+    match cpu.step(bus) {
         Ok(result) => {
             println!(
                 "{:04X}: {:02X}  {:<10}  +{} cycles",
@@ -226,12 +226,12 @@ fn step(cpu: &mut CPU) {
 }
 
 /// Runs for a certain number of cycles
-fn run(cpu: &mut CPU, target_cycles: u64) {
+fn run(cpu: &mut CPU, bus: &mut Bus, target_cycles: u64) {
     let mut cycles_run = 0u64;
     let mut instr_count = 0;
 
     while cycles_run < target_cycles {
-        match cpu.step() {
+        match cpu.step(bus) {
             Ok(result) => {
                 cycles_run += result.cycles as u64;
                 instr_count += 1;
