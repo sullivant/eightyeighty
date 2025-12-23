@@ -54,10 +54,12 @@ impl CPU {
     /// They are pushed on like this:
     /// (sp-1)<-dh; (sp-2)<-dl; sp <- sp - 2
     pub fn push(&mut self, dl: u8, dh: u8, bus: &mut Bus) -> Result<u8, String> {
-        self.sp -= 1;
+        self.sp = self.sp.wrapping_sub(1);
+        // self.sp -= 1;
         bus.write(self.sp.into(), dh);
 
-        self.sp -= 1;
+        self.sp = self.sp.wrapping_sub(1);
+        // self.sp -= 1;
         bus.write(self.sp.into(), dl);
 
         Ok(self.current_instruction.cycles)

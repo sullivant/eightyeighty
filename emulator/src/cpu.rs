@@ -142,7 +142,7 @@ impl CPU {
             flags: 0x02, // 00000010 is the default starting point
 
             halted: false,
-            interrupts_enabled: true,
+            interrupts_enabled: false,
 
             cycle_count: 1,
             current_instruction: Instruction::new(0x00), 
@@ -163,11 +163,16 @@ impl CPU {
         self.l = 0x00;
         self.flags = 0x02;
         self.halted = false;
+        self.interrupts_enabled = false;
         self.cycle_count = 1;
         self.current_instruction = Instruction::new(0x00);
         self.next_instruction = Instruction::new(0x00);
 
         Ok(())
+    }
+
+    pub fn interrupts_enabled(&mut self) -> bool {
+        self.interrupts_enabled
     }
 
     // Reads an instruction at ProgramCounter
@@ -177,7 +182,32 @@ impl CPU {
         Instruction::new(opcode) // new() will fill in the rest..
     }
 
+    pub fn process_interrupt(&mut self, bus: &mut Bus, rst: u8) -> StepResult {
+        let pc_before = self.pc;
+
+        let _ = self.rst(rst, bus);
+
+        self.interrupts_enabled = false;
+
+        StepResult { 
+            pc: pc_before,
+            opcode: 0xC7 | (rst << 3),
+            bytes: vec![0xC7 | (rst <<3)],
+            mnemonic: format!("RST {}", rst),
+            cycles: 11,
+            registers: self.register_snapshot(),
+        }
+    }
+
+
     pub fn step(&mut self, bus: &mut Bus) -> Result<StepResult , String> {
+        if self.interrupts_enabled {
+            if let Some(rst) = bus.take_interrupt() {
+                self.process_interrupt(bus, rst);
+            }
+        }
+
+
         let pc_start = self.pc; // Where we are starting from
 
         // Fetch opcode Instruction and set it to "current"
@@ -215,9 +245,24 @@ impl CPU {
             bytes,
             mnemonic: opcode.text.to_string(),
             cycles: cycles_ran,
-            registers
+            registers: self.register_snapshot(),
         })
 
+    }
+
+    fn register_snapshot(&self) -> RegistersSnapshot {
+        RegistersSnapshot {
+            a: self.a,
+            b: self.b,
+            c: self.c,
+            d: self.d,
+            e: self.e,
+            h: self.h,
+            l: self.l,
+            sp: self.sp,
+            pc: self.pc as u16,
+            flags: self.flags,
+        }
     }
 
     // Gathers the data necessary for the instruction and

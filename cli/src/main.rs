@@ -86,6 +86,12 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
             }
         },
 
+        ["int", line] => {
+            if let Ok(r) = line.parse::<u8>() {
+                emu.bus.request_interrupt(r);
+            }
+        },
+
         ["regs"] => regs(&emu.cpu),
         ["emu"] => emu_state(emu),
 
@@ -150,7 +156,15 @@ fn emu_state(emu: &mut Emulator) {
     match emu.run_state() {
         RunState::Running => { println!("State: Running");},
         RunState::Stopped => { println!("State: Stopped");},
-    }
+    };
+    match emu.cpu.interrupts_enabled() {
+        true => { println!("Interrupts Enabled")},
+        false=> { println!("Interrupts Not Enabled")},
+    };
+    match emu.bus.peek_interrupt() {
+        Some(i) => { println!("Pending Interrupt: {}", i)},
+        None => { println!("Pending Interrupt: None")},
+    };
 }
 
 /// Displays a portion of memory

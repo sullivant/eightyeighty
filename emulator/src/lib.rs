@@ -89,7 +89,9 @@ impl Emulator {
     pub fn reset(&mut self) -> Result<(), String> {
         let rom = self.rom.as_ref().ok_or("No ROM Inserted")?;
 
-        self.cpu.reset()?; // Registers, memory, etc.
+        self.cpu.reset()?; // Registers and flags
+
+        self.bus = Bus::new(Memory::new());
 
         for (i, &b) in rom.iter().enumerate() {
             self.bus.write(i, b);
@@ -103,46 +105,6 @@ impl Emulator {
         self.insert_rom(rom);
         self.reset()
     }
-
-    // /// Ticks the CPU and such until run state says to stop, or cpu cycle budget is expended
-    // pub fn tick(&mut self) {
-    //     if self.run_state != RunState::Running {
-    //         return;
-    //     }
-
-    //     // Run a small bit so we don't keep focus away from the REPL, ui, etc.
-    //     for _ in 0..1_000 {
-    //         if self.cpu.is_halted() {
-    //             self.stop(Some("Halted".to_string()));
-    //             break;
-    //         }
-
-    //         if let Some(remaining) = self.cycle_budget {
-    //             if remaining == 0 {
-    //                 self.stop(Some("Cycle Budget Already Zero".to_string()));
-    //                 break;
-    //             }
-    //         }
-
-    //         let step = match self.cpu.step(&mut self.bus) {
-    //             Ok(s) => s,
-    //             Err(e) => {
-    //                 eprintln!("CPU error: {e}");
-    //                 self.stop(Some("CPU Error".to_string()));
-    //                 break;
-    //             }
-    //         };
-
-    //         self.cycles += step.cycles as u64; // How much did we run in cycles?
-    //         if let Some(ref mut remaining) = self.cycle_budget {
-    //             *remaining = remaining.saturating_sub(step.cycles as u64);
-
-    //             if *remaining == 0 {
-    //                 self.stop(Some("Cycle Budget Exhausted".to_string()));
-    //             }
-    //         }
-    //     }
-    // }
 
     // Control functions
     pub fn run(&mut self, cycles: Option<u64>) {

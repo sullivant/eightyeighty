@@ -22,6 +22,8 @@ impl IoDevice for NullDevice {
 pub struct Bus {
     memory: Memory,
     io: Box<dyn IoDevice>,
+
+    pending_interrupt: Option<u8>, // Basically to hold RST 0-7
 }
 
 impl Bus {
@@ -31,13 +33,14 @@ impl Bus {
         Self {
             memory,
             io: Box::new(NullDevice), // No real device to start
+            pending_interrupt: None,
         }
     }
 
     // Create a bus with an IO device if wanted
     #[must_use]
     pub fn with_io(memory: Memory, io: Box<dyn IoDevice>) -> Self {
-        Self { memory, io }
+        Self { memory, io, pending_interrupt: None }
     }
 
     // Memory related stuff
@@ -71,5 +74,25 @@ impl Bus {
     #[inline]
     pub fn output(&mut self, port: u8, value: u8) {
         self.io.output(port, value);
+    }
+
+    // Interrupts
+
+    /// Stores the interrupt in the pending position
+    pub fn request_interrupt(&mut self, rst: u8) {
+        if rst > 7 { return; } // Only allowing 0-7
+        self.pending_interrupt = Some(rst);
+    }
+
+    /// Takes the interrupt from the pending position
+    pub fn take_interrupt(&mut self) -> Option<u8> {
+        let i = self.pending_interrupt;
+        self.pending_interrupt = None;
+        i
+    }
+
+    /// Simply shows the interrupt but does not take
+    pub fn peek_interrupt(&self) -> Option<u8> {
+        self.pending_interrupt
     }
 }
