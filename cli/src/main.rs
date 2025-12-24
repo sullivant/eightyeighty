@@ -80,6 +80,11 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
             step(emu);
         },
 
+        // Basically, run forever?
+        ["run"] => {
+            run(emu, u64::MAX);
+        },
+
         ["run", cycles] => {
             if let Ok(c) = cycles.parse::<u64>() {
                 run(emu, c);
