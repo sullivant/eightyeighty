@@ -1,3 +1,4 @@
+use std::cell::Ref;
 use std::cell::RefCell;
 use std::io;
 use std::fs;
@@ -149,6 +150,8 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["rom"] => print_rom(emu),
 
         ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
+
+        ["hw"] => show_hardware_state(hardware.borrow()),
 
         ["insert", rom_name] => {
             let file = if rom_name.ends_with(".rom") {
@@ -307,8 +310,15 @@ fn run(emu: &mut Emulator, target_cycles: u64) {
     
 }
 
+// Shows input latch hardware state
+fn show_hardware_state(hw: Ref<'_, MidwayHardware>) {
+    println!("Input Latch 0: {:08b}", hw.input_latch0.read());
+    println!("Input Latch 1: {:08b}", hw.input_latch1.read());
+    println!("Input Latch 2: {:08b}", hw.input_latch2.read());
+}
+
 /// Runs forever, processing keyboard events while doing so.
-fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>,) -> io::Result<()> {
+fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
 
     let mut last_tick = Instant::now();
@@ -334,6 +344,14 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>,) -> i
                     if key.code == KeyCode::Esc {
                         crossterm::terminal::disable_raw_mode()?;
                         return Ok(());
+                    }
+
+                    // CTRL+h to show status of the current input latches
+                    if key.code == KeyCode::Char('h') && key.modifiers.contains(event::KeyModifiers::CONTROL) {
+                        crossterm::terminal::disable_raw_mode()?;
+                        let hw = hardware.borrow();
+                        show_hardware_state(hw);
+                        crossterm::terminal::enable_raw_mode()?;
                     }
                 }
                 _ => {}
