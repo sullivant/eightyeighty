@@ -6,7 +6,10 @@ pub mod cpu;
 pub mod bus;
 mod memory;
 mod video;
-mod devices;
+pub mod devices;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use cpu::CPU;
 use cpu::StepResult;
@@ -14,6 +17,7 @@ use bus::Bus;
 use memory::Memory;
 use devices::{io::InputLatch, io::ShiftRegister};
 
+use crate::bus::IoDevice;
 use crate::devices::hardware::midway::MidwayHardware;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,16 +53,13 @@ impl Default for Emulator {
 }
 
 impl Emulator {
-    /// Creates an empty, "powered off" machine.
+    /// Creates an empty, "powered off" machine with no hardware.
     #[must_use] 
     pub fn new() -> Self {
-        // Our initial hardware is, for now, Midway
-        let hardware = MidwayHardware::new();
-            
         Emulator { 
             cpu: CPU::new(),
-            // bus: Bus::new(Memory::new()),
-            bus: Bus::with_io(Memory::new(), Box::new(hardware)),
+            bus: Bus::new(Memory::new()),
+            // bus: Bus::with_io(Memory::new(), Box::new(hardware)),
 
             run_state: RunState::Stopped,
             cycles: 0,
@@ -66,6 +67,21 @@ impl Emulator {
 
             rom: None,      
         }        
+    }
+
+    /// Allows for creation of a machine with hardware defined
+    pub fn with_io(io: Box<dyn IoDevice>) -> Self {
+        let memory = Memory::new();
+        let bus = Bus::with_io(memory, io);
+
+        Self {
+            cpu: CPU::new(),
+            bus: bus,
+            rom: None,
+            run_state: RunState::Stopped,
+            cycles: 0,
+            cycle_budget: None,
+        }
     }
 
     pub fn run_state(&mut self) -> RunState {

@@ -1,14 +1,35 @@
-use std::io::{self};
+use std::cell::RefCell;
+use std::io;
 use std::fs;
+use std::rc::Rc;
 
+use emulator::bus::IoDevice;
 use emulator::{RunState, RunStopReason};
+use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 use rustyline::{error::ReadlineError};
 use rustyline::DefaultEditor;
-
+use crossterm::event::{self, Event};
+use crossterm::event::{KeyCode, KeyEvent};
+use std::time::{Duration, Instant};
 use emulator::{self, Emulator, cpu::CPU, bus::Bus};
 
 // A simple test rom with a few instructions to load at the start
 const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
+
+
+struct HardwareProxy {
+    hardware: Rc<RefCell<MidwayHardware>>,
+}
+impl IoDevice for HardwareProxy {
+    fn input(&mut self, port: u8) -> u8 {
+        self.hardware.borrow_mut().input(port)
+    }
+    fn output(&mut self, port: u8, value: u8) {
+        self.hardware.borrow_mut().output(port, value)
+    }
+}
+
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rl = DefaultEditor::new()?;
@@ -18,7 +39,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let history_path = ".history";
     let _ = rl.load_history(history_path);
 
-    let mut emu: Emulator = setup_emu()?;
+    // Our "hardware" here:
+    let hardware = Rc::new(RefCell::new(MidwayHardware::new()));
+
+    // Which is used when setting up the emu.
+    let mut emu: Emulator = setup_emu(&hardware)?;
 
     println!("Starting REPL...");
     loop {
@@ -31,7 +56,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 rl.add_history_entry(line)?;
 
-                if !handle_command(&mut emu, line) {
+                // Handling of command also needs to know about the hardware because it's going to
+                // read keys and set the proper ports.
+                if !handle_command(&mut emu, &hardware, line) {
                     break;
                 }
             }
@@ -57,11 +84,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Just loads provided filepath into a vec.
+fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
+    fs::read(path)
+}
+
 /// Will create the emulator machine, and insert the "default" ROM
-fn setup_emu() -> Result<Emulator, String> {
-    // Put this in a setup fn
+fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String> {
     println!("Creating emulator...");
-    let mut emu: Emulator = Emulator::new();
+
+    // let mut emu: Emulator = Emulator::new();
+    // Box up the hardware proxy, with a cloned version of the hardware, and create an emu with it.
+    let mut emu = Emulator::with_io(Box::new(HardwareProxy { hardware: hardware.clone(),}));
+
     println!("Inserting ROM and loading...");
     emu.load_rom(ROM_TST.to_vec())?;
 
@@ -69,7 +104,7 @@ fn setup_emu() -> Result<Emulator, String> {
 }
 
 /// Actually handles processing the REPL command
-fn handle_command(emu: &mut Emulator, line: &str) -> bool {
+fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, line: &str) -> bool {
 
     let parts: Vec<&str> = line.split_whitespace().collect();
 
@@ -82,7 +117,15 @@ fn handle_command(emu: &mut Emulator, line: &str) -> bool {
 
         // Basically, run forever?
         ["run"] => {
-            run(emu, u64::MAX);
+            // run(emu, u64::MAX);
+            println!("Running forever.  ESC to stop.");
+            match run_forever(emu, hardware) {
+                Ok(_) => (),
+                _ => {
+                    println!("Error running forever.");
+                    return false;
+                },
+            }
         },
 
         ["run", cycles] => {
@@ -264,7 +307,71 @@ fn run(emu: &mut Emulator, target_cycles: u64) {
     
 }
 
-/// Just loads provided filepath into a vec.
-fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
-    fs::read(path)
+/// Runs forever, processing keyboard events while doing so.
+fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>,) -> io::Result<()> {
+    crossterm::terminal::enable_raw_mode()?;
+
+    let mut last_tick = Instant::now();
+
+    loop {
+        // Run a slice
+        let stop_reason = emu.run_blocking(Some(2_000));
+
+        if let RunStopReason::Halted = stop_reason {
+            crossterm::terminal::disable_raw_mode()?;
+            println!("CPU Halted; Stopping execution.");
+            break;
+        }
+
+        // Poll input (non-blocking)
+        while event::poll(Duration::from_millis(0))? {
+            match event::read()? {
+                Event::Key(key) => {
+                    let pressed = key.kind == event::KeyEventKind::Press;
+                    handle_key_event(&hardware, key, pressed);
+
+                    // Escape to quit
+                    if key.code == KeyCode::Esc {
+                        crossterm::terminal::disable_raw_mode()?;
+                        return Ok(());
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Simple timing throttle for now
+        if last_tick.elapsed() < Duration::from_millis(16) {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        last_tick = Instant::now();
+    }
+
+    Ok(())
+}
+
+fn handle_key_event(
+    hw: &Rc<RefCell<MidwayHardware>>,
+    event: KeyEvent,
+    pressed: bool,
+) {
+    let input = match event.code {
+        KeyCode::Char('c') => Some(MidwayInput::Coin),
+        KeyCode::Char('1') => Some(MidwayInput::Start1),
+        KeyCode::Char('2') => Some(MidwayInput::Start2),
+
+        KeyCode::Left => Some(MidwayInput::Left),
+        KeyCode::Right => Some(MidwayInput::Right),
+        KeyCode::Char(' ') => Some(MidwayInput::Fire),
+
+        _ => None,
+    };
+
+    if let Some(input) = input {
+        if pressed {
+            hw.borrow_mut().press(input);
+        } else {
+            hw.borrow_mut().release(input);
+        }
+    }
 }
