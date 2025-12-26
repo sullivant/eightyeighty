@@ -368,6 +368,8 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
     Ok(())
 }
 
+
+// While running forever we look at key events.  This fn handles them.
 fn handle_key_event(
     hw: &Rc<RefCell<MidwayHardware>>,
     event: KeyEvent,

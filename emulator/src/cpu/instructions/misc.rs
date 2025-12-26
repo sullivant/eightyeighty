@@ -11,7 +11,7 @@ impl CPU {
     /// TODO: If data out is needed, this needs to be finished
     pub fn data_out(&self, device: u8) -> Result<u8, String> {
         let data = self.a;
-        println!("Setting Accumulator value '{data:#04X}' to device: {device:#04X}");
+        // println!("Setting Accumulator value '{data:#04X}' to device: {device:#04X}");
         Ok(self.current_instruction.cycles)
     }
 
@@ -22,7 +22,7 @@ impl CPU {
         //TODO: This needs to read from a device...
         let data: u8 = 0x00;
         self.a = data;
-        println!("Read value '{data:#04X}' from device {device:#04X}");
+        // println!("Read value '{data:#04X}' from device {device:#04X}");
         Ok(self.current_instruction.cycles)
     }
 

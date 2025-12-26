@@ -5,6 +5,7 @@ use crate::bus::IoDevice;
 
 
 /// Inputs that a Midway expects
+#[derive(Debug)]
 pub enum MidwayInput {
     Coin,
     Start1,
@@ -66,6 +67,7 @@ impl MidwayHardware {
 
     /// Assert or clear a logical input
     pub fn set_input(&mut self, input: MidwayInput, pressed: bool) {
+        // println!("MidwayHardware: {:?} -> {}", input, pressed);
         match input {
             // IN0
             MidwayInput::Coin => self.input_latch0.write_bit(0, pressed),
