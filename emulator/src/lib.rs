@@ -12,7 +12,9 @@ use cpu::CPU;
 use cpu::StepResult;
 use bus::Bus;
 use memory::Memory;
-use devices::{InputLatch, ShiftRegister, PortMapper};
+use devices::{io::InputLatch, io::ShiftRegister};
+
+use crate::devices::hardware::midway::MidwayHardware;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunState {
@@ -50,24 +52,13 @@ impl Emulator {
     /// Creates an empty, "powered off" machine.
     #[must_use] 
     pub fn new() -> Self {
-        // Setup an initial port mapper device onto the bus, too.
-        let mut input0 = InputLatch::new();
-        let mut input1 = InputLatch::new();
-        let mut input2 = InputLatch::new();
-        let mut shift_reg = ShiftRegister::new();
-
-        // This is our "device"
-        let mut port_mapper = PortMapper {
-            input_latch0: input0,
-            input_latch1: input1,
-            input_latch2: input2,
-            shift_register: shift_reg,
-        };
-
+        // Our initial hardware is, for now, Midway
+        let hardware = MidwayHardware::new();
+            
         Emulator { 
             cpu: CPU::new(),
             // bus: Bus::new(Memory::new()),
-            bus: Bus::with_io(Memory::new(), Box::new(port_mapper)),
+            bus: Bus::with_io(Memory::new(), Box::new(hardware)),
 
             run_state: RunState::Stopped,
             cycles: 0,
