@@ -8,17 +8,14 @@ mod memory;
 mod video;
 pub mod devices;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::collections::HashSet;
 
 use cpu::CPU;
 use cpu::StepResult;
 use bus::Bus;
 use memory::Memory;
-use devices::{io::InputLatch, io::ShiftRegister};
 
 use crate::bus::IoDevice;
-use crate::devices::hardware::midway::MidwayHardware;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunState {
@@ -44,6 +41,8 @@ pub struct Emulator {
     cycle_budget: Option<u64>,
 
     rom: Option<Vec<u8>>, // Storing the initial untouched rom, used when loading from new, or resetting.
+
+    breakpoints: HashSet<u16>, // Stores breakpoints.  
 }
 
 impl Default for Emulator {
@@ -59,13 +58,14 @@ impl Emulator {
         Emulator { 
             cpu: CPU::new(),
             bus: Bus::new(Memory::new()),
-            // bus: Bus::with_io(Memory::new(), Box::new(hardware)),
 
             run_state: RunState::Stopped,
             cycles: 0,
             cycle_budget: None,
 
-            rom: None,      
+            rom: None,
+
+            breakpoints: HashSet::new(),      
         }        
     }
 
@@ -77,10 +77,12 @@ impl Emulator {
         Self {
             cpu: CPU::new(),
             bus: bus,
-            rom: None,
+
             run_state: RunState::Stopped,
             cycles: 0,
             cycle_budget: None,
+            rom: None,
+            breakpoints: HashSet::new(),
         }
     }
 
@@ -145,6 +147,12 @@ impl Emulator {
                 return RunStopReason::Halted;
             }
 
+            // Check to see if we have hit a breakpoint.
+            let pc = self.cpu.pc as u16;
+            if self.breakpoints.contains(&pc) {
+                return RunStopReason::Breakpoint(pc);
+            }
+
             let step = match self.cpu.step(&mut self.bus) {
                 Ok(s) => s,
                 Err(_) => {
@@ -185,4 +193,16 @@ impl Emulator {
         return None;
     }
 
+
+    pub fn add_breakpoint(&mut self, addr: u16) {
+        self.breakpoints.insert(addr);
+    }
+
+    pub fn remove_breakpoint(&mut self, addr: u16) {
+        self.breakpoints.remove(&addr);
+    }
+
+    pub fn breakpoints(&self) -> &HashSet<u16> {
+        &self.breakpoints
+    }
 }

@@ -42,8 +42,34 @@ impl IoDevice for MidwayHardware {
             _ => (),
         }
     }
-}
+    fn set_port(&mut self, port: u8, value: u8) {
+        match port {
+            0 => self.input_latch0.write(value),
+            1 => self.input_latch1.write(value),
+            2 => self.input_latch2.write(value),
+            _ => {}
+        }
+    }
 
+    fn set_bit(&mut self, port: u8, bit: u8) {
+        // ACTIVE LOW
+        match port {
+            0 => self.input_latch0.write_bit(bit, false),
+            1 => self.input_latch1.write_bit(bit, false),
+            2 => self.input_latch2.write_bit(bit, false),
+            _ => {}
+        }
+    }
+
+    fn clear_bit(&mut self, port: u8, bit: u8) {
+        match port {
+            0 => self.input_latch0.write_bit(bit, true),
+            1 => self.input_latch1.write_bit(bit, true),
+            2 => self.input_latch2.write_bit(bit, true),
+            _ => {}
+        }
+    }
+}
 
 impl MidwayHardware {
     pub fn new() -> Self {

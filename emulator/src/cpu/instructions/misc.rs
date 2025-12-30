@@ -1,4 +1,5 @@
 use crate::cpu::CPU;
+use crate::bus::Bus;
 
 /// This contains any instructions of the MISC / CONTROL category
 /// that need to be implemented within the CPU
@@ -9,8 +10,9 @@ impl CPU {
     /// Would send the contents of accumulator to the device sent
     /// as the data portion of this command
     /// TODO: If data out is needed, this needs to be finished
-    pub fn data_out(&self, device: u8) -> Result<u8, String> {
+    pub fn data_out(&self, bus: &mut Bus, device: u8) -> Result<u8, String> {
         let data = self.a;
+        bus.output(device, data);
         // println!("Setting Accumulator value '{data:#04X}' to device: {device:#04X}");
         Ok(self.current_instruction.cycles)
     }
@@ -18,11 +20,11 @@ impl CPU {
     /// IN
     /// An 8 bit data byte is read from device number (exp) and
     /// replaces the contents of the accumulator
-    pub fn data_in(&mut self, device: u8) -> Result<u8, String> {
-        //TODO: This needs to read from a device...
-        let data: u8 = 0x00;
+    pub fn data_in(&mut self, bus: &mut Bus, device: u8) -> Result<u8, String> {
+        let data = bus.input(device);
+
         self.a = data;
-        // println!("Read value '{data:#04X}' from device {device:#04X}");
+
         Ok(self.current_instruction.cycles)
     }
 

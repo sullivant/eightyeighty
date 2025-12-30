@@ -3,8 +3,14 @@ use crate::memory::{self, Memory};
 
 // For mapping I/O devices
 pub trait IoDevice {
+    // Standard generic 
     fn input(&mut self, port: u8) -> u8;
     fn output(&mut self, port: u8, value: u8);
+
+    // Direct bit control
+    fn set_port(&mut self, port: u8, value: u8);
+    fn set_bit(&mut self, port: u8, bit: u8);
+    fn clear_bit(&mut self, port: u8, bit: u8);
 }
 
 // Null Device will do... nothing.
@@ -17,11 +23,21 @@ impl IoDevice for NullDevice {
     fn output(&mut self, _port: u8, _value: u8) {
         // Does nothing.
     }
+    
+    fn set_port(&mut self, _port: u8, _value: u8) {
+        println!("Setting port in the null device.  Not cool.");
+    }
+    fn set_bit(&mut self, _port: u8, _bit: u8) {
+        println!("Setting bit in the null device.  Not cool.");
+    }
+    fn clear_bit(&mut self, _port: u8, _bit: u8) {
+        println!("Clearing bit in the null device.  Not cool.");
+    }
 }
 
 pub struct Bus {
     memory: Memory,
-    io: Box<dyn IoDevice>,
+    pub io: Box<dyn IoDevice>,
 
     pending_interrupt: Option<u8>, // Basically to hold RST 0-7
 }

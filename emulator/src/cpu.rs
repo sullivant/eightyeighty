@@ -211,7 +211,7 @@ impl CPU {
 
 
         let pc_start = self.pc; // Where we are starting from
-
+        
         // Fetch opcode Instruction and set it to "current"
         let opcode = self.read_instruction(bus); // Gather the current opcode to run, based on PC's location
         self.current_instruction = opcode;
@@ -452,13 +452,13 @@ impl CPU {
             0xD0 => self.rnc(bus),                             // 11 or 5 cycles
             0xD1 => self.pop(Registers::DE, bus),
             0xD2 => self.jnc(dl, dh),
-            0xD3 => self.data_out(dl),
+            0xD3 => self.data_out(bus,dl),
             0xD4 => self.cnc(dl, dh, bus),                       // 17 or 11 cycles
             0xD5 => self.push(self.e, self.d, bus),
             0xD7 => self.rst(2, bus),
             0xD8 => self.rc(bus),                              // 11 or 5 cycles
             0xDA => self.jc(dl, dh),
-            0xDB => self.data_in(dl),               
+            0xDB => self.data_in(bus,dl),               
             0xDC => self.cc(dl, dh, bus),                        // 17 or 11 cycles
             0xDF => self.rst(3, bus),
 

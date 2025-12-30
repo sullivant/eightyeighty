@@ -34,6 +34,17 @@ impl IoDevice for HardwareProxy {
     fn output(&mut self, port: u8, value: u8) {
         self.hardware.borrow_mut().output(port, value)
     }
+
+    fn set_port(&mut self, port: u8, value: u8) {
+        self.hardware.borrow_mut().set_port(port, value);
+    }
+
+    fn set_bit(&mut self, port: u8, bit: u8) {
+        self.hardware.borrow_mut().set_bit(port, bit);
+    }
+    fn clear_bit(&mut self, port: u8, bit: u8) {
+        self.hardware.borrow_mut().clear_bit(port, bit);
+    }
 }
 
 struct Keyboard {
@@ -253,6 +264,66 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
             }
         },
 
+        ["break", addr] => {
+            if let Ok(a) = u16::from_str_radix(addr, 16) {
+                emu.add_breakpoint(a);
+                println!("Breakpoint added at {:04X}", a);
+            } else {
+                println!("Invalid address");
+            }
+        },
+
+        ["break", "remove", addr] => {
+            if let Ok(a) = u16::from_str_radix(addr, 16) {
+                emu.remove_breakpoint(a);
+                println!("Breakpoint removed at {:04X}", a);
+            } else {
+                println!("Invalid address");
+            }
+        },
+
+        ["breaklist"] => {
+            let bps = emu.breakpoints();
+            if bps.is_empty() {
+                println!("No Breakpoints set.");
+            } else {
+                println!("Breakpoints:");
+                for pc in bps {
+                    println!("   {:04X}", pc);
+                }
+            }
+        },
+
+        ["set_port", port_str, value_str] => {
+            match (port_str.parse::<u8>(), value_str.parse::<u8>()) {
+                (Ok(port), Ok(value)) => {
+                    hardware.borrow_mut().set_port(port, value);
+                    println!("Set port {} to {:#04X}", port, value);
+                }
+                _ => println!("Usage: set_port <port: u8> <value: u8>"),
+            }
+        },
+
+        ["set_bit", port_str, bit_str] => {
+            match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
+                (Ok(port), Ok(bit)) if bit < 8 => {
+                    hardware.borrow_mut().set_bit(port, bit);
+                    println!("Set bit {} on port {}", bit, port);
+                }
+                _ => println!("Usage: set_bit <port: u8> <bit: 0-7>"),
+            }
+        },
+
+        ["clear_bit", port_str, bit_str] => {
+            match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
+                (Ok(port), Ok(bit)) if bit < 8 => {
+                    hardware.borrow_mut().clear_bit(port, bit);
+                    println!("Cleared bit {} on port {}", bit, port);
+                }
+                _ => println!("Usage: clear_bit <port: u8> <bit: 0-7>"),
+            }
+        },
+
         _ => println!("Unknown command: {}", line),
     }
 
@@ -391,8 +462,14 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
     let mut last_tick = Instant::now();
 
     loop {
-        // Run a slice
+        // Run a slice of deep dish
         let stop_reason = emu.run_blocking(Some(2_000));
+
+        if let RunStopReason::Breakpoint(pc) = stop_reason {
+            crossterm::terminal::disable_raw_mode()?;
+            println!("*** BREAKPOINT HIT at PC = {:04X} ***", pc);
+            break;
+        }
 
         if let RunStopReason::Halted = stop_reason {
             crossterm::terminal::disable_raw_mode()?;
