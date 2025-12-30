@@ -29,8 +29,6 @@ struct HardwareProxy {
 }
 impl IoDevice for HardwareProxy {
     fn input(&mut self, port: u8) -> u8 {
-        println!("HardwareProxy's Rc points to: {:p}", Rc::as_ptr(&self.hardware));
-        
         self.hardware.borrow_mut().input(port)
     }
     fn output(&mut self, port: u8, value: u8) {
@@ -42,8 +40,6 @@ impl IoDevice for HardwareProxy {
     }
 
     fn set_bit(&mut self, port: u8, bit: u8) {
-        println!("HardwareProxy set_bit called. Rc pointer: {:p}", Rc::as_ptr(&self.hardware));
-        
         self.hardware.borrow_mut().set_bit(port, bit);
     }
     fn clear_bit(&mut self, port: u8, bit: u8) {
@@ -172,20 +168,18 @@ fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
 fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String> {
     println!("Creating emulator...");
     
-    let hw_proxy = HardwareProxy { hardware: hardware.clone() };
-    println!("HardwareProxy pointer before Box: {:p}", &*hw_proxy.hardware);
+    // let hw_proxy = HardwareProxy { hardware: hardware.clone() };
+    // println!("HardwareProxy pointer before Box: {:p}", &*hw_proxy.hardware);
+    // let boxed_io: Box<dyn IoDevice> = Box::new(hw_proxy);
 
-    let boxed_io: Box<dyn IoDevice> = Box::new(hw_proxy);
+    // println!("Box<dyn IoDevice> pointer before moving to Emulator:");
+    // let raw_ptr = &*boxed_io as *const dyn IoDevice;
+    // let (data_ptr, _vtable): (*const (), *const ()) = unsafe { std::mem::transmute(raw_ptr) };
+    // println!("data_ptr: {:p}", data_ptr);
 
-    println!("Box<dyn IoDevice> pointer before moving to Emulator:");
-    let raw_ptr = &*boxed_io as *const dyn IoDevice;
-    let (data_ptr, _vtable): (*const (), *const ()) = unsafe { std::mem::transmute(raw_ptr) };
-    println!("data_ptr: {:p}", data_ptr);
-
-    // let mut emu: Emulator = Emulator::new();
     // Box up the hardware proxy, with a cloned version of the hardware, and create an emu with it.
-    // let mut emu = Emulator::with_io(Box::new(HardwareProxy { hardware: hardware.clone(),}));
-    let mut emu = Emulator::with_io(boxed_io);
+    let mut emu = Emulator::with_io(Box::new(HardwareProxy { hardware: hardware.clone(),}));
+    // let mut emu = Emulator::with_io(boxed_io);
 
     println!("Inserting ROM and loading...");
     emu.load_rom(ROM_TST.to_vec())?;
@@ -314,7 +308,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["set_port", port_str, value_str] => {
             match (port_str.parse::<u8>(), value_str.parse::<u8>()) {
                 (Ok(port), Ok(value)) => {
-                    hardware.borrow_mut().set_port(port, value);
+                    emu.set_port(port, value);
                     println!("Set port {} to {:#04X}", port, value);
                 }
                 _ => println!("Usage: set_port <port: u8> <value: u8>"),
@@ -324,9 +318,6 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["set_bit", port_str, bit_str] => {
             match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
                 (Ok(port), Ok(bit)) if bit < 8 => {
-                    println!("setting via hardware borrow");
-                    hardware.borrow_mut().set_bit(port, bit);
-                    println!("Setting via emu proxy");
                     emu.set_bit(port, bit);
                     println!("Set bit {} on port {}", bit, port);
                 }
@@ -337,7 +328,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["clear_bit", port_str, bit_str] => {
             match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
                 (Ok(port), Ok(bit)) if bit < 8 => {
-                    hardware.borrow_mut().clear_bit(port, bit);
+                    emu.clear_bit(port, bit);
                     println!("Cleared bit {} on port {}", bit, port);
                 }
                 _ => println!("Usage: clear_bit <port: u8> <bit: 0-7>"),

@@ -56,9 +56,6 @@ impl Bus {
     // Create a bus with an IO device if wanted
     #[must_use]
     pub fn with_io(memory: Memory, io: Box<dyn IoDevice>) -> Self {
-        let raw_ptr: *const () = &*io as *const dyn IoDevice as *const ();
-        println!("with_io: io trait object pointer = {:p}", raw_ptr);
-        
         Self { memory, io, pending_interrupt: None }
     }
 
@@ -87,25 +84,8 @@ impl Bus {
     // IO things
     #[inline]
     pub fn input(&mut self, port: u8) -> u8 {
-        println!("in bus.rs:input");
-        self.print_io_ptr();
         self.io.input(port)
     }
-
-    pub fn print_io_ptr(&self) {
-        // Get a raw pointer to the trait object inside the Box
-        let raw_ptr = &*self.io as *const dyn IoDevice;
-
-        println!("Bus.io points to trait object at: {:p}", raw_ptr);
-
-        // Get the raw pointer from the fat pointer:
-        let (data_ptr, _vtable_ptr): (*const (), *const ()) = unsafe { 
-            std::mem::transmute(raw_ptr)
-        };
-
-        println!("Bus.io data pointer (concrete object) is at: {:p}", data_ptr);
-    }
-
 
     #[inline]
     pub fn output(&mut self, port: u8, value: u8) {

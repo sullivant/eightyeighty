@@ -52,7 +52,7 @@ impl IoDevice for MidwayHardware {
     }
 
     fn set_bit(&mut self, port: u8, bit: u8) {
-        println!("midway.rs: set_bit");
+        // println!("midway.rs: set_bit");
         // ACTIVE LOW
         match port {
             0 => self.input_latch0.write_bit(bit, false),
