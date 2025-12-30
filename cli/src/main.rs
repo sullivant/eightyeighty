@@ -29,6 +29,8 @@ struct HardwareProxy {
 }
 impl IoDevice for HardwareProxy {
     fn input(&mut self, port: u8) -> u8 {
+        println!("HardwareProxy's Rc points to: {:p}", Rc::as_ptr(&self.hardware));
+        
         self.hardware.borrow_mut().input(port)
     }
     fn output(&mut self, port: u8, value: u8) {
@@ -114,9 +116,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Our "hardware" here:
     let hardware = Rc::new(RefCell::new(MidwayHardware::new()));
+    println!("Original hardware Rc points to: {:p}", Rc::as_ptr(&hardware));
 
     // Which is used when setting up the emu.
     let mut emu: Emulator = setup_emu(&hardware)?;
+
 
     println!("Starting REPL...");
     loop {
@@ -165,10 +169,21 @@ fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
 /// Will create the emulator machine, and insert the "default" ROM
 fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String> {
     println!("Creating emulator...");
+    
+    let hw_proxy = HardwareProxy { hardware: hardware.clone() };
+    println!("HardwareProxy pointer before Box: {:p}", &*hw_proxy.hardware);
+
+    let boxed_io: Box<dyn IoDevice> = Box::new(hw_proxy);
+
+    println!("Box<dyn IoDevice> pointer before moving to Emulator:");
+    let raw_ptr = &*boxed_io as *const dyn IoDevice;
+    let (data_ptr, _vtable): (*const (), *const ()) = unsafe { std::mem::transmute(raw_ptr) };
+    println!("data_ptr: {:p}", data_ptr);
 
     // let mut emu: Emulator = Emulator::new();
     // Box up the hardware proxy, with a cloned version of the hardware, and create an emu with it.
-    let mut emu = Emulator::with_io(Box::new(HardwareProxy { hardware: hardware.clone(),}));
+    // let mut emu = Emulator::with_io(Box::new(HardwareProxy { hardware: hardware.clone(),}));
+    let mut emu = Emulator::with_io(boxed_io);
 
     println!("Inserting ROM and loading...");
     emu.load_rom(ROM_TST.to_vec())?;

@@ -205,4 +205,9 @@ impl Emulator {
     pub fn breakpoints(&self) -> &HashSet<u16> {
         &self.breakpoints
     }
+
+    pub fn input(&mut self, port: u8) -> u8 {
+        println!("In lib.rs: input");
+        self.bus.input(port)
+    }
 }
