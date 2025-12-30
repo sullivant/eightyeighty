@@ -56,6 +56,9 @@ impl Bus {
     // Create a bus with an IO device if wanted
     #[must_use]
     pub fn with_io(memory: Memory, io: Box<dyn IoDevice>) -> Self {
+        let raw_ptr: *const () = &*io as *const dyn IoDevice as *const ();
+        println!("with_io: io trait object pointer = {:p}", raw_ptr);
+        
         Self { memory, io, pending_interrupt: None }
     }
 

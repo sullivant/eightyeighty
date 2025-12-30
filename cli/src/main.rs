@@ -42,6 +42,8 @@ impl IoDevice for HardwareProxy {
     }
 
     fn set_bit(&mut self, port: u8, bit: u8) {
+        println!("HardwareProxy set_bit called. Rc pointer: {:p}", Rc::as_ptr(&self.hardware));
+        
         self.hardware.borrow_mut().set_bit(port, bit);
     }
     fn clear_bit(&mut self, port: u8, bit: u8) {
@@ -322,7 +324,10 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["set_bit", port_str, bit_str] => {
             match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
                 (Ok(port), Ok(bit)) if bit < 8 => {
+                    println!("setting via hardware borrow");
                     hardware.borrow_mut().set_bit(port, bit);
+                    println!("Setting via emu proxy");
+                    emu.set_bit(port, bit);
                     println!("Set bit {} on port {}", bit, port);
                 }
                 _ => println!("Usage: set_bit <port: u8> <bit: 0-7>"),

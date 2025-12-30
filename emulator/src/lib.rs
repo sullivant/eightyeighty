@@ -16,6 +16,7 @@ use bus::Bus;
 use memory::Memory;
 
 use crate::bus::IoDevice;
+use crate::bus::NullDevice;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunState {
@@ -116,8 +117,12 @@ impl Emulator {
 
         self.cpu.reset()?; // Registers and flags
 
-        self.bus = Bus::new(Memory::new());
+        // Instead of creating a new Bus from scratch, preserve the existing IO device:
+        let io = std::mem::replace(&mut self.bus.io, Box::new(NullDevice {})); // temporarily take ownership of io
 
+        self.bus = Bus::with_io(Memory::new(), io);
+
+        // Load the ROM
         for (i, &b) in rom.iter().enumerate() {
             self.bus.write(i, b);
         }
@@ -209,5 +214,10 @@ impl Emulator {
     pub fn input(&mut self, port: u8) -> u8 {
         println!("In lib.rs: input");
         self.bus.input(port)
+    }
+
+    pub fn set_bit(&mut self, port: u8, bit: u8) {
+        println!("In lib.rs: set bit");
+        self.bus.io.set_bit(port, bit);
     }
 }
