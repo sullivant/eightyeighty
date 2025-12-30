@@ -210,21 +210,4 @@ impl Emulator {
     pub fn breakpoints(&self) -> &HashSet<u16> {
         &self.breakpoints
     }
-
-    pub fn input(&mut self, port: u8) -> u8 {
-        self.bus.input(port)
-    }
-
-
-    pub fn set_port(&mut self, port: u8, value: u8) {
-        self.bus.io.set_port(port, value);
-    }
-    
-    pub fn set_bit(&mut self, port: u8, bit: u8) {
-        self.bus.io.set_bit(port, bit);
-    }
-
-    pub fn clear_bit(&mut self, port: u8, bit: u8) {
-        self.bus.io.clear_bit(port, bit);
-    }
 }

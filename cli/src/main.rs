@@ -56,7 +56,7 @@ impl Keyboard {
     fn new() -> Self {
         Self {
             pressed: HashMap::new(),
-            release_after: Duration::from_millis(120),
+            release_after: Duration::from_millis(50),
         }
     }
 
@@ -308,7 +308,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["set_port", port_str, value_str] => {
             match (port_str.parse::<u8>(), value_str.parse::<u8>()) {
                 (Ok(port), Ok(value)) => {
-                    emu.set_port(port, value);
+                    hardware.borrow_mut().set_port(port, value);
                     println!("Set port {} to {:#04X}", port, value);
                 }
                 _ => println!("Usage: set_port <port: u8> <value: u8>"),
@@ -318,7 +318,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["set_bit", port_str, bit_str] => {
             match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
                 (Ok(port), Ok(bit)) if bit < 8 => {
-                    emu.set_bit(port, bit);
+                    hardware.borrow_mut().set_bit(port, bit);
                     println!("Set bit {} on port {}", bit, port);
                 }
                 _ => println!("Usage: set_bit <port: u8> <bit: 0-7>"),
@@ -328,7 +328,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["clear_bit", port_str, bit_str] => {
             match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
                 (Ok(port), Ok(bit)) if bit < 8 => {
-                    emu.clear_bit(port, bit);
+                    hardware.borrow_mut().clear_bit(port, bit);
                     println!("Cleared bit {} on port {}", bit, port);
                 }
                 _ => println!("Usage: clear_bit <port: u8> <bit: 0-7>"),

@@ -1,8 +1,7 @@
 # Ignore any "special" roms, but allow stuff we've made ourselves
 resources/roms/*
 !resources/roms/
-!resources/roms/test.rom
-!resources/roms/*.hex
+!resources/roms/*.asm
 
 /resources/fonts
 **/.history
