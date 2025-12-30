@@ -21,17 +21,19 @@ impl InputLatch {
     #[inline]
     pub fn set_bit(&mut self, bit: u8) {
         if bit < 8 {
-            self.value |= 1 << bit;
+            self.value |= 1 << bit;  // set bit to 1
         }
     }
+
 
     /// Clears a single bit (0-7)
     #[inline]
     pub fn clear_bit(&mut self, bit: u8) {
         if bit < 8 {
-            self.value &= !(1 << bit);
+            self.value &= !(1 << bit);  // clear bit to 0
         }
     }
+
 
     /// Sets or clears depending on value
     #[inline]

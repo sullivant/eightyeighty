@@ -51,6 +51,11 @@ impl MidwayHardware {
         let mut in1 = InputLatch::new();
         let mut in2 = InputLatch::new();
 
+        // Set them all to be pulled high - they start out as "off" but are ACTIVE LOW
+        in0.write(0xFF);
+        in1.write(0xFF);
+        in2.write(0xFF);
+
         // Default DIP switches
         in2.set_bit(0); // 3 lives
         in2.set_bit(1);
@@ -67,18 +72,19 @@ impl MidwayHardware {
 
     /// Assert or clear a logical input
     pub fn set_input(&mut self, input: MidwayInput, pressed: bool) {
-        // println!("MidwayHardware: {:?} -> {}", input, pressed);
+        let level = !pressed; // Midway is ACTIVE LOW
+
         match input {
             // IN0
-            MidwayInput::Coin => self.input_latch0.write_bit(0, pressed),
-            MidwayInput::Tilt => self.input_latch0.write_bit(2, pressed),
+            MidwayInput::Coin => self.input_latch0.write_bit(0, level),
+            MidwayInput::Tilt => self.input_latch0.write_bit(2, level),
 
             // IN1 (player controls)
-            MidwayInput::Start1 => self.input_latch1.write_bit(2, pressed),
-            MidwayInput::Start2 => self.input_latch1.write_bit(1, pressed),
-            MidwayInput::Fire => self.input_latch1.write_bit(4, pressed),
-            MidwayInput::Left => self.input_latch1.write_bit(5, pressed),
-            MidwayInput::Right => self.input_latch1.write_bit(6, pressed),
+            MidwayInput::Start1 => self.input_latch1.write_bit(2, level),
+            MidwayInput::Start2 => self.input_latch1.write_bit(1, level),
+            MidwayInput::Fire => self.input_latch1.write_bit(4, level),
+            MidwayInput::Left => self.input_latch1.write_bit(5, level),
+            MidwayInput::Right => self.input_latch1.write_bit(6, level),
         }
     }
 

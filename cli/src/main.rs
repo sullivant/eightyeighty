@@ -4,14 +4,20 @@ use std::io;
 use std::fs;
 use std::rc::Rc;
 
-use emulator::bus::IoDevice;
-use emulator::{RunState, RunStopReason};
-use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
-use rustyline::{error::ReadlineError};
-use rustyline::DefaultEditor;
+// For key handling
+use std::collections::HashMap;
+use crossterm::event::KeyEventKind;
 use crossterm::event::{self, Event};
 use crossterm::event::{KeyCode, KeyEvent};
 use std::time::{Duration, Instant};
+
+// For REPL work
+use rustyline::{error::ReadlineError};
+use rustyline::DefaultEditor;
+
+use emulator::bus::IoDevice;
+use emulator::{RunState, RunStopReason};
+use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 use emulator::{self, Emulator, cpu::CPU, bus::Bus};
 
 // A simple test rom with a few instructions to load at the start
@@ -30,6 +36,61 @@ impl IoDevice for HardwareProxy {
     }
 }
 
+struct Keyboard {
+    pressed: HashMap<KeyCode, Instant>,
+    release_after: Duration,
+}
+
+impl Keyboard {
+    fn new() -> Self {
+        Self {
+            pressed: HashMap::new(),
+            release_after: Duration::from_millis(120),
+        }
+    }
+
+    /// Register a press or refresh if already pressed
+    fn press(&mut self, key: KeyCode) {
+        self.pressed.insert(key, Instant::now());
+    }
+
+    /// Returns keys that should be released by now 
+    fn tick(&mut self) -> Vec<KeyCode> {
+        let now = Instant::now();
+        let mut released = Vec::new();
+
+        // For each key see if it should be released by now by looking at
+        // each key and its timestamp, if it should be released, 
+        // do not retain it.  Simple.
+        self.pressed.retain(|&key, &mut t| {
+            if now.duration_since(t) > self.release_after {
+                released.push(key);
+                false
+            } else {
+                true
+            }
+        });
+
+        released
+    }
+}
+
+
+/// Maps keyboard codes to Midway specific inputs when we are using midway hardware.
+/// I will probably want this in some way stuffed into hardware::midway.rs but without
+/// reliance on crossterm::KeyCode.
+fn key_to_midway_input(key: KeyCode) -> Option<MidwayInput> {
+   use MidwayInput::*;
+   match key {
+    KeyCode::Char('c')  => Some(Coin),
+    KeyCode::Char('1')  => Some(Start1),
+    KeyCode::Char('2')  => Some(Start2),
+    KeyCode::Left       => Some(Left),
+    KeyCode::Right      => Some(Right),
+    KeyCode::Char(' ')  => Some(Fire),
+    _                   => None,    
+   } 
+}
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -161,7 +222,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
             };
 
             let path = format!("resources/roms/{}", file);
-            println!("Inserting ROM: {}", path);
+            println!("Inserting ROM and resetting: {}", path);
 
             // If it loads from the file, stuff it into the Emulator
             match load_rom_file(&path) {
@@ -171,6 +232,11 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
                 Err(e) => {
                     println!("File error: {}", e);
                 }
+            }
+
+            if let Err(e) = emu.reset() {
+                println!("Error in resetting: {}",e);
+                return false;
             }
         },
 
@@ -321,6 +387,7 @@ fn show_hardware_state(hw: Ref<'_, MidwayHardware>) {
 fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io::Result<()> {
     crossterm::terminal::enable_raw_mode()?;
 
+    let mut keyboard = Keyboard::new();
     let mut last_tick = Instant::now();
 
     loop {
@@ -335,10 +402,15 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
 
         // Poll input (non-blocking)
         while event::poll(Duration::from_millis(0))? {
-            match event::read()? {
-                Event::Key(key) => {
-                    let pressed = key.kind == event::KeyEventKind::Press;
-                    handle_key_event(&hardware, key, pressed);
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    keyboard.press(key.code); // Register the press
+
+                    // And send the input off to the hardware
+                    if let Some(input) = key_to_midway_input(key.code) {
+                        hardware.borrow_mut().press(input);
+                        debug_keypress(key.code, hardware.borrow(), true)?;
+                    }
 
                     // Escape to quit
                     if key.code == KeyCode::Esc {
@@ -354,7 +426,15 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
                         crossterm::terminal::enable_raw_mode()?;
                     }
                 }
-                _ => {}
+            }
+        }
+
+        // Now handle the releases; tick() returns a list of newly released
+        // keys, we send them to the hardware in the form of releases.
+        for key in keyboard.tick() {
+            if let Some(input) = key_to_midway_input(key) {
+                hardware.borrow_mut().release(input);
+                debug_keypress(key, hardware.borrow(), false)?;
             }
         }
 
@@ -368,30 +448,13 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
     Ok(())
 }
 
-
-// While running forever we look at key events.  This fn handles them.
-fn handle_key_event(
-    hw: &Rc<RefCell<MidwayHardware>>,
-    event: KeyEvent,
-    pressed: bool,
-) {
-    let input = match event.code {
-        KeyCode::Char('c') => Some(MidwayInput::Coin),
-        KeyCode::Char('1') => Some(MidwayInput::Start1),
-        KeyCode::Char('2') => Some(MidwayInput::Start2),
-
-        KeyCode::Left => Some(MidwayInput::Left),
-        KeyCode::Right => Some(MidwayInput::Right),
-        KeyCode::Char(' ') => Some(MidwayInput::Fire),
-
-        _ => None,
-    };
-
-    if let Some(input) = input {
-        if pressed {
-            hw.borrow_mut().press(input);
-        } else {
-            hw.borrow_mut().release(input);
-        }
-    }
+fn debug_keypress(key: KeyCode, hw: Ref<'_, MidwayHardware>, pressed: bool) -> io::Result<()> {
+    crossterm::terminal::disable_raw_mode()?;
+    println!("------------------");                  
+    if pressed { println!("Pressed: {:?}", key); } else { println!("Released: {:?}", key)}
+    let hw = hw;
+    show_hardware_state(hw);  
+    println!("------------------");                  
+    crossterm::terminal::enable_raw_mode()?;
+    Ok(())
 }
