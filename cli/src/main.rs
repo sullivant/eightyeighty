@@ -8,12 +8,15 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use crossterm::event::KeyEventKind;
 use crossterm::event::{self, Event};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode};
 use std::time::{Duration, Instant};
 
 // For REPL work
 use rustyline::{error::ReadlineError};
 use rustyline::DefaultEditor;
+
+mod commands;
+use commands::dispatch;
 
 use emulator::bus::IoDevice;
 use emulator::{RunState, RunStopReason};
@@ -87,21 +90,7 @@ impl Keyboard {
 }
 
 
-/// Maps keyboard codes to Midway specific inputs when we are using midway hardware.
-/// I will probably want this in some way stuffed into hardware::midway.rs but without
-/// reliance on crossterm::KeyCode.
-fn key_to_midway_input(key: KeyCode) -> Option<MidwayInput> {
-   use MidwayInput::*;
-   match key {
-    KeyCode::Char('c')  => Some(Coin),
-    KeyCode::Char('1')  => Some(Start1),
-    KeyCode::Char('2')  => Some(Start2),
-    KeyCode::Left       => Some(Left),
-    KeyCode::Right      => Some(Right),
-    KeyCode::Char(' ')  => Some(Fire),
-    _                   => None,    
-   } 
-}
+
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -133,8 +122,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Handling of command also needs to know about the hardware because it's going to
                 // read keys and set the proper ports.
-                if !handle_command(&mut emu, &hardware, line) {
-                    break;
+                // if !handle_command(&mut emu, &hardware, line) {
+                if !dispatch(&mut emu, &hardware, line) {
+                     break;
                 }
             }
 
@@ -193,39 +183,13 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
     let parts: Vec<&str> = line.split_whitespace().collect();
 
     match parts.as_slice() {
-        ["quit"] | ["exit"] => return false,
-
-        ["step"] => {
-            step(emu);
-        },
-
-        // Basically, run forever?
-        ["run"] => {
-            // run(emu, u64::MAX);
-            println!("Running forever.  ESC to stop.");
-            match run_forever(emu, hardware) {
-                Ok(_) => (),
-                _ => {
-                    println!("Error running forever.");
-                    return false;
-                },
-            }
-        },
-
-        ["run", cycles] => {
-            if let Ok(c) = cycles.parse::<u64>() {
-                run(emu, c);
-            }
-        },
-
         ["int", line] => {
             if let Ok(r) = line.parse::<u8>() {
                 emu.bus.request_interrupt(r);
             }
         },
 
-        ["regs"] => regs(&emu.cpu),
-        ["emu"] => emu_state(emu),
+
 
         // Will resend the line, to be properly parsed in the mem fn.
         ["mem", _, _] => mem(&emu.bus, line),
@@ -233,8 +197,6 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
         ["rom"] => print_rom(emu),
 
         ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
-
-        ["hw"] => show_hardware_state(hardware.borrow()),
 
         ["insert", rom_name] => {
             let file = if rom_name.ends_with(".rom") {
@@ -342,13 +304,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
 }
 
 
-/// Displays registers
-fn regs(cpu: &CPU) {
-    println!(
-        "A:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X}",
-        cpu.a, cpu.b, cpu.c, cpu.d, cpu.e, cpu.h, cpu.l, cpu.sp, cpu.pc
-    );
-}
+
 
 /// Displays emulator state
 fn emu_state(emu: &mut Emulator) {
@@ -432,117 +388,5 @@ fn print_rom(emu: &Emulator) {
     }
 }
 
-/// Issues a single step command and shows what happened and how many cycles it took
-fn step(emu: &mut Emulator) {
-    match emu.step() {
-        Some(result) => {
-            println!(
-                "{:04X}: {:02X}  {:<10}  +{} cycles",
-                result.pc,
-                result.opcode,
-                result.mnemonic,
-                result.cycles
-            );
-        }
-        _ => (),
-    }
-}
 
-/// Runs for a certain number of cycles; handled by the emulator
-fn run(emu: &mut Emulator, target_cycles: u64) {
-    match emu.run_blocking(Some(target_cycles)) {
-        RunStopReason::CycleBudgetExhausted => { println!("Stopped: Cycle budget exhausted.");},
-        RunStopReason::Halted => { println!("Stopped: Halted.");},
-        _ => { println!("Stopped: Unknown reason.");}
-    }
-    
-}
 
-// Shows input latch hardware state
-fn show_hardware_state(hw: Ref<'_, MidwayHardware>) {
-    println!("Input Latch 0: {:08b}", hw.input_latch0.read());
-    println!("Input Latch 1: {:08b}", hw.input_latch1.read());
-    println!("Input Latch 2: {:08b}", hw.input_latch2.read());
-}
-
-/// Runs forever, processing keyboard events while doing so.
-fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io::Result<()> {
-    crossterm::terminal::enable_raw_mode()?;
-
-    let mut keyboard = Keyboard::new();
-    let mut last_tick = Instant::now();
-
-    loop {
-        // Run a slice of deep dish
-        let stop_reason = emu.run_blocking(Some(2_000));
-
-        if let RunStopReason::Breakpoint(pc) = stop_reason {
-            crossterm::terminal::disable_raw_mode()?;
-            println!("*** BREAKPOINT HIT at PC = {:04X} ***", pc);
-            break;
-        }
-
-        if let RunStopReason::Halted = stop_reason {
-            crossterm::terminal::disable_raw_mode()?;
-            println!("CPU Halted; Stopping execution.");
-            break;
-        }
-
-        // Poll input (non-blocking)
-        while event::poll(Duration::from_millis(0))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    keyboard.press(key.code); // Register the press
-
-                    // And send the input off to the hardware
-                    if let Some(input) = key_to_midway_input(key.code) {
-                        hardware.borrow_mut().press(input);
-                        debug_keypress(key.code, hardware.borrow(), true)?;
-                    }
-
-                    // Escape to quit
-                    if key.code == KeyCode::Esc {
-                        crossterm::terminal::disable_raw_mode()?;
-                        return Ok(());
-                    }
-
-                    // CTRL+h to show status of the current input latches
-                    if key.code == KeyCode::Char('h') && key.modifiers.contains(event::KeyModifiers::CONTROL) {
-                        crossterm::terminal::disable_raw_mode()?;
-                        let hw = hardware.borrow();
-                        show_hardware_state(hw);
-                        crossterm::terminal::enable_raw_mode()?;
-                    }
-                }
-            }
-        }
-
-        // Now handle the releases; tick() returns a list of newly released
-        // keys, we send them to the hardware in the form of releases.
-        for key in keyboard.tick() {
-            if let Some(input) = key_to_midway_input(key) {
-                hardware.borrow_mut().release(input);
-                debug_keypress(key, hardware.borrow(), false)?;
-            }
-        }
-
-        // Simple timing throttle for now
-        if last_tick.elapsed() < Duration::from_millis(16) {
-            std::thread::sleep(Duration::from_millis(1));
-        }
-        last_tick = Instant::now();
-    }
-
-    Ok(())
-}
-
-fn debug_keypress(key: KeyCode, hw: Ref<'_, MidwayHardware>, pressed: bool) -> io::Result<()> {
-    crossterm::terminal::disable_raw_mode()?;
-    println!("------------------");                  
-    if pressed { println!("Pressed: {:?}", key); } else { println!("Released: {:?}", key)}
-    let hw = hw;
-    show_hardware_state(hw);  
-    println!("------------------");                  
-    crossterm::terminal::enable_raw_mode()?;
-    Ok(())
-}
