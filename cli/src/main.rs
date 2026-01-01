@@ -122,9 +122,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Handling of command also needs to know about the hardware because it's going to
                 // read keys and set the proper ports.
-                // if !handle_command(&mut emu, &hardware, line) {
                 if !dispatch(&mut emu, &hardware, line) {
-                     break;
+                    break; // If we have returned false from dispatch, we were instructed to quit the REPL
                 }
             }
 
@@ -149,10 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Just loads provided filepath into a vec.
-fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
-    fs::read(path)
-}
+
 
 /// Will create the emulator machine, and insert the "default" ROM
 fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String> {
@@ -183,119 +179,7 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
     let parts: Vec<&str> = line.split_whitespace().collect();
 
     match parts.as_slice() {
-        ["int", line] => {
-            if let Ok(r) = line.parse::<u8>() {
-                emu.bus.request_interrupt(r);
-            }
-        },
 
-
-
-        // Will resend the line, to be properly parsed in the mem fn.
-        ["mem", _, _] => mem(&emu.bus, line),
-
-        ["rom"] => print_rom(emu),
-
-        ["pc"] => println!("PC = {:04X}", emu.cpu.pc),
-
-        ["insert", rom_name] => {
-            let file = if rom_name.ends_with(".rom") {
-                rom_name.to_string()
-            } else {
-                format!("{}.rom", rom_name)
-            };
-
-            let path = format!("resources/roms/{}", file);
-            println!("Inserting ROM and resetting: {}", path);
-
-            // If it loads from the file, stuff it into the Emulator
-            match load_rom_file(&path) {
-                Ok(bytes) => {
-                    emu.insert_rom(bytes);
-                }
-                Err(e) => {
-                    println!("File error: {}", e);
-                }
-            }
-
-            if let Err(e) = emu.reset() {
-                println!("Error in resetting: {}",e);
-                return false;
-            }
-        },
-
-        ["remove"] => {
-            println!("Removing ROM from Emulator");
-            emu.remove_rom();
-        },
-
-        ["reset"] => {
-            println!("Resetting Emulator");
-            if let Err(e) = emu.reset() {
-                println!("Error in resetting: {}",e);
-                return false;
-            }
-        },
-
-        ["break", addr] => {
-            if let Ok(a) = u16::from_str_radix(addr, 16) {
-                emu.add_breakpoint(a);
-                println!("Breakpoint added at {:04X}", a);
-            } else {
-                println!("Invalid address");
-            }
-        },
-
-        ["break", "remove", addr] => {
-            if let Ok(a) = u16::from_str_radix(addr, 16) {
-                emu.remove_breakpoint(a);
-                println!("Breakpoint removed at {:04X}", a);
-            } else {
-                println!("Invalid address");
-            }
-        },
-
-        ["breaklist"] => {
-            let bps = emu.breakpoints();
-            if bps.is_empty() {
-                println!("No Breakpoints set.");
-            } else {
-                println!("Breakpoints:");
-                for pc in bps {
-                    println!("   {:04X}", pc);
-                }
-            }
-        },
-
-        ["set_port", port_str, value_str] => {
-            match (port_str.parse::<u8>(), value_str.parse::<u8>()) {
-                (Ok(port), Ok(value)) => {
-                    hardware.borrow_mut().set_port(port, value);
-                    println!("Set port {} to {:#04X}", port, value);
-                }
-                _ => println!("Usage: set_port <port: u8> <value: u8>"),
-            }
-        },
-
-        ["set_bit", port_str, bit_str] => {
-            match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
-                (Ok(port), Ok(bit)) if bit < 8 => {
-                    hardware.borrow_mut().set_bit(port, bit);
-                    println!("Set bit {} on port {}", bit, port);
-                }
-                _ => println!("Usage: set_bit <port: u8> <bit: 0-7>"),
-            }
-        },
-
-        ["clear_bit", port_str, bit_str] => {
-            match (port_str.parse::<u8>(), bit_str.parse::<u8>()) {
-                (Ok(port), Ok(bit)) if bit < 8 => {
-                    hardware.borrow_mut().clear_bit(port, bit);
-                    println!("Cleared bit {} on port {}", bit, port);
-                }
-                _ => println!("Usage: clear_bit <port: u8> <bit: 0-7>"),
-            }
-        },
 
         _ => println!("Unknown command: {}", line),
     }
@@ -303,90 +187,6 @@ fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, li
     true
 }
 
-
-
-
-/// Displays emulator state
-fn emu_state(emu: &mut Emulator) {
-    match emu.run_state() {
-        RunState::Running => { println!("State: Running");},
-        RunState::Stopped => { println!("State: Stopped");},
-    };
-    match emu.cpu.interrupts_enabled() {
-        true => { println!("Interrupts Enabled")},
-        false=> { println!("Interrupts Not Enabled")},
-    };
-    match emu.bus.peek_interrupt() {
-        Some(i) => { println!("Pending Interrupt: {}", i)},
-        None => { println!("Pending Interrupt: None")},
-    };
-}
-
-/// Displays a portion of memory
-fn mem(bus: &Bus, cmd: &str) {
-    let parts: Vec<_> = cmd.split_whitespace().collect();
-    if parts.len() != 3 {
-        println!("Usage: mem <addr> <len>");
-        return;
-    }
-
-    let addr = usize::from_str_radix(parts[1], 16).unwrap_or(0);
-    let len = parts[2].parse::<usize>().unwrap_or(0);
-    let bytes_per_line = 16;
-
-    for line_start in (0..len).step_by(bytes_per_line) {
-        // Print the address at start of line
-        print!("{:04X}:  ", addr + line_start);
-
-        // Print hex bytes for this line
-        for i in 0..bytes_per_line {
-            let idx = line_start + i;
-            if idx < len {
-                let byte = bus.read(addr + idx);
-                print!("{:02X} ", byte);
-            } else {
-                // Padding for incomplete line
-                print!("   ");
-            }
-        }
-
-        // Print ASCII characters for this line
-        print!(" ");
-
-        for i in 0..bytes_per_line {
-            let idx = line_start + i;
-            if idx < len {
-                let byte = bus.read(addr + idx);
-                // Show printable ASCII or '.' for non-printable
-                let ch = if byte.is_ascii_graphic() || byte == b' ' {
-                    byte as char
-                } else {
-                    '.'
-                };
-                print!("{}", ch);
-            } else {
-                // Padding for incomplete line
-                print!(" ");
-            }
-        }
-
-        println!();
-    }
-}
-
-/// Prints the currently loaded ROM in case one is curious
-fn print_rom(emu: &Emulator) {
-    match emu.rom() {
-        Some(rom) => {
-            for (addr, byte) in rom.iter().enumerate() {
-                println!("{:04X}: {:02X}", addr, byte);
-            }
-        }
-        None => {
-            println!("No ROM loaded.");
-        }
-    }
-}
 
 
 
