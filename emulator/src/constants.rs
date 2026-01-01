@@ -1,6 +1,7 @@
 // use sdl2::pixels::Color;
 
 // CPU Constants
+#[cfg(test)]
 pub const OPCODE_SIZE: usize = 1;
 pub const RAM_SIZE: usize = 0xFFFF;
 
