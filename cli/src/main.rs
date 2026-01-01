@@ -1,13 +1,8 @@
-use std::cell::Ref;
 use std::cell::RefCell;
-use std::io;
-use std::fs;
 use std::rc::Rc;
 
 // For key handling
 use std::collections::HashMap;
-use crossterm::event::KeyEventKind;
-use crossterm::event::{self, Event};
 use crossterm::event::{KeyCode};
 use std::time::{Duration, Instant};
 
@@ -19,9 +14,8 @@ mod commands;
 use commands::dispatch;
 
 use emulator::bus::IoDevice;
-use emulator::{RunState, RunStopReason};
-use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
-use emulator::{self, Emulator, cpu::CPU, bus::Bus};
+use emulator::devices::hardware::midway::MidwayHardware;
+use emulator::{self, Emulator};
 
 // A simple test rom with a few instructions to load at the start
 const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
@@ -171,20 +165,6 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
     emu.load_rom(ROM_TST.to_vec())?;
 
     Ok(emu)
-}
-
-/// Actually handles processing the REPL command
-fn handle_command(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>, line: &str) -> bool {
-
-    let parts: Vec<&str> = line.split_whitespace().collect();
-
-    match parts.as_slice() {
-
-
-        _ => println!("Unknown command: {}", line),
-    }
-
-    true
 }
 
 

@@ -1,10 +1,7 @@
-/// This is the hardware configuration available for a Midway 8080 (Space Invaders) system
-
 use crate::devices::io::{InputLatch, ShiftRegister};
 use crate::bus::IoDevice;
 
-
-/// Inputs that a Midway expects
+/// This is the hardware configuration available for a Midway 8080 (Space Invaders) system
 #[derive(Debug)]
 pub enum MidwayInput {
     Coin,
@@ -72,7 +69,14 @@ impl IoDevice for MidwayHardware {
     }
 }
 
+impl Default for MidwayHardware {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MidwayHardware {
+    #[must_use]
     pub fn new() -> Self {
         let mut in0 = InputLatch::new();
         let mut in1 = InputLatch::new();
@@ -98,7 +102,7 @@ impl MidwayHardware {
     }
 
     /// Assert or clear a logical input
-    pub fn set_input(&mut self, input: MidwayInput, pressed: bool) {
+    pub fn set_input(&mut self, input: &MidwayInput, pressed: bool) {
         let level = !pressed; // Midway is ACTIVE LOW
 
         match input {
@@ -116,11 +120,11 @@ impl MidwayHardware {
     }
 
     /// Convenience helpers
-    pub fn press(&mut self, input: MidwayInput) {
+    pub fn press(&mut self, input: &MidwayInput) {
         self.set_input(input, true);
     }
 
-    pub fn release(&mut self, input: MidwayInput) {
+    pub fn release(&mut self, input: &MidwayInput) {
         self.set_input(input, false);
     }
 }

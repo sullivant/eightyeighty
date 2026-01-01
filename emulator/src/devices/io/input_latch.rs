@@ -1,7 +1,12 @@
 /// Allows for a latched input mechanism
-
 pub struct InputLatch {
     value: u8,
+}
+
+impl Default for InputLatch {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InputLatch {

@@ -3,8 +3,6 @@ use crate::bus::Bus;
 
 /// This contains any instructions of the MISC / CONTROL category
 /// that need to be implemented within the CPU
-
-#[allow(clippy::unnecessary_wraps)]
 impl CPU {
     /// OUT D8
     /// Would send the contents of accumulator to the device sent

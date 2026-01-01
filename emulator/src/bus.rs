@@ -1,5 +1,4 @@
-use crate::memory::{self, Memory};
-
+use crate::memory::Memory;
 
 // For mapping I/O devices
 pub trait IoDevice {
@@ -107,6 +106,7 @@ impl Bus {
         i
     }
 
+    #[must_use]
     /// Simply shows the interrupt but does not take
     pub fn peek_interrupt(&self) -> Option<u8> {
         self.pending_interrupt

@@ -9,6 +9,7 @@ pub struct ShiftRegister {
 }
 
 impl ShiftRegister {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             register: 0,
@@ -18,12 +19,12 @@ impl ShiftRegister {
 
     // Write to the low portion of the register
     pub fn write_low(&mut self, value: u8) {
-        self.register = (self.register & 0xFF00) | (value as u16);
+        self.register = (self.register & 0xFF00) | u16::from(value);
     }
 
     // Write to the high portion of the register
     pub fn write_high(&mut self, value: u8) {
-        self.register = (self.register & 0x00FF) | ((value as u16) << 8);
+        self.register = (self.register & 0x00FF) | (u16::from(value) << 8);
     }
 
     // Set the offset and only really care about 0-7
@@ -31,6 +32,7 @@ impl ShiftRegister {
         self.shift_offset = offset & 0x07;
     }
 
+    #[must_use]
     pub fn read_shifted(&self) -> u8 {
         let shift = 8 - self.shift_offset;
         ((self.register >> shift) & 0xFF) as u8

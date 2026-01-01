@@ -70,6 +70,7 @@ impl Emulator {
         }        
     }
 
+    #[must_use]
     /// Allows for creation of a machine with hardware defined
     pub fn with_io(io: Box<dyn IoDevice>) -> Self {
         let memory = Memory::new();
@@ -77,7 +78,7 @@ impl Emulator {
 
         Self {
             cpu: CPU::new(),
-            bus: bus,
+            bus,
 
             run_state: RunState::Stopped,
             cycles: 0,
@@ -115,7 +116,7 @@ impl Emulator {
     pub fn reset(&mut self) -> Result<(), String> {
         let rom = self.rom.as_ref().ok_or("No ROM Inserted")?;
 
-        self.cpu.reset()?; // Registers and flags
+        self.cpu.reset(); // Registers and flags
 
         // Instead of creating a new Bus from scratch, preserve the existing IO device:
         let io = std::mem::replace(&mut self.bus.io, Box::new(NullDevice {})); // temporarily take ownership of io
@@ -130,7 +131,11 @@ impl Emulator {
         Ok(())
     }
  
-    /// Inserts a rom and then ensures it loads into the CPU properly.  A convenience fn for "`insert_rom()`; `reset()`"
+    /// Inserts a rom and then ensures it loads into the CPU properly.\
+    /// A convenience fn for "`insert_rom()`; `reset()`"
+    /// 
+    /// ## Errors
+    /// Will forward errors from `insert_rom()` and `reset()` calls.
     pub fn load_rom(&mut self, rom: Vec<u8>) -> Result<(), String> {
         self.insert_rom(rom);
         self.reset()
@@ -158,18 +163,15 @@ impl Emulator {
                 return RunStopReason::Breakpoint(pc);
             }
 
-            let step = match self.cpu.step(&mut self.bus) {
-                Ok(s) => s,
-                Err(_) => {
-                    self.stop();
-                    return RunStopReason::Error;
-                }
+            let Ok(step) = self.cpu.step(&mut self.bus) else {
+                self.stop();
+                return RunStopReason::Error;
             };
 
-            self.cycles += step.cycles as u64;
+            self.cycles += u64::from(step.cycles);
 
             if let Some(ref mut remaining) = self.cycle_budget {
-                *remaining = remaining.saturating_sub(step.cycles as u64);
+                *remaining = remaining.saturating_sub(u64::from(step.cycles));
                 if *remaining == 0 {
                     self.stop();
                     return RunStopReason::CycleBudgetExhausted;
@@ -191,11 +193,11 @@ impl Emulator {
         }
 
         if let Ok(step) = self.cpu.step(&mut self.bus) {
-            self.cycles += step.cycles as u64;
+            self.cycles += u64::from(step.cycles);
             return Some(step);
         }
 
-        return None;
+        None
     }
 
 
@@ -207,6 +209,7 @@ impl Emulator {
         self.breakpoints.remove(&addr);
     }
 
+    #[must_use]
     pub fn breakpoints(&self) -> &HashSet<u16> {
         &self.breakpoints
     }

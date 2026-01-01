@@ -2,21 +2,16 @@
 
 use std::fmt;
 use serde::{Deserialize,Serialize};
-use serde_big_array::BigArray;
 
 use crate::constants::{RAM_SIZE, VRAM_END, VRAM_START};
 
 /// Memory
-///
-/// TODO: Make this able to output a section of data by slice, for processing by the
-/// memory display window.
 
-const SLICE_SIZE: usize = 16;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Memory {
-    #[serde(with = "BigArray")]
-    data: [u8; RAM_SIZE]
+    // #[serde(with = "BigArray")]
+    data: Box<[u8]>//[u8; RAM_SIZE]
 }
 
 /// When returning (for display) the memory, we need to represent this as a JSON string
@@ -39,9 +34,9 @@ impl Default for Memory {
 }
 
 impl Memory {
-    pub const fn new() -> Memory {
+    pub fn new() -> Memory {
         Memory {
-            data: [0; RAM_SIZE]
+            data: vec![0; RAM_SIZE].into_boxed_slice() // [0; RAM_SIZE]
         }
     }
 
@@ -49,8 +44,11 @@ impl Memory {
     pub fn get_slice(&self, start: usize) -> [u8; 16] {
         let mut ret: [u8; 16] = [0; 16];
 
-        for n in 0..16 {
-            ret[n] = self.read(n + start).unwrap_or_default();
+        // for n in 0..16 {
+        //     ret[n] = self.read(n + start).unwrap_or_default();
+        // }
+        for (n, slot) in ret.iter_mut().enumerate() {
+            *slot = self.read(n + start).unwrap_or_default();
         }
 
         ret
@@ -100,7 +98,8 @@ mod tests {
     #[test]
     fn test_new() {
         let mem = Memory::new();
-        let array: [u8; RAM_SIZE] = [0; RAM_SIZE];
+        // let array: [u8; RAM_SIZE] = [0; RAM_SIZE];
+        let array = vec![0; RAM_SIZE].into_boxed_slice();
 
         assert_eq!(mem.data, array);
     }

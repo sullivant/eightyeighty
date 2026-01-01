@@ -151,7 +151,7 @@ impl CPU {
     }
 
     /// Performs a basic CPU reset without the need to re-create the entire CPU
-    pub fn reset(&mut self) -> Result<(), String> {
+    pub fn reset(&mut self) {
         self.pc = 0x00;
         self.sp = 0x00;
         self.a = 0x00;
@@ -167,8 +167,6 @@ impl CPU {
         self.cycle_count = 1;
         self.current_instruction = Instruction::new(0x00);
         self.next_instruction = Instruction::new(0x00);
-
-        Ok(())
     }
 
     pub fn interrupts_enabled(&mut self) -> bool {
@@ -193,20 +191,22 @@ impl CPU {
             pc: pc_before,
             opcode: 0xC7 | (rst << 3),
             bytes: vec![0xC7 | (rst <<3)],
-            mnemonic: format!("RST {}", rst),
+            mnemonic: format!("RST {rst}"),
             cycles: 11,
             registers: self.register_snapshot(),
         }
     }
 
+    /// If there is an interrupt in the queue and we are watching for them,
+    /// let's take it and then process it.
+    /// 
+    /// ## Errors
+    /// Will bubble up any errrors found from `take_interrupt()` or `process_interrupt()`
     pub fn step(&mut self, bus: &mut Bus) -> Result<StepResult , String> {
-        // If there is an interrupt in the queue and we are watching for them,
-        // let's take it and then process it.
-        if self.interrupts_enabled {
-            if let Some(rst) = bus.take_interrupt() {
-                println!("Interrupted.");
-                return Ok(self.process_interrupt(bus, rst));
-            }
+
+        if self.interrupts_enabled && let Some(rst) = bus.take_interrupt() {
+            println!("Interrupted.");
+            return Ok(self.process_interrupt(bus, rst));
         }
 
 
@@ -226,20 +226,6 @@ impl CPU {
 
         // Execute the opcode
         let cycles_ran = self.run_opcode(bus)?;
-
-        // Snapshot of the registers after execution
-        let registers = RegistersSnapshot {
-            a: self.a,
-            b: self.b,
-            c: self.c,
-            d: self.d,
-            e: self.e,
-            h: self.h,
-            l: self.l,
-            sp: self.sp,
-            pc: self.pc as u16,
-            flags: self.flags,
-        };
 
         Ok(StepResult {
             pc: pc_start,
@@ -267,9 +253,12 @@ impl CPU {
         }
     }
 
-    // Gathers the data necessary for the instruction and
-    // calls out to the appropriate instruction operation to
-    // perform the thing...
+    /// Gathers the data necessary for the instruction and
+    /// calls out to the appropriate instruction operation to
+    /// perform the opcode.
+    /// 
+    /// ## Errors
+    /// Will bubble up any errors returned from the opcode
     #[allow(clippy::too_many_lines)]
     pub fn run_opcode(&mut self, bus: &mut Bus) -> Result<u8, String> {
         // let (dl, dh) = match self.get_data_pair() {
@@ -658,6 +647,7 @@ impl CPU {
         }
     }
 
+    #[must_use]
     pub fn is_halted(&self) -> bool {
         self.halted
     }

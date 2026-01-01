@@ -10,17 +10,19 @@ use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 
 use crate::Keyboard;
 
+// To clean things we make a type alias
+pub type CommandHandler = fn(
+    &mut Emulator,
+    &Rc<RefCell<MidwayHardware>>,
+    &[&str],
+) -> Result<bool, String>;
 
 pub struct Command {
     // pub name: &'static str,
     pub names: &'static [&'static str],
     pub usage: &'static str,
     pub help: &'static str,
-    pub handler: fn(
-        &mut Emulator,
-        &Rc<RefCell<MidwayHardware>>,
-        &[&str],
-    ) -> Result<bool, String>, 
+    pub handler: CommandHandler, 
 }
 
 pub static COMMANDS: &[Command] = &[
@@ -159,7 +161,7 @@ pub fn dispatch(emu: &mut Emulator, hw: &Rc<RefCell<MidwayHardware>>, line: &str
         }, 
         Ok(false) => { 
             // Command indicated "quit REPL/emu"
-            return false;
+            false
         },
         Err(s) => {
             // Command was in error
@@ -204,17 +206,14 @@ fn cmd_quit(_emu: &mut Emulator, _hw: &Rc<RefCell<MidwayHardware>>, _args: &[&st
 }
  
 fn cmd_step(emu: &mut Emulator, _hw: &Rc<RefCell<MidwayHardware>>, _args: &[&str]) -> Result<bool, String> {
-    match emu.step() {
-        Some(result) => {
-            println!(
+    if let Some(result) = emu.step() {
+       println!(
                 "{:04X}: {:02X}  {:<10}  +{} cycles",
                 result.pc,
                 result.opcode,
                 result.mnemonic,
                 result.cycles
             );
-        }
-        _ => (),
     }
 
     Ok(true)
@@ -359,11 +358,11 @@ fn cmd_int(emu: &mut Emulator, _hw: &Rc<RefCell<MidwayHardware>>, args: &[&str])
         [addr] => {
              match u8::from_str_radix(addr, 8) {
                 Ok(r) => r,
-                _ => { return Err(format!("Invalid argument"));}
+                _ => { return Err("Invalid argument".to_string());}
              }
         },
         _ => {
-            return Err(format!("Invalid argument"));
+            return Err("Invalid argument".to_string());
         }
     };
 
@@ -397,7 +396,7 @@ fn cmd_insert(emu: &mut Emulator, _hw: &Rc<RefCell<MidwayHardware>>, args: &[&st
              addr.to_string()
         },
         _ => {
-            return Err(format!("Invalid argument"));
+            return Err("Invalid argument".to_string());
         }
     };
 
@@ -568,29 +567,27 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
 
         // Poll input (non-blocking)
         while event::poll(Duration::from_millis(0))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    keyboard.press(key.code); // Register the press
+            if let Event::Key(key) = event::read()? && key.kind == KeyEventKind::Press {
+                keyboard.press(key.code); // Register the press
 
-                    // And send the input off to the hardware
-                    if let Some(input) = key_to_midway_input(key.code) {
-                        hardware.borrow_mut().press(input);
-                        debug_keypress(key.code, hardware.borrow(), true)?;
-                    }
+                // And send the input off to the hardware
+                if let Some(input) = key_to_midway_input(key.code) {
+                    hardware.borrow_mut().press(&input);
+                    debug_keypress(key.code, hardware.borrow(), true)?;
+                }
 
-                    // Escape to quit
-                    if key.code == KeyCode::Esc {
-                        crossterm::terminal::disable_raw_mode()?;
-                        return Ok(());
-                    }
+                // Escape to quit
+                if key.code == KeyCode::Esc {
+                    crossterm::terminal::disable_raw_mode()?;
+                    return Ok(());
+                }
 
-                    // CTRL+h to show status of the current input latches
-                    if key.code == KeyCode::Char('h') && key.modifiers.contains(event::KeyModifiers::CONTROL) {
-                        crossterm::terminal::disable_raw_mode()?;
-                        let hw = hardware.borrow();
-                        show_hardware_state(hw);
-                        crossterm::terminal::enable_raw_mode()?;
-                    }
+                // CTRL+h to show status of the current input latches
+                if key.code == KeyCode::Char('h') && key.modifiers.contains(event::KeyModifiers::CONTROL) {
+                    crossterm::terminal::disable_raw_mode()?;
+                    let hw = hardware.borrow();
+                    show_hardware_state(hw);
+                    crossterm::terminal::enable_raw_mode()?;
                 }
             }
         }
@@ -599,7 +596,7 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
         // keys, we send them to the hardware in the form of releases.
         for key in keyboard.tick() {
             if let Some(input) = key_to_midway_input(key) {
-                hardware.borrow_mut().release(input);
+                hardware.borrow_mut().release(&input);
                 debug_keypress(key, hardware.borrow(), false)?;
             }
         }
@@ -617,11 +614,6 @@ fn run_forever(emu: &mut Emulator, hardware: &Rc<RefCell<MidwayHardware>>) -> io
 /// Just loads provided filepath into a vec.
 fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
     fs::read(path)
-}
-
-// This is used a lot when parsing command arguments
-fn parse_u16_hex(s: &str) -> Option<u16> {
-    u16::from_str_radix(s, 16).ok()
 }
 
 /// Maps keyboard codes to Midway specific inputs when we are using midway hardware.
