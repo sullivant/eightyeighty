@@ -1,0 +1,49 @@
+
+export component MainWindow inherits Window {
+    title: "eightyeighty — Intel 8080 Emulator";
+    width: 1200px;
+    height: 800px;
+
+    callback start();
+    callback stop();
+    callback step();
+    callback exit();
+    callback about();
+
+    MenuBar {
+        Menu {
+            title: @tr("File");
+            MenuItem {
+                title: @tr("New");
+                activated => { root.start(); }
+            }
+            MenuItem {
+                title: @tr("Open");
+                activated => { root.exit(); }
+            }
+        }
+        Menu {
+            title: @tr("Edit");
+            MenuItem {
+                title: @tr("Copy");
+            }
+            MenuItem {
+                title: @tr("Paste");
+            }
+            MenuSeparator {}
+            Menu {
+                title: @tr("Find");
+                MenuItem {
+                    title: @tr("Find in document...");
+                }
+                MenuItem {
+                    title: @tr("Find Next");
+                }
+                MenuItem {
+                    title: @tr("Find Previous");
+                }
+            }
+        }
+    }
+
+}

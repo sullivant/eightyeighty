@@ -2,7 +2,8 @@
 [workspace]
 members = [
     "emulator",
-    "cli"
+    "cli",
+    "frontend"
 ]
 
 resolver = "2"
