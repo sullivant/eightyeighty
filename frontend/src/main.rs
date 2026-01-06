@@ -9,8 +9,7 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     ui.global::<AppLogic>().on_cb_show_settings(|| {
-        let dialog = SettingsDialog::new().unwrap();
-        dialog.show().unwrap();
+        println!("Showing settings...");
     });
 
     ui.show()?;

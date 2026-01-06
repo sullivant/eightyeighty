@@ -1,25 +1,12 @@
 
 import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
-import { PlayIcon } from "@lucide"; 
+
 import { AppControls } from "./controls.slint";
 import { Theme } from "theme.slint";
+
+// Import the global app logic, and then export it so build.rs picks it up, too.
 import { AppLogic } from "globals.slint";
-
 export { AppLogic }
-
-export component SettingsDialog inherits Dialog {
-    title: "Settings";
-
-    VerticalBox{
-        PlayIcon {
-            size: 24px;
-            colorize: #FFFFFF;
-        }
-    }
-
-    StandardButton { kind: ok; }
-    StandardButton { kind: cancel; }
-}
 
 export component MainWindow inherits Window {
     title: "eightyeighty — Intel 8080 Emulator";

@@ -8,9 +8,7 @@ component ControlButton inherits Rectangle {
     // in property<string> text;
     in property<image> icon;
     
-    area := TouchArea {
-        clicked => {AppLogic.cb-exit();}
-    }
+    area := TouchArea { }
 
     background: area.has-hover ? Theme.button-hover : Theme.button;
     border-radius: Theme.radius;
@@ -33,7 +31,9 @@ export component AppControls inherits Rectangle {
     HorizontalLayout {
         spacing: Theme.gap;
         padding: Theme.padding;
+
         ControlButton {
+            TouchArea { clicked => { AppLogic.cb-exit(); } }
             PlayIcon {
                 size: Theme.icon-size;
                 colorize: Theme.icon-color;
