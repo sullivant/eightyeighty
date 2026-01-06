@@ -1,49 +1,111 @@
 
+import { StandardButton, Button } from "std-widgets.slint";
+export component SettingsDialog inherits Dialog {
+    title: "Settings";
+
+    Text { text: "Settings here."; }
+
+    StandardButton { kind: ok; }
+    StandardButton { kind: cancel; }
+}
+
 export component MainWindow inherits Window {
     title: "eightyeighty — Intel 8080 Emulator";
-    width: 1200px;
-    height: 800px;
+    preferred-width: 1200px;
+    preferred-height: 800px;
 
-    callback start();
-    callback stop();
-    callback step();
-    callback exit();
-    callback about();
+    callback cb-show-settings();
+    callback cb-exit();
 
     MenuBar {
         Menu {
             title: @tr("File");
             MenuItem {
-                title: @tr("New");
-                activated => { root.start(); }
+                title: @tr("Settings");
+                activated => { root.cb-show-settings(); }
             }
             MenuItem {
-                title: @tr("Open");
-                activated => { root.exit(); }
+                title: @tr("Exit");
+                activated => { root.cb-exit(); }
             }
         }
         Menu {
-            title: @tr("Edit");
+            title: @tr("CPU");
             MenuItem {
-                title: @tr("Copy");
-            }
-            MenuItem {
-                title: @tr("Paste");
-            }
-            MenuSeparator {}
-            Menu {
-                title: @tr("Find");
-                MenuItem {
-                    title: @tr("Find in document...");
-                }
-                MenuItem {
-                    title: @tr("Find Next");
-                }
-                MenuItem {
-                    title: @tr("Find Previous");
-                }
+                title: @tr("Reset");
             }
         }
     }
-
+    GridLayout {
+        
+        Rectangle {
+            background: #588fe0;
+            col: 0;
+            row: 0;
+            rowspan: 3;
+            width: 50%;
+            height: 50%;
+            Text {
+                text: "Memory";
+            }
+        }
+        Rectangle {
+            background: #3e7d69;
+            col: 0;
+            row: 3;
+            rowspan: 2;
+            width: 50%;
+            height: 50%;
+            Text {
+                text: "Display";
+            }            
+        }
+        Rectangle {
+            background: #c9e058; 
+            col: 1;
+            row: 0;
+            min-height: 70px;
+            max-height: 70px;
+            Text {
+                text: "Step / Run Controls";
+            }
+        }
+        Rectangle {
+            background: #6de058;
+            col: 1;
+            row: 1;
+            min-height: 70px;
+            Text {
+                text: "EMU State";
+            }            
+        }
+        Rectangle {
+            background: #58c5e0;
+            col: 1;
+            row: 2;
+            min-height: 70px;
+            Text {
+                text: "HW State";
+            }            
+        }
+        Rectangle {
+            background: #e09e58;
+            col: 1;
+            row: 3;
+            height: 25%;
+            Text {
+                text: "Regs";
+            }             
+        }
+        Rectangle {
+            background: #715f6c;
+            col: 1;
+            row: 4;
+            height: 25%;
+            Text {
+                text: "ROM Information";
+            }                         
+        }
+    }
 }
+
