@@ -1,0 +1,61 @@
+
+import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
+import { PlayIcon, OctagonXIcon, StepForwardIcon, BadgeQuestionMarkIcon } from "@lucide"; 
+import { Theme } from "theme.slint";
+import { AppLogic } from "globals.slint";
+
+component ControlButton inherits Rectangle {
+    // in property<string> text;
+    in property<image> icon;
+    
+    area := TouchArea {
+        clicked => {AppLogic.cb-exit();}
+    }
+
+    background: area.has-hover ? Theme.button-hover : Theme.button;
+    border-radius: Theme.radius;
+    min-width: 64px;
+    min-height: 32px;
+
+    border-width: Theme.border-width;
+    border-color: Theme.border-color;
+
+    // Text {
+    //     // text: root.text;
+    //     color: Theme.text;
+    //     horizontal-alignment: center;
+    //     vertical-alignment: center;
+    // }
+}
+
+
+export component AppControls inherits Rectangle {
+    HorizontalLayout {
+        spacing: Theme.gap;
+        padding: Theme.padding;
+        ControlButton {
+            PlayIcon {
+                size: Theme.icon-size;
+                colorize: Theme.icon-color;
+            }
+        }
+        ControlButton { 
+            OctagonXIcon {
+                size: Theme.icon-size;
+                colorize: Theme.icon-color;
+            }
+        }
+        ControlButton { 
+            StepForwardIcon {
+                size: Theme.icon-size;
+                colorize: Theme.icon-color;
+            }
+        }
+        ControlButton { 
+            BadgeQuestionMarkIcon {
+                size: Theme.icon-size;
+                colorize: Theme.icon-color;
+            }
+        }
+    }
+}

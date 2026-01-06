@@ -1,6 +1,11 @@
 
 import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
 import { PlayIcon } from "@lucide"; 
+import { AppControls } from "./controls.slint";
+import { Theme } from "theme.slint";
+import { AppLogic } from "globals.slint";
+
+export { AppLogic }
 
 export component SettingsDialog inherits Dialog {
     title: "Settings";
@@ -20,20 +25,18 @@ export component MainWindow inherits Window {
     title: "eightyeighty — Intel 8080 Emulator";
     preferred-width: 1200px;
     preferred-height: 800px;
-
-    callback cb-show-settings();
-    callback cb-exit();
+    background: Theme.app-background;
 
     MenuBar {
         Menu {
             title: @tr("File");
             MenuItem {
                 title: @tr("Settings");
-                activated => { root.cb-show-settings(); }
+                activated => { AppLogic.cb-show-settings(); }
             }
             MenuItem {
                 title: @tr("Exit");
-                activated => { root.cb-exit(); }
+                activated => { AppLogic.cb-exit(); }
             }
         }
         Menu {
@@ -43,10 +46,11 @@ export component MainWindow inherits Window {
             }
         }
     }
+
+
     GridLayout {
         
         Rectangle {
-            background: #588fe0;
             col: 0;
             row: 0;
             rowspan: 3;
@@ -55,13 +59,8 @@ export component MainWindow inherits Window {
             Text {
                 text: "Memory";
             }
-            PlayIcon{
-                size: 48px;
-                colorize: #FFFFFF;
-            }
         }
         Rectangle {
-            background: #3e7d69;
             col: 0;
             row: 3;
             rowspan: 2;
@@ -72,36 +71,34 @@ export component MainWindow inherits Window {
             }            
         }
         Rectangle {
-            background: #c9e058; 
             col: 1;
             row: 0;
-            min-height: 70px;
-            max-height: 70px;
-            Text {
-                text: "Step / Run Controls";
-            }
+            min-height: 20px;
+            max-height: 50px;
+            vertical-stretch: 1;
+            
+            AppControls {}
         }
         Rectangle {
-            background: #6de058;
             col: 1;
             row: 1;
-            min-height: 70px;
+            min-height: 20px;
+            vertical-stretch: 1;
             Text {
                 text: "EMU State";
             }
     
         }
         Rectangle {
-            background: #58c5e0;
             col: 1;
             row: 2;
             min-height: 70px;
+            vertical-stretch: 1;
             Text {
                 text: "HW State";
             }            
         }
         Rectangle {
-            background: #e09e58;
             col: 1;
             row: 3;
             height: 25%;
@@ -110,7 +107,6 @@ export component MainWindow inherits Window {
             }             
         }
         Rectangle {
-            background: #715f6c;
             col: 1;
             row: 4;
             height: 25%;
