@@ -1,0 +1,56 @@
+import { Theme } from "../theme.slint";
+import { AppLogic } from "../globals.slint";
+
+/** 
+fn cmd_emu_state(emu: &mut Emulator, _hw: &Rc<RefCell<MidwayHardware>>, _args: &[&str],) -> Result<bool, String> {
+    match emu.run_state() {
+        RunState::Running => { println!("State: Running");},
+        RunState::Stopped => { println!("State: Stopped");},
+    };
+    match emu.cpu.interrupts_enabled() {
+        true => { println!("Interrupts Enabled")},
+        false=> { println!("Interrupts Not Enabled")},
+    };
+    match emu.bus.peek_interrupt() {
+        Some(i) => { println!("Pending Interrupt: {}", i)},
+        None => { println!("Pending Interrupt: None")},
+    };
+
+    Ok(true)
+}
+ */
+
+
+export global EmulatorState {
+    in-out property <string> state;
+    in-out property <string> interrupts;
+    in-out property <string> pending;
+
+    callback sync();
+}
+
+component InfoCell inherits Rectangle {
+    in property<string> text;
+    
+    border-radius: Theme.radius;
+    min-width: 64px;
+    min-height: 32px;
+
+    border-width: Theme.border-width;
+    border-color: Theme.border-color;
+    background: Theme.cell;
+
+    Text { color: Theme.text; text: text; width: 90%; horizontal-alignment: left;  }
+}
+
+
+export component State inherits Rectangle {
+    GridLayout {
+        spacing: Theme.gap;
+        padding: Theme.padding;
+        
+        InfoCell { text: EmulatorState.state; row:0; col:0; }
+        InfoCell { text: EmulatorState.interrupts; row:1; col:0; }
+        InfoCell { text: EmulatorState.pending; row:2; col:0; }
+    }
+}

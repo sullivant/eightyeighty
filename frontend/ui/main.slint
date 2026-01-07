@@ -11,7 +11,11 @@ export { AppLogic }
 import { EmulatorRegisters, Registers } from "./emu/registers.slint";
 export { EmulatorRegisters }
 
+import { EmulatorState, State } from "./emu/state.slint";
+export { EmulatorState }
+
 import { AppControls } from "./emu/controls.slint";
+import { State } from "emu/state.slint";
 
 
 export component MainWindow inherits Window {
@@ -47,7 +51,7 @@ export component MainWindow inherits Window {
             col: 0;
             row: 0;
             rowspan: 3;
-            width: 50%;
+            width: 60%;
             height: 50%;
             Text {
                 text: "Memory";
@@ -57,7 +61,7 @@ export component MainWindow inherits Window {
             col: 0;
             row: 3;
             rowspan: 2;
-            width: 50%;
+            width: 60%;
             height: 50%;
             Text {
                 text: "Display";
@@ -77,9 +81,8 @@ export component MainWindow inherits Window {
             row: 1;
             min-height: 20px;
             vertical-stretch: 1;
-            Text {
-                text: "EMU State";
-            }
+
+            State {}
     
         }
         Rectangle {

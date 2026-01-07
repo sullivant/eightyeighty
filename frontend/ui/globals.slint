@@ -2,7 +2,8 @@ export global AppLogic {
     // This contains fns for general, over-all app control things.
     // 
     // Stuff that will be done specific for the Emulator, its registers, steps, etc, will be done in each of their slint files.
-    
+
     pure callback cb-exit();
     pure callback cb-show-settings();
+    callback sync();
 }
