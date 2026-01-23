@@ -143,18 +143,33 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
 
+    let ui_weak_mem = ui.as_weak();
+    let window_for_actions = window_start_addr.clone();
 
     // Specific button / action handlers.
     let emu_for_step = emu.clone();
+    let ui_weak_step = ui_weak_mem.clone();
+    let window_step = window_for_actions.clone();
     ui.global::<AppLogic>().on_cb_step(move || {
-        let mut emu = emu_for_step.borrow_mut();
-        emu.step();    
+        {
+            let mut emu = emu_for_step.borrow_mut();
+            emu.step();  
+        }  
+        // Refresh memory view
+        let start = *window_step.borrow();
+        update_memory_view(&ui_weak_step, &emu_for_step, start, WINDOW_SIZE_BYTES);
     });
 
     let emu_for_reset = emu.clone();
+    let ui_weak_reset = ui_weak_mem.clone();
+    let window_reset = window_for_actions.clone();
     ui.global::<AppLogic>().on_cb_reset(move || {
-        let mut emu = emu_for_reset.borrow_mut();
-        emu.reset().unwrap();
+        {
+            let mut emu = emu_for_reset.borrow_mut();
+            emu.reset().unwrap();
+        }
+        let start = *window_reset.borrow();
+        update_memory_view(&ui_weak_reset, &emu_for_reset, start, WINDOW_SIZE_BYTES);
     });
 
     let emu_for_run = emu.clone();
@@ -164,9 +179,16 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     let emu_for_stop = emu.clone();
+    let ui_weak_stop = ui_weak_mem.clone();
+    let window_stop = window_for_actions.clone();
     ui.global::<AppLogic>().on_cb_stop(move || {
-        let mut emu = emu_for_stop.borrow_mut();
-        emu.set_run_state(RunState::Stopped);
+        {
+            let mut emu = emu_for_stop.borrow_mut();
+            emu.set_run_state(RunState::Stopped);
+        }
+
+        let start = *window_stop.borrow();
+        update_memory_view(&ui_weak_stop, &emu_for_stop, start, WINDOW_SIZE_BYTES);
     });
 
     // Handle the request to cleanly exit the app or show settings
@@ -211,6 +233,15 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     ui.show()?;
+
+    // Force first memory population AFTER UI is alive
+    {
+        let ui_weak_first = ui.as_weak();
+        let emu_first = emu.clone();
+        let window_first = window_start_addr.clone();
+        let start = window_first.borrow();
+        update_memory_view(&ui_weak_first, &emu_first, *start, WINDOW_SIZE_BYTES);
+    }
     slint::run_event_loop()?;
 
     Ok(())
@@ -227,7 +258,7 @@ fn update_memory_view(
     };
 
     // The props that are in the actual memory view.
-    let mut mem_data = ui.global::<MemoryViewData>();
+    let mem_data = ui.global::<MemoryViewData>();
 
     let emu = emu.borrow();
     let memory = emu.bus.memory().get_data();
@@ -333,7 +364,7 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
         }
     }
     println!("Inserting ROM and loading...");
-
+    emu.reset()?;
 
     // emu.load_rom(ROM_TST.to_vec())?;
 

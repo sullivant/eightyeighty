@@ -1,6 +1,7 @@
 import { ScrollView, Button } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
+import { ChevronLeftIcon, ChevronRightIcon } from "@lucide"; 
 
 
 export global MemoryViewData {
@@ -13,27 +14,49 @@ export global MemoryViewData {
     in property<int> windowSize;
 }
 
+component ControlButton inherits Rectangle {
+    // in property<string> text;
+    in property<image> icon;
+    
+    border-radius: Theme.radius;
+    min-width: 64px;
+    min-height: 12px;
+    
+    border-width: Theme.border-width;
+    border-color: Theme.border-color;
+}
 
 export component MemoryView {
-    width: 600px;
+    width: 80%;
     height: 400px;
 
     VerticalLayout {
-        spacing: 6px;
+        spacing: Theme.gap;
+        padding: Theme.padding;
 
         // Controls
         HorizontalLayout {
             spacing: 12px;
 
-            Button {
-                text: "< Prev";
-                clicked => { AppLogic.previous_page(); }
+            ControlButton {
+                areaPrev := TouchArea { clicked => { AppLogic.previous_page(); } }
+                background: areaPrev.has-hover ? Theme.button-hover : Theme.button;
+                
+                ChevronLeftIcon {
+                    size: Theme.icon-size;
+                    colorize: Theme.icon-color;
+                }
             }
-            Button {
-                text: "Next >";
-                clicked => { AppLogic.next_page(); }
-            }
+            ControlButton {
+                areaNext := TouchArea { clicked => { AppLogic.next_page(); } }
+                background: areaNext.has-hover ? Theme.button-hover : Theme.button;
 
+                ChevronRightIcon {
+                    size: Theme.icon-size;
+                    colorize: Theme.icon-color;
+                }
+            }
+            
             Rectangle { width: 1px; } // Spacer
 
             Text {
@@ -54,7 +77,7 @@ export component MemoryView {
                 height: parent.height;
 
                 VerticalLayout {
-                    spacing: 2px;
+                    spacing: 0px;
                     
                     for row in MemoryViewData.addresses.length: Rectangle {
                         height: 22px;
@@ -62,6 +85,8 @@ export component MemoryView {
 
                         HorizontalLayout {
                             spacing: 8px;
+                            padding-left: 2px;
+                            padding-top: 2px;
 
                             // Address column data
                             Text { 
