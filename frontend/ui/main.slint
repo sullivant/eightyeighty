@@ -15,7 +15,10 @@ import { EmulatorState, State } from "./emu/state.slint";
 export { EmulatorState }
 
 import { AppControls } from "./emu/controls.slint";
-import { State } from "emu/state.slint";
+import { State } from "./emu/state.slint";
+
+import { MemoryView, MemoryViewData } from "./emu/memory.slint";
+export { MemoryViewData }
 
 
 export component MainWindow inherits Window {
@@ -53,9 +56,7 @@ export component MainWindow inherits Window {
             rowspan: 3;
             width: 60%;
             height: 50%;
-            Text {
-                text: "Memory";
-            }
+            MemoryView { }
         }
         Rectangle {
             col: 0;

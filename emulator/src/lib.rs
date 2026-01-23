@@ -92,6 +92,10 @@ impl Emulator {
         self.run_state
     }
 
+    pub fn set_run_state(&mut self, rs: RunState) {
+        self.run_state = rs;
+    }
+
     /// Inserts (readies) a rom into the machine.  But does not write anything to memory or reset the CPU.
     pub fn insert_rom(&mut self, rom: Vec<u8>) {
         self.rom = Some(rom);

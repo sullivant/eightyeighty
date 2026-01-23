@@ -1,6 +1,6 @@
 
 import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
-import { PlayIcon, OctagonXIcon, StepForwardIcon, BadgeQuestionMarkIcon } from "@lucide"; 
+import { PlayIcon, OctagonXIcon, StepForwardIcon, BadgeQuestionMarkIcon, RotateCcwIcon } from "@lucide"; 
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
 
@@ -23,7 +23,7 @@ export component AppControls inherits Rectangle {
         padding: Theme.padding;
 
         ControlButton {
-            areaPlay := TouchArea { clicked => { AppLogic.cb-exit(); } }
+            areaPlay := TouchArea { clicked => { AppLogic.cb-run(); } }
             background: areaPlay.has-hover ? Theme.button-hover : Theme.button;
 
             PlayIcon {
@@ -32,7 +32,7 @@ export component AppControls inherits Rectangle {
             }
         }
         ControlButton { 
-            areaStop := TouchArea { clicked => { AppLogic.cb-exit(); } }
+            areaStop := TouchArea { clicked => { AppLogic.cb-stop(); } }
             background: areaStop.has-hover ? Theme.button-hover : Theme.button;
 
             OctagonXIcon {
@@ -41,7 +41,7 @@ export component AppControls inherits Rectangle {
             }
         }
         ControlButton {             
-            areaStep := TouchArea { clicked => { AppLogic.cb-exit(); } }
+            areaStep := TouchArea { clicked => { AppLogic.cb-step(); } }
             background: areaStep.has-hover ? Theme.button-hover : Theme.button;
 
             StepForwardIcon {
@@ -50,10 +50,10 @@ export component AppControls inherits Rectangle {
             }
         }
         ControlButton { 
-            areaHelp := TouchArea { clicked => { AppLogic.cb-exit(); } }
+            areaHelp := TouchArea { clicked => { AppLogic.cb-reset(); } }
             background: areaHelp.has-hover ? Theme.button-hover : Theme.button;
 
-            BadgeQuestionMarkIcon {
+            RotateCcwIcon {
                 size: Theme.icon-size;
                 colorize: Theme.icon-color;
             }

@@ -40,6 +40,10 @@ impl Memory {
         }
     }
 
+    pub fn get_data(&self) -> &[u8] {
+        &self.data
+    }
+
     /// Returns a slice (16) of ram beginning at the provided starting point
     pub fn get_slice(&self, start: usize) -> [u8; 16] {
         let mut ret: [u8; 16] = [0; 16];

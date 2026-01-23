@@ -6,12 +6,16 @@ export global Theme {
 
     property<color> neutral: #262629;
 
-
+    property<color> secondary: #f9cbe5;
+    property<color> secondary-content: #a0004a; 
 
 
     out property<color> app-background: Theme.base-200;
 
     out property<color> cell: Theme.base-100;
+    out property<color> cell-alt: Theme.base-200;
+    out property<color> pc-cell: Theme.secondary;
+    out property<color> pc-cell-text: Theme.secondary-content;
 
     out property<color> button: Theme.base-100;
     out property<color> button-hover: Theme.base-300;
@@ -23,6 +27,7 @@ export global Theme {
 
     out property<length> padding: 8px;
     out property<length> radius: 6px;
+    out property<length> radius-thin: 3px;
     out property<length> gap: 6px;
     out property<length> border-width: 2px;
     

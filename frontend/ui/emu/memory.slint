@@ -1,0 +1,108 @@
+import { ScrollView, Button } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { AppLogic } from "../globals.slint";
+
+
+export global MemoryViewData {
+    in property<[string]> addresses;       // formatted address per row
+    in property<[[string]]> hexBytes;      // hex bytes per row
+    in property<[[string]]> asciiChars;    // ascii chars per row
+    in property<int> pcRow;
+    in property<int> pcCol;
+    in property<int> windowStartAddress;
+    in property<int> windowSize;
+}
+
+
+export component MemoryView {
+    width: 600px;
+    height: 400px;
+
+    VerticalLayout {
+        spacing: 6px;
+
+        // Controls
+        HorizontalLayout {
+            spacing: 12px;
+
+            Button {
+                text: "< Prev";
+                clicked => { AppLogic.previous_page(); }
+            }
+            Button {
+                text: "Next >";
+                clicked => { AppLogic.next_page(); }
+            }
+
+            Rectangle { width: 1px; } // Spacer
+
+            Text {
+                color: #888;
+                font-family: "monospace";
+                text: "Window: 0x" + MemoryViewData.windowStartAddress + " (" + MemoryViewData.windowSize + " bytes)";
+            }
+        }
+
+        // Memory grid 
+        Rectangle {
+            background: Theme.app-background;
+            border-radius: Theme.radius;
+            clip: true;
+
+            ScrollView {
+                width: parent.width;
+                height: parent.height;
+
+                VerticalLayout {
+                    spacing: 2px;
+                    
+                    for row in MemoryViewData.addresses.length: Rectangle {
+                        height: 22px;
+                        background: Theme.cell;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+
+                            // Address column data
+                            Text { 
+                                width: 80px;
+                                color: Theme.text;
+                                font-family: "monospace";
+                                text: MemoryViewData.addresses[row];
+                            }
+
+                            // Hex Bytes
+                            for col in 16: Rectangle {
+                                width: 28px;
+                                height: 20px;
+                                border-radius: Theme.radius-thin;
+
+                                background: (row == MemoryViewData.pcRow && col == MemoryViewData.pcCol) ? Theme.pc-cell : Theme.cell;
+
+                                Text {
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    font-family: "monospace";
+                                    font-size: 11px;
+                                    color: (row == MemoryViewData.pcRow && col == MemoryViewData.pcCol) ? Theme.pc-cell-text : Theme.text;
+                                    text: MemoryViewData.hexBytes[row][col];
+                                }
+                            }
+
+                            // ASCII View
+                            HorizontalLayout {
+                                spacing: 0;
+                                for col in 16: Text {
+                                    width: 12px;
+                                    font-family: "monospace";
+                                    color: Theme.text;
+                                    text: MemoryViewData.asciiChars[row][col];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,6 +1,8 @@
 slint::include_modules!();
 
+use core::ascii;
 use std::cell::RefCell;
+use std::{fs, io};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -8,11 +10,13 @@ use std::time::Duration;
 use emulator::bus::IoDevice;
 use emulator::devices::hardware::midway::MidwayHardware;
 use emulator::{self, Emulator, RunState};
-use slint::ToSharedString;
+use slint::{ToSharedString, VecModel};
+use slint::{ModelRc, SharedString};
 
 // A simple test rom with a few instructions to load at the start
 const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
 
+const WINDOW_SIZE_BYTES: usize = 256;
 
 struct HardwareProxy {
     hardware: Rc<RefCell<MidwayHardware>>,
@@ -56,59 +60,155 @@ fn main() -> Result<(), slint::PlatformError> {
 
     // A timer that allows periodic syncing
     let ui_weak_sync = ui.as_weak();
-    let sync_timer = slint::Timer::default();
-    sync_timer.start(
+    let ui_sync_timer = slint::Timer::default();
+    let emu_for_timer = emu.clone();
+    ui_sync_timer.start(
         slint::TimerMode::Repeated,
-        Duration::from_millis(100),
+        Duration::from_millis(16),  // ~60 FPS
         move || {
             if let Some(ui) = ui_weak_sync.upgrade() {
+                // If runstate is running, run a small chunk of work.  Borrow happens only within
+                // this block, so later, invoke_sync() can borrow again on its own.
+                {
+                    let mut emu = emu_for_timer.borrow_mut();
+                    if emu.run_state() == RunState::Running {
+                        emu.run_blocking(Some(200));
+                    }
+                }
+
+                // Sync the UI
                 ui.global::<AppLogic>().invoke_sync();
             }
         },
     );
 
 
-    // Handle syncing everything at once.
+    // A memory specific timer because it has a heavier lift.
+    let window_start_addr = Rc::new(RefCell::new(0usize));
+    let memory_timer = slint::Timer::default();
+    let emu_for_mem_timer = emu.clone();
+    let ui_weak_mem = ui.as_weak();
+    let window_start_for_mem = window_start_addr.clone();
+
+    memory_timer.start(
+        slint::TimerMode::Repeated,
+        Duration::from_secs(1), // 1 FPS
+        move || {
+            let start = *window_start_for_mem.borrow();
+            update_memory_view(
+                &ui_weak_mem,
+                &emu_for_mem_timer,
+                start,
+                WINDOW_SIZE_BYTES,
+            );
+        }
+    );
+
+    // Handle syncing everything, except memory view portion, at once.
     ui.global::<AppLogic>().on_sync(move || {
         let Some(ui) = ui_weak_all.upgrade() else {
             return;
         };
 
-        let mut emu = emu_for_all.borrow_mut();
-        let cpu = &emu.cpu;
+        {
+            let mut emu = emu_for_all.borrow_mut();
+            let cpu = &emu.cpu;
 
-        // Update registers
-        let regs = ui.global::<EmulatorRegisters>();
-        regs.set_a(cpu.a as i32);
-        regs.set_b(cpu.b as i32);
-        regs.set_c(cpu.c as i32);
-        regs.set_e(cpu.e as i32);
-        regs.set_h(cpu.h as i32);
-        regs.set_l(cpu.l as i32);
-        regs.set_sp(cpu.sp as i32);
-        regs.set_pc(cpu.pc as i32);
+            // Update registers
+            let regs = ui.global::<EmulatorRegisters>();
+            regs.set_a(cpu.a as i32);
+            regs.set_b(cpu.b as i32);
+            regs.set_c(cpu.c as i32);
+            regs.set_e(cpu.e as i32);
+            regs.set_h(cpu.h as i32);
+            regs.set_l(cpu.l as i32);
+            regs.set_sp(cpu.sp as i32);
+            regs.set_pc(cpu.pc as i32);
 
-        // Update emulator state
-        let state = ui.global::<EmulatorState>();
-        match emu.run_state() {
-            RunState::Running => { state.set_state("State: Running".to_shared_string());},
-            RunState::Stopped => { state.set_state("State: Stopped".to_shared_string());},
-        };
-        match emu.cpu.interrupts_enabled() {
-            true => { state.set_interrupts("Interrupts Enabled".to_shared_string())},
-            false=> { state.set_interrupts("Interrupts Not Enabled".to_shared_string())},
-        };
-        match emu.bus.peek_interrupt() {
-            Some(i) => { state.set_pending(format!("Pending Interrupt: {}", i).to_shared_string())},
-            None => { state.set_pending("Pending Interrupt: None".to_shared_string())},
-        };
+            // Update emulator state
+            let state = ui.global::<EmulatorState>();
+            match emu.run_state() {
+                RunState::Running => { state.set_state("State: Running".to_shared_string());},
+                RunState::Stopped => { state.set_state("State: Stopped".to_shared_string());},
+            };
+            match emu.cpu.interrupts_enabled() {
+                true => { state.set_interrupts("Interrupts Enabled".to_shared_string())},
+                false=> { state.set_interrupts("Interrupts Not Enabled".to_shared_string())},
+            };
+            match emu.bus.peek_interrupt() {
+                Some(i) => { state.set_pending(format!("Pending Interrupt: {}", i).to_shared_string())},
+                None => { state.set_pending("Pending Interrupt: None".to_shared_string())},
+            };
+        }
     });
 
 
 
-    // Handle the request to cleanly exit the app
+    // Specific button / action handlers.
+    let emu_for_step = emu.clone();
+    ui.global::<AppLogic>().on_cb_step(move || {
+        let mut emu = emu_for_step.borrow_mut();
+        emu.step();    
+    });
+
+    let emu_for_reset = emu.clone();
+    ui.global::<AppLogic>().on_cb_reset(move || {
+        let mut emu = emu_for_reset.borrow_mut();
+        emu.reset().unwrap();
+    });
+
+    let emu_for_run = emu.clone();
+    ui.global::<AppLogic>().on_cb_run(move || {
+        let mut emu = emu_for_run.borrow_mut();
+        emu.set_run_state(RunState::Running);
+    });
+
+    let emu_for_stop = emu.clone();
+    ui.global::<AppLogic>().on_cb_stop(move || {
+        let mut emu = emu_for_stop.borrow_mut();
+        emu.set_run_state(RunState::Stopped);
+    });
+
+    // Handle the request to cleanly exit the app or show settings
     ui.global::<AppLogic>().on_cb_exit(|| slint::quit_event_loop().unwrap() );
     ui.global::<AppLogic>().on_cb_show_settings(|| println!("Showing settings...") );
+
+    // Handle paging the memory view (prev)
+    let ui_weak_prev = ui.as_weak();
+    let emu_prev = emu.clone();
+    let window_prev = window_start_addr.clone();
+    ui.global::<AppLogic>().on_previous_page(move || {
+        let mut start = window_prev.borrow_mut();
+
+        if *start >= WINDOW_SIZE_BYTES {
+            *start -= WINDOW_SIZE_BYTES;
+        } else {
+            *start = 0;
+        }
+
+        update_memory_view(&ui_weak_prev, &emu_prev, *start, WINDOW_SIZE_BYTES);
+    });
+
+    // Handle paging the memory view (next)
+    let ui_weak_next = ui.as_weak();
+    let emu_next = emu.clone();
+    let window_next = window_start_addr.clone();
+    ui.global::<AppLogic>().on_next_page(move || {
+        let mut start = window_next.borrow_mut();
+
+        let mem_len = emu_next.borrow_mut().bus.memory().get_data().len();
+
+        if *start + WINDOW_SIZE_BYTES < mem_len {
+            *start += WINDOW_SIZE_BYTES;
+        }
+
+        // Clamp.
+        if *start + WINDOW_SIZE_BYTES > mem_len {
+            *start = mem_len.saturating_sub(WINDOW_SIZE_BYTES);
+        }
+
+        update_memory_view(&ui_weak_next, &emu_next, *start, WINDOW_SIZE_BYTES);
+    });
 
     ui.show()?;
     slint::run_event_loop()?;
@@ -116,7 +216,94 @@ fn main() -> Result<(), slint::PlatformError> {
     Ok(())
 }
 
+fn update_memory_view(
+    ui_weak: &slint::Weak<MainWindow>,
+    emu: &Rc<RefCell<Emulator>>,
+    window_start: usize,
+    window_size: usize,
+) {
+    let Some(ui) = ui_weak.upgrade() else {
+        return;
+    };
 
+    // The props that are in the actual memory view.
+    let mut mem_data = ui.global::<MemoryViewData>();
+
+    let emu = emu.borrow();
+    let memory = emu.bus.memory().get_data();
+    let mem_len = memory.len();
+
+    if mem_len == 0 {
+        return;
+    }
+
+    let start = window_start.min(mem_len - 1);
+    let end = (start + window_size).min(mem_len);
+    let slice = &memory[start..end]; // What we will actually display / update
+
+    let bytes_per_row = 16;
+    let total_rows = (slice.len() + bytes_per_row -1) / bytes_per_row;
+
+    let mut addresses: Vec<SharedString> = Vec::with_capacity(total_rows);
+    let mut hex_rows: Vec<ModelRc<SharedString>> = Vec::with_capacity(total_rows);
+    let mut ascii_rows: Vec<ModelRc<SharedString>> = Vec::with_capacity(total_rows);
+
+    for row in 0..total_rows {
+        let row_start = row * bytes_per_row;
+        let row_end = (row_start+bytes_per_row).min(slice.len());
+        let row_slice = &slice[row_start..row_end];
+
+        let absolute_addr = start + row_start;
+        addresses.push(format!("0x{:04X}", absolute_addr).into());
+
+        // The hex version
+        let mut hex: Vec<SharedString> = row_slice
+            .iter().map(|b| format!("{:02X}", b).into())
+            .collect();
+
+        while hex.len() < bytes_per_row {
+            hex.push("".into());
+        }
+
+        hex_rows.push(ModelRc::new(VecModel::from(hex)));
+
+        // ASCII version
+        let mut ascii: Vec<SharedString> = row_slice
+            .iter().map(|&b| {
+                let c = b as char;
+                if c.is_ascii_graphic() || c == ' ' { c } else { '.' }
+            })
+            .map(|c| c.to_string().into()).collect();
+
+        while ascii.len() < bytes_per_row {
+            ascii.push("".into());
+        }
+
+        ascii_rows.push(ModelRc::new(VecModel::from(ascii)));
+    }
+
+    // Send into the memory view on the slint side
+    mem_data.set_addresses(ModelRc::new(VecModel::from(addresses)));
+    mem_data.set_hexBytes(ModelRc::new(VecModel::from(hex_rows)));
+    mem_data.set_asciiChars(ModelRc::new(VecModel::from(ascii_rows)));
+
+    // Highlight PC
+    let pc = emu.cpu.pc as usize;
+
+    if pc >= start && pc < end {
+        let offset = pc - start;
+        mem_data.set_pcRow((offset / bytes_per_row) as i32);
+        mem_data.set_pcCol((offset % bytes_per_row) as i32);
+    } else {
+        mem_data.set_pcRow(-1);
+        mem_data.set_pcCol(-1);
+    }
+
+    mem_data.set_windowStartAddress(start as i32);
+    mem_data.set_windowSize(window_size as i32);
+
+
+}
 
 /// Will create the emulator machine, and insert the "default" ROM
 fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String> {
@@ -135,9 +322,25 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
     let mut emu = Emulator::with_io(Box::new(HardwareProxy { hardware: hardware.clone(),}));
     // let mut emu = Emulator::with_io(boxed_io);
 
+
+    let path = format!("resources/roms/8080.rom");
+    match load_rom_file(&path) {
+        Ok(bytes) => {
+            emu.insert_rom(bytes);
+        }
+        Err(e) => {
+            println!("File error: {}", e);
+        }
+    }
     println!("Inserting ROM and loading...");
-    emu.load_rom(ROM_TST.to_vec())?;
+
+
+    // emu.load_rom(ROM_TST.to_vec())?;
 
     Ok(emu)
 }
 
+/// Just loads provided filepath into a vec.
+fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
+    fs::read(path)
+}
