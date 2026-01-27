@@ -1,10 +1,10 @@
 slint::include_modules!();
 
-use core::ascii;
 use std::cell::RefCell;
 use std::{fs, io};
 use std::rc::Rc;
 use std::time::Duration;
+use rfd::FileDialog;
 
 // Allows for integration with the running system as if it was MidwayHardware.
 use emulator::bus::IoDevice;
@@ -211,6 +211,30 @@ fn main() -> Result<(), slint::PlatformError> {
         } else {
             slot.as_ref().unwrap().show().unwrap();
         }
+    });
+
+    // This handle deals with inserting a ROM via the CPU menu.
+    let emu_for_rom = emu.clone();
+    ui.global::<AppLogic>().on_cb_insert_rom(move || {
+        if let Some(path) = FileDialog::new()
+            .add_filter("ROM files", &["rom", "bin"])
+            .set_title("Select ROM to insert")
+            .pick_file()
+        {
+            println!("Selected file: {:?}", path);
+
+            match load_rom_file(&path.to_str().unwrap()) {
+                Ok(bytes) => {
+                    let mut emu = emu_for_rom.borrow_mut();
+                    emu.insert_rom(bytes);
+                    emu.reset().unwrap();
+                }
+                Err(e) => {
+                    println!("File error: {}", e);
+                }
+            }
+        }
+
     });
 
     // This handle deals with popping the memory view when desired.

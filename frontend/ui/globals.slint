@@ -3,17 +3,20 @@ export global AppLogic {
     // 
     // Stuff that will be done specific for the Emulator, its registers, steps, etc, will be done in each of their slint files.
 
+    // Applilcation operation
     pure callback cb-exit();
     pure callback cb-show-settings();
     pure callback cb-show-memory();
     callback sync();
 
-
+    // CPU Control
     pure callback cb-run();
     pure callback cb-stop();
     pure callback cb-step();
     pure callback cb-reset();
+    pure callback cb-insert-rom();
 
+    // Memory view paging and 
     pure callback previous_page();
     pure callback next_page();
 

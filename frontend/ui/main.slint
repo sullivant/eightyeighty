@@ -49,6 +49,10 @@ export component MainWindow inherits Window {
                 activated => { AppLogic.cb-show-memory(); }
             }
             MenuItem {
+                title: @tr("Insert ROM");
+                activated => { AppLogic.cb-insert-rom(); }
+            }
+            MenuItem {
                 title: @tr("Reset");
             }
         }
