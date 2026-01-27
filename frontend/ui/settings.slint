@@ -1,0 +1,19 @@
+import { Button, CheckBox } from "std-widgets.slint";
+
+export component SettingsWindow inherits Window {
+    title: "8080 - Settings";
+    width: 400px;
+    height: 300px;
+
+    VerticalLayout {
+        Text {
+            text: "Settings";
+            font-size: 24px;
+        }
+
+        CheckBox {
+            text: "Hello World";
+        }
+        Button { text: "Close"; }
+    }
+}

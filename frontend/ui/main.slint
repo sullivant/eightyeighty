@@ -18,7 +18,10 @@ import { AppControls } from "./emu/controls.slint";
 import { State } from "./emu/state.slint";
 
 import { MemoryView, MemoryViewData } from "./emu/memory.slint";
-export { MemoryViewData }
+export { MemoryView, MemoryViewData }
+
+import { SettingsWindow } from "./settings.slint";
+export { SettingsWindow }
 
 
 export component MainWindow inherits Window {
@@ -42,6 +45,10 @@ export component MainWindow inherits Window {
         Menu {
             title: @tr("CPU");
             MenuItem {
+                title: @tr("Memory");
+                activated => { AppLogic.cb-show-memory(); }
+            }
+            MenuItem {
                 title: @tr("Reset");
             }
         }
@@ -56,7 +63,10 @@ export component MainWindow inherits Window {
             rowspan: 3;
             width: 60%;
             height: 50%;
-            MemoryView { }
+            Text {
+                text: "Display";
+            } 
+            // MemoryView { }
         }
         Rectangle {
             col: 0;

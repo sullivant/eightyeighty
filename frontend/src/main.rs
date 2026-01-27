@@ -58,6 +58,10 @@ fn main() -> Result<(), slint::PlatformError> {
     // Clones of the emu (RC) for each closure
     let emu_for_all = emu.clone();
 
+    // For handling of the memory window
+    let memory_window: Rc<RefCell<Option<MemoryView>>> = Rc::new(RefCell::new(None));
+    let memory_weak: Rc<RefCell<Option<slint::Weak<MemoryView>>>> = Rc::new(RefCell::new(None));
+
     // A timer that allows periodic syncing
     let ui_weak_sync = ui.as_weak();
     let ui_sync_timer = slint::Timer::default();
@@ -87,20 +91,17 @@ fn main() -> Result<(), slint::PlatformError> {
     let window_start_addr = Rc::new(RefCell::new(0usize));
     let memory_timer = slint::Timer::default();
     let emu_for_mem_timer = emu.clone();
-    let ui_weak_mem = ui.as_weak();
     let window_start_for_mem = window_start_addr.clone();
-
+    let memory_weak_timer = memory_weak.clone();
     memory_timer.start(
         slint::TimerMode::Repeated,
         Duration::from_secs(1), // 1 FPS
         move || {
             let start = *window_start_for_mem.borrow();
-            update_memory_view(
-                &ui_weak_mem,
-                &emu_for_mem_timer,
-                start,
-                WINDOW_SIZE_BYTES,
-            );
+
+            if let Some(weak) = memory_weak_timer.borrow().as_ref() {
+                update_memory_view(weak, &emu_for_mem_timer, start, WINDOW_SIZE_BYTES);
+            }
         }
     );
 
@@ -142,14 +143,12 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-
-    let ui_weak_mem = ui.as_weak();
     let window_for_actions = window_start_addr.clone();
 
     // Specific button / action handlers.
     let emu_for_step = emu.clone();
-    let ui_weak_step = ui_weak_mem.clone();
     let window_step = window_for_actions.clone();
+    let memory_weak_step = memory_weak.clone();
     ui.global::<AppLogic>().on_cb_step(move || {
         {
             let mut emu = emu_for_step.borrow_mut();
@@ -157,19 +156,23 @@ fn main() -> Result<(), slint::PlatformError> {
         }  
         // Refresh memory view
         let start = *window_step.borrow();
-        update_memory_view(&ui_weak_step, &emu_for_step, start, WINDOW_SIZE_BYTES);
+        if let Some(weak) = memory_weak_step.borrow().as_ref() {
+            update_memory_view(weak, &emu_for_step, start, WINDOW_SIZE_BYTES);
+        }
     });
 
     let emu_for_reset = emu.clone();
-    let ui_weak_reset = ui_weak_mem.clone();
-    let window_reset = window_for_actions.clone();
+    let window_reset: Rc<RefCell<usize>> = window_for_actions.clone();
+    let memory_weak_reset = memory_weak.clone();
     ui.global::<AppLogic>().on_cb_reset(move || {
         {
             let mut emu = emu_for_reset.borrow_mut();
             emu.reset().unwrap();
         }
         let start = *window_reset.borrow();
-        update_memory_view(&ui_weak_reset, &emu_for_reset, start, WINDOW_SIZE_BYTES);
+        if let Some(weak) = memory_weak_reset.borrow().as_ref() {
+            update_memory_view(weak, &emu_for_reset, start, WINDOW_SIZE_BYTES);
+        }
     });
 
     let emu_for_run = emu.clone();
@@ -179,8 +182,8 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 
     let emu_for_stop = emu.clone();
-    let ui_weak_stop = ui_weak_mem.clone();
     let window_stop = window_for_actions.clone();
+    let memory_weak_stop = memory_weak.clone();
     ui.global::<AppLogic>().on_cb_stop(move || {
         {
             let mut emu = emu_for_stop.borrow_mut();
@@ -188,67 +191,112 @@ fn main() -> Result<(), slint::PlatformError> {
         }
 
         let start = *window_stop.borrow();
-        update_memory_view(&ui_weak_stop, &emu_for_stop, start, WINDOW_SIZE_BYTES);
+        if let Some(weak) = memory_weak_stop.borrow().as_ref() {
+            update_memory_view(weak, &emu_for_stop, start, WINDOW_SIZE_BYTES);
+        }
     });
 
     // Handle the request to cleanly exit the app or show settings
     ui.global::<AppLogic>().on_cb_exit(|| slint::quit_event_loop().unwrap() );
-    ui.global::<AppLogic>().on_cb_show_settings(|| println!("Showing settings...") );
+    let settings_window: Rc<std::cell::RefCell<Option<SettingsWindow>>> = 
+        Rc::new(std::cell::RefCell::new(None));
+    let settings_clone = settings_window.clone(); // We do stuff with the clone.
+    ui.global::<AppLogic>().on_cb_show_settings(move || {
+        let mut slot = settings_clone.borrow_mut();
 
-    // Handle paging the memory view (prev)
-    let ui_weak_prev = ui.as_weak();
-    let emu_prev = emu.clone();
-    let window_prev = window_start_addr.clone();
-    ui.global::<AppLogic>().on_previous_page(move || {
-        let mut start = window_prev.borrow_mut();
-
-        if *start >= WINDOW_SIZE_BYTES {
-            *start -= WINDOW_SIZE_BYTES;
+        if slot.is_none() {
+            let win = SettingsWindow::new().unwrap();
+            win.show().unwrap();
+            *slot = Some(win); // This lets us be reentrant.
         } else {
-            *start = 0;
+            slot.as_ref().unwrap().show().unwrap();
         }
-
-        update_memory_view(&ui_weak_prev, &emu_prev, *start, WINDOW_SIZE_BYTES);
     });
 
-    // Handle paging the memory view (next)
-    let ui_weak_next = ui.as_weak();
-    let emu_next = emu.clone();
-    let window_next = window_start_addr.clone();
-    ui.global::<AppLogic>().on_next_page(move || {
-        let mut start = window_next.borrow_mut();
+    // This handle deals with popping the memory view when desired.
+    let emu_for_memory = emu.clone();
+    let window_start_addr_for_memory = window_start_addr.clone();
+    let memory_window_clone = memory_window.clone();
+    let memory_weak_clone = memory_weak.clone();
+    ui.global::<AppLogic>().on_cb_show_memory(move || {
+        // let win_ref: &MemoryView;
 
-        let mem_len = emu_next.borrow_mut().bus.memory().get_data().len();
+        {
+            let mut slot = memory_window_clone.borrow_mut();
 
-        if *start + WINDOW_SIZE_BYTES < mem_len {
-            *start += WINDOW_SIZE_BYTES;
+            if slot.is_none() {
+                let new_win = MemoryView::new().unwrap();
+
+                // Callback handling for the memory window PREVIOUS button
+                {
+                    let emu_prev = emu_for_memory.clone();
+                    let window_prev = window_start_addr_for_memory.clone();
+                    let memory_weak_prev = memory_weak_clone.clone();
+
+                    new_win.global::<AppLogic>().on_previous_page(move || {
+                        println!("PREVIOUS!");
+                        let mut start = window_prev.borrow_mut();
+                        if *start >= WINDOW_SIZE_BYTES {
+                            *start -= WINDOW_SIZE_BYTES;
+                        } else {
+                            *start = 0;
+                        }
+                        if let Some(weak) = memory_weak_prev.borrow().as_ref() {
+                            update_memory_view(weak, &emu_prev, *start, WINDOW_SIZE_BYTES);
+                        }
+                    });
+                }
+                // Callback handling for the memory window NEXT button
+                {
+                    let emu_next = emu_for_memory.clone();
+                    let window_next = window_start_addr_for_memory.clone();
+                    let memory_weak_next = memory_weak_clone.clone();
+                    let mem_len = emu_next.borrow().bus.memory().get_data().len();
+                    new_win.global::<AppLogic>().on_next_page(move || {
+                        println!("NEXT!");
+                        let mut start = window_next.borrow_mut();
+
+                        if *start + WINDOW_SIZE_BYTES < mem_len {
+                            *start += WINDOW_SIZE_BYTES;
+                        }
+
+                        if *start + WINDOW_SIZE_BYTES > mem_len {
+                            *start = mem_len.saturating_sub(WINDOW_SIZE_BYTES);
+                        }
+                        if let Some(weak) = memory_weak_next.borrow().as_ref() {
+                            update_memory_view(weak, &emu_next, *start, WINDOW_SIZE_BYTES);
+                        }
+                    });
+                }
+
+                *memory_weak_clone.borrow_mut() = Some(new_win.as_weak());
+                *slot = Some(new_win);
+            }
+
+            slot.as_ref().unwrap().show().unwrap();
         }
-
-        // Clamp.
-        if *start + WINDOW_SIZE_BYTES > mem_len {
-            *start = mem_len.saturating_sub(WINDOW_SIZE_BYTES);
-        }
-
-        update_memory_view(&ui_weak_next, &emu_next, *start, WINDOW_SIZE_BYTES);
     });
+
 
     ui.show()?;
 
     // Force first memory population AFTER UI is alive
     {
-        let ui_weak_first = ui.as_weak();
         let emu_first = emu.clone();
         let window_first = window_start_addr.clone();
         let start = window_first.borrow();
-        update_memory_view(&ui_weak_first, &emu_first, *start, WINDOW_SIZE_BYTES);
+        if let Some(weak) = memory_weak.borrow().as_ref() {
+            update_memory_view(weak, &emu_first, *start, WINDOW_SIZE_BYTES);
+        }
     }
     slint::run_event_loop()?;
 
     Ok(())
 }
 
+/// Does what it says on the tin.
 fn update_memory_view(
-    ui_weak: &slint::Weak<MainWindow>,
+    ui_weak: &slint::Weak<MemoryView>,
     emu: &Rc<RefCell<Emulator>>,
     window_start: usize,
     window_size: usize,
