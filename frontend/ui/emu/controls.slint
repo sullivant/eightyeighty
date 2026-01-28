@@ -1,6 +1,7 @@
 
 import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
-import { PlayIcon, OctagonXIcon, StepForwardIcon, BadgeQuestionMarkIcon, RotateCcwIcon } from "@lucide"; 
+import { PlayIcon, OctagonXIcon, StepForwardIcon, MicrochipIcon, 
+         BadgeQuestionMarkIcon, RotateCcwIcon, FolderOpenIcon } from "@lucide"; 
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
 
@@ -9,8 +10,8 @@ component ControlButton inherits Rectangle {
     in property<image> icon;
     
     border-radius: Theme.radius;
-    min-width: 64px;
-    min-height: 32px;
+    width: 64px;
+    height: 32px;
 
     border-width: Theme.border-width;
     border-color: Theme.border-color;
@@ -58,5 +59,23 @@ export component AppControls inherits Rectangle {
                 colorize: Theme.icon-color;
             }
         }
+        ControlButton { 
+            areaOpen := TouchArea { clicked => { AppLogic.cb-insert-rom(); } }
+            background: areaOpen.has-hover ? Theme.button-hover : Theme.button;
+
+            FolderOpenIcon {
+                size: Theme.icon-size;
+                colorize: Theme.icon-color;
+            }
+        }        
+        ControlButton { 
+            areaRam := TouchArea { clicked => { AppLogic.cb-show-memory(); } }
+            background: areaRam.has-hover ? Theme.button-hover : Theme.button;
+
+            MicrochipIcon {
+                size: Theme.icon-size;
+                colorize: Theme.icon-color;
+            }
+        }          
     }
 }

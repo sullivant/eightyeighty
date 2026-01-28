@@ -93,6 +93,7 @@ impl Emulator {
     }
 
     pub fn set_run_state(&mut self, rs: RunState) {
+        // println!("Setting State: {:?}", rs);
         self.run_state = rs;
     }
 
@@ -119,6 +120,8 @@ impl Emulator {
     /// Will return `Err` if we are not able to successfully insert a ROM.
     pub fn reset(&mut self) -> Result<(), String> {
         let rom = self.rom.as_ref().ok_or("No ROM Inserted")?;
+
+        self.run_state = RunState::Stopped;
 
         self.cpu.reset(); // Registers and flags
 
@@ -148,7 +151,7 @@ impl Emulator {
     // Control functions
     pub fn run(&mut self, cycles: Option<u64>) {
         self.cycle_budget = cycles;
-        self.run_state = RunState::Running;
+        self.set_run_state(RunState::Running);
     }
 
     // Runs in a blocking fashion, until RunState tells it to stop
@@ -185,9 +188,9 @@ impl Emulator {
 
         RunStopReason::Error
     }
-    
+
     pub fn stop(&mut self) {
-        self.run_state = RunState::Stopped;
+        self.set_run_state(RunState::Stopped);
         self.cycle_budget = None;
     }
 

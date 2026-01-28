@@ -9,12 +9,9 @@ use rfd::FileDialog;
 // Allows for integration with the running system as if it was MidwayHardware.
 use emulator::bus::IoDevice;
 use emulator::devices::hardware::midway::MidwayHardware;
-use emulator::{self, Emulator, RunState};
+use emulator::{self, Emulator, RunState, RunStopReason};
 use slint::{ToSharedString, VecModel};
 use slint::{ModelRc, SharedString};
-
-// A simple test rom with a few instructions to load at the start
-const ROM_TST: &[u8] = &[0x3E, 0x42, 0x76];
 
 const WINDOW_SIZE_BYTES: usize = 256;
 
@@ -76,7 +73,26 @@ fn main() -> Result<(), slint::PlatformError> {
                 {
                     let mut emu = emu_for_timer.borrow_mut();
                     if emu.run_state() == RunState::Running {
-                        emu.run_blocking(Some(200));
+                        let stop_reason = emu.run_blocking(Some(200));
+
+                        match stop_reason {
+                            RunStopReason::Breakpoint(pc) => {
+                                println!("*** BREAKPOINT HIT at PC = {:04X} ***", pc);
+                                emu.set_run_state(RunState::Stopped);
+                            },
+                            RunStopReason::Halted => {
+                                println!("CPU Halted; Stopping execution.");
+                                emu.set_run_state(RunState::Stopped);
+                            },
+                            RunStopReason::Error => {
+                                println!("CPU Halted with ERROR; Stopping execution.");
+                                emu.set_run_state(RunState::Stopped);
+                            },
+                            RunStopReason::CycleBudgetExhausted => {
+                                // Cool beans.  We can just keep running.
+                                emu.set_run_state(RunState::Running);
+                            }
+                        }                     
                     }
                 }
 
@@ -97,6 +113,9 @@ fn main() -> Result<(), slint::PlatformError> {
         slint::TimerMode::Repeated,
         Duration::from_secs(1), // 1 FPS
         move || {
+
+            //TODO: May want to care here about if the memory view window is displayed - no need to update if it is not.
+
             let start = *window_start_for_mem.borrow();
 
             if let Some(weak) = memory_weak_timer.borrow().as_ref() {
