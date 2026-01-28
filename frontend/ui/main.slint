@@ -64,20 +64,10 @@ export component MainWindow inherits Window {
         Rectangle {
             col: 0;
             row: 0;
-            rowspan: 3;
+            rowspan: 5;
             width: 60%;
-            height: 50%;
-            Text {
-                text: "Display";
-            } 
-            // MemoryView { }
-        }
-        Rectangle {
-            col: 0;
-            row: 3;
-            rowspan: 2;
-            width: 60%;
-            height: 50%;
+            height: 100%;
+            background: red;
             Text {
                 text: "Display";
             }            
@@ -105,6 +95,7 @@ export component MainWindow inherits Window {
             row: 2;
             min-height: 70px;
             vertical-stretch: 1;
+            background: #385769;
             Text {
                 text: "HW State";
             }            
@@ -120,6 +111,7 @@ export component MainWindow inherits Window {
             col: 1;
             row: 4;
             height: 25%;
+            background: #385769;
             Text {
                 text: "ROM Information";
             }                         

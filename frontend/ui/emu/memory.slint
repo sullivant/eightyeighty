@@ -1,4 +1,4 @@
-import { ScrollView, Button } from "std-widgets.slint";
+import { ScrollView, Button, LineEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
 import { ChevronLeftIcon, ChevronRightIcon } from "@lucide"; 
@@ -30,7 +30,7 @@ export component MemoryView inherits Window {
     width: 900px;
     height: 405px;
     background: Theme.app-background;
-    
+
     VerticalLayout {
         spacing: Theme.gap;
         padding: Theme.padding;
@@ -38,6 +38,16 @@ export component MemoryView inherits Window {
         // Controls
         HorizontalLayout {
             spacing: 12px;
+
+
+            LineEdit {
+                width: 120px;
+                placeholder-text: "Goto (hex)";
+ 
+                accepted(text) => {
+                    AppLogic.goto_location(text);
+                }
+            }
 
             ControlButton {
                 areaPrev := TouchArea { clicked => { AppLogic.previous_page(); } }
@@ -63,8 +73,10 @@ export component MemoryView inherits Window {
             Text {
                 color: #888;
                 font-family: "monospace";
+                vertical-alignment: center;
                 text: "Window: 0x" + MemoryViewData.windowStartAddress + " (" + MemoryViewData.windowSize + " bytes)";
             }
+
         }
 
         // Memory grid 

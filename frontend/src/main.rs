@@ -258,7 +258,6 @@ fn main() -> Result<(), slint::PlatformError> {
                     let memory_weak_prev = memory_weak_clone.clone();
 
                     new_win.global::<AppLogic>().on_previous_page(move || {
-                        println!("PREVIOUS!");
                         let mut start = window_prev.borrow_mut();
                         if *start >= WINDOW_SIZE_BYTES {
                             *start -= WINDOW_SIZE_BYTES;
@@ -277,7 +276,6 @@ fn main() -> Result<(), slint::PlatformError> {
                     let memory_weak_next = memory_weak_clone.clone();
                     let mem_len = emu_next.borrow().bus.memory().get_data().len();
                     new_win.global::<AppLogic>().on_next_page(move || {
-                        println!("NEXT!");
                         let mut start = window_next.borrow_mut();
 
                         if *start + WINDOW_SIZE_BYTES < mem_len {
