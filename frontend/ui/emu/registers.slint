@@ -1,6 +1,6 @@
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
-
+import { BlocksIcon } from "../vendor/lucide.slint";
 
 export global EmulatorRegisters {
     in-out property <int> pc;
@@ -19,7 +19,7 @@ component InfoCell inherits Rectangle {
     in property<string> text;
     
     border-radius: Theme.radius;
-    min-width: 64px;
+
     height: 32px;
 
     border-width: Theme.border-width;
@@ -43,14 +43,42 @@ export component Registers inherits Rectangle {
         padding-left: 10px;
         spacing: Theme.gap;
         
-        InfoCell { text: "A: "+EmulatorRegisters.a; row:0; col:0; }
-        InfoCell { text: "B: "+EmulatorRegisters.b; row:0; col:1; }
-        InfoCell { text: "C: "+EmulatorRegisters.c; row:0; col:2; }
-        InfoCell { text: "E: "+EmulatorRegisters.e; row:0; col:3; }
-        InfoCell { text: "H: "+EmulatorRegisters.h; row:0; col:4; }
-        InfoCell { text: "L: "+EmulatorRegisters.l; row:0; col:5; }
-        InfoCell { text: "SP: "+EmulatorRegisters.sp; row:1; col:0; colspan: 2; }
-        InfoCell { text: "PC: "+EmulatorRegisters.pc; row:1; col:2; colspan: 2; }
+
+        Rectangle { 
+            row:0; col:0; colspan: 6; 
+
+            border-radius: Theme.radius;
+            min-width: 64px;
+            height: 32px;
+
+            border-width: Theme.border-width;
+            border-color: Theme.border-color;
+            background: Theme.cell;
+
+            HorizontalLayout {
+                BlocksIcon {
+                    opacity: 1;
+                    size: Theme.icon-size;
+                    colorize: Theme.icon-color;
+                    vertical-alignment: ImageVerticalAlignment.center;
+                    height: 32px;
+                    width: 32px;
+                }
+                Text { 
+                    color: Theme.text; font-weight: Theme.weight-bold; text: "Registers"; width: 100%; horizontal-alignment: left; vertical-alignment: center; 
+                }
+            }
+        } 
+
+
+        InfoCell { text: "A: "+EmulatorRegisters.a; row:1; col:0; }
+        InfoCell { text: "B: "+EmulatorRegisters.b; row:1; col:1; }
+        InfoCell { text: "C: "+EmulatorRegisters.c; row:1; col:2; }
+        InfoCell { text: "E: "+EmulatorRegisters.e; row:1; col:3; }
+        InfoCell { text: "H: "+EmulatorRegisters.h; row:1; col:4; }
+        InfoCell { text: "L: "+EmulatorRegisters.l; row:1; col:5; }
+        InfoCell { text: "SP: "+EmulatorRegisters.sp; row:2; col:0; colspan: 2; }
+        InfoCell { text: "PC: "+EmulatorRegisters.pc; row:2; col:2; colspan: 2; }
 
     }
 }

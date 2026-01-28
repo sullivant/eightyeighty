@@ -1,7 +1,8 @@
 
 import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
 import { PlayIcon, OctagonXIcon, StepForwardIcon, MicrochipIcon, 
-         BadgeQuestionMarkIcon, RotateCcwIcon, FolderOpenIcon } from "@lucide"; 
+         BadgeQuestionMarkIcon, RotateCcwIcon, FolderOpenIcon, BinaryIcon, 
+         GamepadDirectionalIcon } from "@lucide"; 
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
 
@@ -10,7 +11,7 @@ component ControlButton inherits Rectangle {
     in property<image> icon;
     
     border-radius: Theme.radius;
-    width: 64px;
+
     height: 32px;
 
     border-width: Theme.border-width;
@@ -19,11 +20,39 @@ component ControlButton inherits Rectangle {
 
 
 export component AppControls inherits Rectangle {
-    HorizontalLayout {
+    GridLayout {
+        padding: 10px;
+        padding-left: 10px;
         spacing: Theme.gap;
-        padding: Theme.padding;
+
+        Rectangle { 
+            row:0; col:0; colspan: 6; 
+
+            border-radius: Theme.radius;
+            min-width: 64px;
+            height: 32px;
+
+            border-width: Theme.border-width;
+            border-color: Theme.border-color;
+            background: Theme.cell;
+
+            HorizontalLayout {
+                GamepadDirectionalIcon {
+                    opacity: 1;
+                    size: Theme.icon-size;
+                    colorize: Theme.icon-color;
+                    vertical-alignment: ImageVerticalAlignment.center;
+                    height: 32px;
+                    width: 32px;
+                }
+                Text { 
+                    color: Theme.text; font-weight: Theme.weight-bold; text: "Emulator Control"; width: 100%; horizontal-alignment: left; vertical-alignment: center; 
+                }
+            }
+        }  
 
         ControlButton {
+            row: 1; col:0;
             areaPlay := TouchArea { clicked => { AppLogic.cb-run(); } }
             background: areaPlay.has-hover ? Theme.button-hover : Theme.button;
 
@@ -33,6 +62,7 @@ export component AppControls inherits Rectangle {
             }
         }
         ControlButton { 
+            row: 1; col:1;
             areaStop := TouchArea { clicked => { AppLogic.cb-stop(); } }
             background: areaStop.has-hover ? Theme.button-hover : Theme.button;
 
@@ -41,7 +71,8 @@ export component AppControls inherits Rectangle {
                 colorize: Theme.icon-color;
             }
         }
-        ControlButton {             
+        ControlButton {  
+            row: 1; col:2;           
             areaStep := TouchArea { clicked => { AppLogic.cb-step(); } }
             background: areaStep.has-hover ? Theme.button-hover : Theme.button;
 
@@ -51,6 +82,7 @@ export component AppControls inherits Rectangle {
             }
         }
         ControlButton { 
+            row: 1; col:3;
             areaHelp := TouchArea { clicked => { AppLogic.cb-reset(); } }
             background: areaHelp.has-hover ? Theme.button-hover : Theme.button;
 
@@ -60,6 +92,7 @@ export component AppControls inherits Rectangle {
             }
         }
         ControlButton { 
+            row: 1; col:4;
             areaOpen := TouchArea { clicked => { AppLogic.cb-insert-rom(); } }
             background: areaOpen.has-hover ? Theme.button-hover : Theme.button;
 
@@ -69,6 +102,7 @@ export component AppControls inherits Rectangle {
             }
         }        
         ControlButton { 
+            row: 1; col:5;
             areaRam := TouchArea { clicked => { AppLogic.cb-show-memory(); } }
             background: areaRam.has-hover ? Theme.button-hover : Theme.button;
 
@@ -76,6 +110,7 @@ export component AppControls inherits Rectangle {
                 size: Theme.icon-size;
                 colorize: Theme.icon-color;
             }
-        }          
+        }           
     }
+
 }

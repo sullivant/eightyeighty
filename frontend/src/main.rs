@@ -160,6 +160,15 @@ fn main() -> Result<(), slint::PlatformError> {
                 None => { state.set_pending("Pending Interrupt: None".to_shared_string())},
             };
         }
+
+        // Update the hardware state portion of the UI.
+        {
+            let state = ui.global::<HardwareState>();
+            let hw = hardware.borrow();
+            state.set_latch_0(format!("Input 0: {:08b}", hw.input_latch0.read()).to_shared_string());
+            state.set_latch_1(format!("Input 1: {:08b}", hw.input_latch1.read()).to_shared_string());
+            state.set_latch_2(format!("Input 2: {:08b}", hw.input_latch2.read()).to_shared_string());
+        }
     });
 
     let window_for_actions = window_start_addr.clone();

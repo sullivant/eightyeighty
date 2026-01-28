@@ -14,6 +14,9 @@ export { EmulatorRegisters }
 import { EmulatorState, State } from "./emu/state.slint";
 export { EmulatorState }
 
+import { HardwareState, Hardware } from "./emu/hardware.slint";
+export { HardwareState }
+
 import { AppControls } from "./emu/controls.slint";
 import { State } from "./emu/state.slint";
 
@@ -76,10 +79,10 @@ export component MainWindow inherits Window {
             col: 1;
             row: 0;
             min-height: 20px;
-            max-height: 50px;
+        
             vertical-stretch: 1;
             
-            AppControls {}
+            AppControls { }
         }
         Rectangle {
             col: 1;
@@ -95,16 +98,14 @@ export component MainWindow inherits Window {
             row: 2;
             min-height: 70px;
             vertical-stretch: 1;
-            background: #385769;
-            Text {
-                text: "HW State";
-            }            
+            Hardware {}           
         }
         Rectangle {
             col: 1;
             row: 3;
             height: 25%;
             
+            vertical-stretch: 1;
             Registers {}             
         }
         Rectangle {
@@ -112,6 +113,8 @@ export component MainWindow inherits Window {
             row: 4;
             height: 25%;
             background: #385769;
+
+            vertical-stretch: 1;
             Text {
                 text: "ROM Information";
             }                         

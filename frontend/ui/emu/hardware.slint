@@ -1,11 +1,11 @@
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
-import { PlugZapIcon } from "../vendor/lucide.slint";
+import { BinaryIcon } from "@lucide"; 
 
-export global EmulatorState {
-    in-out property <string> state;
-    in-out property <string> interrupts;
-    in-out property <string> pending;
+export global HardwareState {
+    in-out property <string> latch_0;
+    in-out property <string> latch_1;
+    in-out property <string> latch_2;
 
     callback sync();
 }
@@ -32,11 +32,13 @@ component InfoCell inherits Rectangle {
 }
 
 
-export component State inherits Rectangle {
+
+export component Hardware inherits Rectangle {
     GridLayout {
         spacing: Theme.gap;
         padding: Theme.padding;
-        
+        padding-top: 10px;
+
         Rectangle { 
             row:0; col:0; colspan: 3; 
 
@@ -49,7 +51,7 @@ export component State inherits Rectangle {
             background: Theme.cell;
 
             HorizontalLayout {
-                PlugZapIcon {
+                BinaryIcon {
                     opacity: 1;
                     size: Theme.icon-size;
                     colorize: Theme.icon-color;
@@ -58,13 +60,14 @@ export component State inherits Rectangle {
                     width: 32px;
                 }
                 Text { 
-                    color: Theme.text; font-weight: Theme.weight-bold; text: "Emulator State"; width: 100%; horizontal-alignment: left; vertical-alignment: center; 
+                    color: Theme.text; font-weight: Theme.weight-bold; text: "Hardware Latch States"; width: 100%; horizontal-alignment: left; vertical-alignment: center; 
                 }
             }
-        } 
-
-        InfoCell { text: EmulatorState.state; row:1; col:0; }
-        InfoCell { text: EmulatorState.interrupts; row:1; col:1; }
-        InfoCell { text: EmulatorState.pending; row:1; col:2; }
+        }            
+        
+        InfoCell { text: HardwareState.latch_0; row:1; col:0; }
+        InfoCell { text: HardwareState.latch_1; row:1; col:1; }
+        InfoCell { text: HardwareState.latch_2; row:1; col:2; }
     }
+   
 }
