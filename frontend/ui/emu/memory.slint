@@ -2,7 +2,8 @@ import { ScrollView, Button, LineEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
 import { ChevronLeftIcon, ChevronRightIcon } from "@lucide"; 
-
+import { RotateCcwIcon } from "@lucide";
+import { ControlButton } from "../components/controlbutton.slint";
 
 export global MemoryViewData {
     in property<[string]> addresses;       // formatted address per row
@@ -14,22 +15,23 @@ export global MemoryViewData {
     in property<int> windowSize;
 }
 
-component ControlButton inherits Rectangle {
-    // in property<string> text;
-    in property<image> icon;
+// component ControlButton inherits Rectangle {
+//     // in property<string> text;
+//     in property<image> icon;
     
-    border-radius: Theme.radius;
-    min-width: 64px;
-    min-height: 12px;
+//     border-radius: Theme.radius;
+//     width: 64px;
+//     height: 32px;
     
-    border-width: Theme.border-width;
-    border-color: Theme.border-color;
-}
+//     border-width: Theme.border-width;
+//     border-color: Theme.border-color;
+// }
 
 export component MemoryView inherits Window {
     width: 900px;
-    height: 405px;
+    height: 425px;
     background: Theme.app-background;
+    title: "eightyeighty - Memory";
 
     VerticalLayout {
         spacing: Theme.gap;
@@ -39,23 +41,38 @@ export component MemoryView inherits Window {
         HorizontalLayout {
             spacing: 12px;
 
-
             LineEdit {
                 width: 120px;
                 placeholder-text: "Goto (hex)";
  
-                accepted(text) => {
-                    AppLogic.goto_location(text);
+                accepted => {
+                    AppLogic.goto_location(self.text);
+                }
+            }            
+            ControlButton {
+                areaHome := TouchArea { clicked => { AppLogic.goto_location("0"); } }
+                background: areaHome.has-hover ? Theme.button-hover : Theme.button;
+                
+                RotateCcwIcon {
+                    opacity: 1;
+                    size: Theme.icon-size;
+                    colorize: Theme.icon-color;
+                    vertical-alignment: ImageVerticalAlignment.center;
+                    height: 32px;
+                    width: 32px;
                 }
             }
-
             ControlButton {
                 areaPrev := TouchArea { clicked => { AppLogic.previous_page(); } }
                 background: areaPrev.has-hover ? Theme.button-hover : Theme.button;
                 
                 ChevronLeftIcon {
+                    opacity: 1;
                     size: Theme.icon-size;
                     colorize: Theme.icon-color;
+                    vertical-alignment: ImageVerticalAlignment.center;
+                    height: 32px;
+                    width: 32px;
                 }
             }
             ControlButton {
@@ -63,19 +80,16 @@ export component MemoryView inherits Window {
                 background: areaNext.has-hover ? Theme.button-hover : Theme.button;
 
                 ChevronRightIcon {
+                    opacity: 1;
                     size: Theme.icon-size;
                     colorize: Theme.icon-color;
+                    vertical-alignment: ImageVerticalAlignment.center;
+                    height: 32px;
+                    width: 32px;
                 }
             }
             
             Rectangle { width: 1px; } // Spacer
-
-            Text {
-                color: #888;
-                font-family: "monospace";
-                vertical-alignment: center;
-                text: "Window: 0x" + MemoryViewData.windowStartAddress + " (" + MemoryViewData.windowSize + " bytes)";
-            }
 
         }
 

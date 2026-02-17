@@ -1,0 +1,16 @@
+import { Theme } from "../theme.slint";
+
+export component ControlButton inherits Rectangle {
+    // in property<string> text;
+    in property<image> icon;
+    
+    border-radius: Theme.radius;
+    width: 64px;
+    height: 32px;
+    
+    
+    // border-width: Theme.border-width;
+    // border-color: Theme.border-color;
+    border-width: 1px;
+    border-color: red;
+}

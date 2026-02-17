@@ -319,6 +319,56 @@ fn main() -> Result<(), slint::PlatformError> {
                     });
                 }
 
+                // Callback for handling the memory "go to location" field
+                {
+                    let emu_goto = emu_for_memory.clone();
+                    let window_goto = window_start_addr_for_memory.clone();
+                    let memory_weak_goto = memory_weak_clone.clone();
+                    let mem_len = emu_goto.borrow().bus.memory().get_data().len();
+                    
+                    new_win.global::<AppLogic>().on_goto_location(move |text| {
+
+                        let text = text.trim();
+
+                        if text.is_empty() {
+                            println!("Requested memory location is empty. Doing nothing.");
+                            return;
+                        }
+
+                        let trimmed = text.strip_prefix("0x").unwrap_or(text);
+
+                        match u64::from_str_radix(trimmed, 16) {
+                            Ok(addr_u64) => {
+
+                                let addr = addr_u64 as usize;
+
+                                if addr >= mem_len {
+                                    println!("Address {:X} out of bounds.", addr);
+                                    return;
+                                }
+
+                                // Compute page start containing this address
+                                let page_start = (addr / WINDOW_SIZE_BYTES) * WINDOW_SIZE_BYTES;
+
+                                {
+                                    let mut start = window_goto.borrow_mut();
+                                    *start = page_start;
+                                }
+
+                                if let Some(weak) = memory_weak_goto.borrow().as_ref() {
+                                    update_memory_view(weak, &emu_goto, page_start, WINDOW_SIZE_BYTES);
+                                }
+                            }
+
+                            Err(_) => {
+                                println!("Requested memory location is not valid hex: {:?}", trimmed);
+                            }
+                        }
+
+                    } );
+
+                }
+
                 *memory_weak_clone.borrow_mut() = Some(new_win.as_weak());
                 *slot = Some(new_win);
             }
