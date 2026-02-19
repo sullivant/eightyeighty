@@ -1,8 +1,8 @@
 import { ScrollView, Button, LineEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
 import { AppLogic } from "../globals.slint";
-import { ChevronLeftIcon, ChevronRightIcon } from "@lucide"; 
-import { RotateCcwIcon } from "@lucide";
+import { ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon, SquareArrowLeftIcon, FolderOpenIcon} from "@lucide"; 
+// import { RotateCcwIcon } from "@lucide";
 import { ControlButton } from "../components/controlbutton.slint";
 
 export global MemoryViewData {
@@ -53,7 +53,7 @@ export component MemoryView inherits Window {
                 areaHome := TouchArea { clicked => { AppLogic.goto_location("0"); } }
                 background: areaHome.has-hover ? Theme.button-hover : Theme.button;
                 
-                RotateCcwIcon {
+                SquareArrowLeftIcon {
                     opacity: 1;
                     size: Theme.icon-size;
                     colorize: Theme.icon-color;
