@@ -26,12 +26,16 @@ export { MemoryView, MemoryViewData }
 import { SettingsWindow } from "./settings.slint";
 export { SettingsWindow }
 
+import { EmulatorDisplay } from "./components/emulatordisplay.slint";
+
 
 export component MainWindow inherits Window {
     title: "eightyeighty — Intel 8080 Emulator";
     preferred-width: 1200px;
     preferred-height: 800px;
     background: Theme.app-background;
+
+    in-out property <image> frame;
 
     MenuBar {
         Menu {
@@ -63,18 +67,38 @@ export component MainWindow inherits Window {
 
 
     GridLayout {
-        
+
         Rectangle {
             col: 0;
             row: 0;
             rowspan: 5;
             width: 60%;
             height: 100%;
-            background: red;
-            Text {
-                text: "Display";
-            }            
+
+                EmulatorDisplay {
+                    // col: 0;
+                    // row: 0;
+                    // rowspan: 5;
+                    width: 224px;
+                    height: 256px;
+                    
+                    background: black;    
+                    
+                    frame: root.frame;
+                }
         }
+            
+        // Rectangle {
+        //     col: 0;
+        //     row: 0;
+        //     rowspan: 5;
+        //     width: 60%;
+        //     height: 100%;
+        //     background: red;
+        //     Text {
+        //         text: "Display";
+        //     }            
+        // }
         Rectangle {
             col: 1;
             row: 0;

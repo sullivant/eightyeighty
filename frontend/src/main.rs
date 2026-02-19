@@ -12,6 +12,7 @@ use emulator::devices::hardware::midway::MidwayHardware;
 use emulator::{self, Emulator, RunState, RunStopReason};
 use slint::{ToSharedString, VecModel};
 use slint::{ModelRc, SharedString};
+use slint::{SharedPixelBuffer, Rgba8Pixel, Image}; // For wiring in display for now.  Later we'll wire into hardware/midway.rs
 
 const WINDOW_SIZE_BYTES: usize = 256;
 
@@ -63,6 +64,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui_weak_sync = ui.as_weak();
     let ui_sync_timer = slint::Timer::default();
     let emu_for_timer = emu.clone();
+    let ui_weak_display = ui.as_weak();
     ui_sync_timer.start(
         slint::TimerMode::Repeated,
         Duration::from_millis(16),  // ~60 FPS
@@ -109,6 +111,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let emu_for_mem_timer = emu.clone();
     let window_start_for_mem = window_start_addr.clone();
     let memory_weak_timer = memory_weak.clone();
+    let emu_for_display = emu.clone();
     memory_timer.start(
         slint::TimerMode::Repeated,
         Duration::from_secs(1), // 1 FPS
@@ -168,6 +171,16 @@ fn main() -> Result<(), slint::PlatformError> {
             state.set_latch_0(format!("Input 0: {:08b}", hw.input_latch0.read()).to_shared_string());
             state.set_latch_1(format!("Input 1: {:08b}", hw.input_latch1.read()).to_shared_string());
             state.set_latch_2(format!("Input 2: {:08b}", hw.input_latch2.read()).to_shared_string());
+        }
+
+        // Update the display portion of the UI.
+        {
+            if let Some(ui) = ui_weak_display.upgrade() {
+                let emu = emu_for_display.borrow();
+
+                let frame = build_frame_from_vram(&emu);
+                ui.set_frame(frame);
+            }
         }
     });
 
@@ -522,4 +535,43 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
 /// Just loads provided filepath into a vec.
 fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
     fs::read(path)
+}
+
+
+fn build_frame_from_vram(emu: &Emulator) -> Image {
+    const WIDTH: usize = 224;
+    const HEIGHT: usize = 256;
+    const VRAM_START: usize = 0x2400;
+
+
+    let memory = emu.bus.memory().get_data();
+
+    let mut buffer =
+        SharedPixelBuffer::<Rgba8Pixel>::new(WIDTH as u32, HEIGHT as u32);
+
+    {
+        let pixels = buffer.make_mut_slice();
+
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+
+                // Midway stores video rotated 90°
+                let byte_index = VRAM_START + (x * HEIGHT + y) / 8;
+                let bit = (memory[byte_index] >> (y % 8)) & 1;
+
+                let color = if bit == 1 {
+                    Rgba8Pixel::new(255, 255, 255, 255)
+                } else {
+                    Rgba8Pixel::new(0, 0, 0, 255)
+                };
+
+                // Slint buffer is row-major
+                let idx = y * WIDTH + x;
+                pixels[idx] = color;
+            }
+        }
+    }
+
+
+    Image::from_rgba8(buffer)
 }

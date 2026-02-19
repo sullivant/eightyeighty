@@ -1,0 +1,12 @@
+export component EmulatorDisplay inherits Rectangle {
+    in property <image> frame;
+
+    background: black;
+
+    Image {
+        source: frame;
+        width: parent.width;
+        height: parent.height;
+        image-fit: fill;
+    }
+}
