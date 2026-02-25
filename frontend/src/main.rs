@@ -146,7 +146,9 @@ fn main() -> Result<(), slint::PlatformError> {
             regs.set_h(cpu.h as i32);
             regs.set_l(cpu.l as i32);
             regs.set_sp(cpu.sp as i32);
+            regs.set_sp_hex(format!("{:X}", cpu.sp).to_shared_string());
             regs.set_pc(cpu.pc as i32);
+            regs.set_pc_hex(format!("{:X}", cpu.pc).to_shared_string());
 
             // Update emulator state
             let state = ui.global::<EmulatorState>();

@@ -4,7 +4,9 @@ import { BlocksIcon } from "../vendor/lucide.slint";
 
 export global EmulatorRegisters {
     in-out property <int> pc;
+    in property<string> pc-hex;
     in-out property <int> sp;
+    in property<string> sp-hex;
     in-out property <int> a;
     in-out property <int> b;
     in-out property <int> c;
@@ -77,8 +79,7 @@ export component Registers inherits Rectangle {
         InfoCell { text: "E: "+EmulatorRegisters.e; row:1; col:3; }
         InfoCell { text: "H: "+EmulatorRegisters.h; row:1; col:4; }
         InfoCell { text: "L: "+EmulatorRegisters.l; row:1; col:5; }
-        InfoCell { text: "SP: "+EmulatorRegisters.sp; row:2; col:0; colspan: 2; }
-        InfoCell { text: "PC: "+EmulatorRegisters.pc; row:2; col:2; colspan: 2; }
-
+        InfoCell { text: "SP: 0x"+EmulatorRegisters.sp-hex; row:2; col:0; colspan: 2; }
+        InfoCell { text: "PC: 0x"+EmulatorRegisters.pc-hex; row:2; col:2; colspan: 2; }
     }
 }
