@@ -92,7 +92,8 @@ impl CPU {
             _ => return Err(format!("POP: Invalid source register requested: {reg}")),
         }
 
-        self.sp += 2;
+        // self.sp += 2;
+        self.sp = self.sp.wrapping_add(2);
 
         Ok(self.current_instruction.cycles)
     }

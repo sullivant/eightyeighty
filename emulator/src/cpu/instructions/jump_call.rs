@@ -15,7 +15,7 @@ impl CPU {
     pub fn rst(&mut self, loc: u8, bus: &mut Bus) -> Result<u8, String> {
         let dl = (self.pc as u16 & 0xFF) as u8;
         let dh = (self.pc as u16 >> 8) as u8;
-        match self.push(dl, dh, bus) {
+        match self.push(dh, dl, bus) {
             Ok(_) => (),
             Err(e) => return Err(e),
         }

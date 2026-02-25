@@ -205,7 +205,6 @@ impl CPU {
     pub fn step(&mut self, bus: &mut Bus) -> Result<StepResult , String> {
 
         if self.interrupts_enabled && let Some(rst) = bus.take_interrupt() {
-            println!("Interrupted.");
             return Ok(self.process_interrupt(bus, rst));
         }
 

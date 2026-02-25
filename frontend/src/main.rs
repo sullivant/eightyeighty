@@ -17,6 +17,9 @@ use slint::{SharedPixelBuffer, Rgba8Pixel, Image}; // For wiring in display for 
 
 const WINDOW_SIZE_BYTES: usize = 256;
 
+const CYCLES_PER_FRAME: u64 = 33_333; // Will hopefully work out around 2MHZ
+const HALF_CYCLES_PER_FRAME: u64 = 16_667; // For dealing with RST1 and RST2
+
 struct HardwareProxy {
     hardware: Rc<RefCell<MidwayHardware>>,
 }
@@ -76,7 +79,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 {
                     let mut emu = emu_for_timer.borrow_mut();
                     if emu.run_state() == RunState::Running {
-                        let stop_reason = emu.run_blocking(Some(200));
+
+                        // Run the first half of the frame and fire RST1
+                        let stop_reason = emu.run_blocking(Some(CYCLES_PER_FRAME));
 
                         match stop_reason {
                             RunStopReason::Breakpoint(pc) => {
@@ -95,7 +100,36 @@ fn main() -> Result<(), slint::PlatformError> {
                                 // Cool beans.  We can just keep running.
                                 emu.set_run_state(RunState::Running);
                             }
-                        }                     
+                        }     
+
+                        // Fire interrupt RST1
+                        emu.bus.request_interrupt(1);
+
+                        // Run the second half and fire RST2 
+                        let stop_reason = emu.run_blocking(Some(HALF_CYCLES_PER_FRAME));
+
+                        match stop_reason {
+                            RunStopReason::Breakpoint(pc) => {
+                                println!("*** BREAKPOINT HIT at PC = {:04X} ***", pc);
+                                emu.set_run_state(RunState::Stopped);
+                            },
+                            RunStopReason::Halted => {
+                                println!("CPU Halted; Stopping execution.");
+                                emu.set_run_state(RunState::Stopped);
+                            },
+                            RunStopReason::Error => {
+                                println!("CPU Halted with ERROR; Stopping execution.");
+                                emu.set_run_state(RunState::Stopped);
+                            },
+                            RunStopReason::CycleBudgetExhausted => {
+                                // Cool beans.  We can just keep running.
+                                emu.set_run_state(RunState::Running);
+                            }
+                        }    
+
+                        // Fire interrupt RST2
+                        emu.bus.request_interrupt(2);
+                                      
                     }
                 }
 
@@ -577,7 +611,6 @@ fn build_frame_from_vram(emu: &Emulator) -> Image {
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
-
                 // Midway stores video rotated 90°
                 let byte_index = VRAM_START + (x * HEIGHT + y) / 8;
                 let bit = (memory[byte_index] >> (y % 8)) & 1;
@@ -589,7 +622,8 @@ fn build_frame_from_vram(emu: &Emulator) -> Image {
                 };
 
                 // Slint buffer is row-major
-                let idx = y * WIDTH + x;
+                // let idx = y * WIDTH + x;
+                let idx = (HEIGHT - 1 - y) * WIDTH + x;
                 pixels[idx] = color;
             }
         }
@@ -614,7 +648,6 @@ fn handle_input(hw: &Rc<RefCell<MidwayHardware>>, input: MidwayInput, pressed: b
 }
 
 fn slint_key_to_midway_input(key: &str) -> Option<MidwayInput> {
-    println!("Got key: {:?}", key);
     use MidwayInput::*;
     match key {
         "c" => Some(Coin),
