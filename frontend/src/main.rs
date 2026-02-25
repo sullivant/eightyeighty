@@ -8,8 +8,9 @@ use rfd::FileDialog;
 
 // Allows for integration with the running system as if it was MidwayHardware.
 use emulator::bus::IoDevice;
-use emulator::devices::hardware::midway::MidwayHardware;
+use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 use emulator::{self, Emulator, RunState, RunStopReason};
+use slint::platform::Key;
 use slint::{ToSharedString, VecModel};
 use slint::{ModelRc, SharedString};
 use slint::{SharedPixelBuffer, Rgba8Pixel, Image}; // For wiring in display for now.  Later we'll wire into hardware/midway.rs
@@ -128,6 +129,7 @@ fn main() -> Result<(), slint::PlatformError> {
     );
 
     // Handle syncing everything, except memory view portion, at once.
+    let hw_for_sync = hardware.clone();
     ui.global::<AppLogic>().on_sync(move || {
         let Some(ui) = ui_weak_all.upgrade() else {
             return;
@@ -169,7 +171,7 @@ fn main() -> Result<(), slint::PlatformError> {
         // Update the hardware state portion of the UI.
         {
             let state = ui.global::<HardwareState>();
-            let hw = hardware.borrow();
+            let hw = hw_for_sync.borrow();
             state.set_latch_0(format!("Input 0: {:08b}", hw.input_latch0.read()).to_shared_string());
             state.set_latch_1(format!("Input 1: {:08b}", hw.input_latch1.read()).to_shared_string());
             state.set_latch_2(format!("Input 2: {:08b}", hw.input_latch2.read()).to_shared_string());
@@ -279,6 +281,26 @@ fn main() -> Result<(), slint::PlatformError> {
         }
 
     });
+
+
+    // Handle keyboard input;
+    // I do not like how this is not KeyEvent and instead is just the text representation.
+    let hw_for_press = hardware.clone();
+    let hw_for_release = hardware.clone();
+    {
+        ui.on_key_pressed(move |keytext: SharedString| {
+            // println!("Key pressed: {:?}", keytext);
+            if let Some(input) = slint_key_to_midway_input(&keytext) {
+                handle_input(&hw_for_press, input, true);
+            }        
+        });
+        ui.on_key_released(move |keytext: SharedString| {
+            // println!("Key released: {:?}", keytext);
+            if let Some(input) = slint_key_to_midway_input(&keytext) {
+                handle_input(&hw_for_release, input, false);
+            } 
+        });
+    }
 
     // This handle deals with popping the memory view when desired.
     let emu_for_memory = emu.clone();
@@ -391,7 +413,6 @@ fn main() -> Result<(), slint::PlatformError> {
             slot.as_ref().unwrap().show().unwrap();
         }
     });
-
 
     ui.show()?;
 
@@ -576,4 +597,34 @@ fn build_frame_from_vram(emu: &Emulator) -> Image {
 
 
     Image::from_rgba8(buffer)
+}
+
+fn handle_input(hw: &Rc<RefCell<MidwayHardware>>, input: MidwayInput, pressed: bool) {
+    use MidwayInput::*;
+    let mut hw = hw.borrow_mut();
+    match input {
+        Coin    => if pressed { hw.set_bit(0, 0) } else { hw.clear_bit(0, 0) },
+        Start1  => if pressed { hw.set_bit(0, 1) } else { hw.clear_bit(0, 1) },
+        Start2  => if pressed { hw.set_bit(0, 2) } else { hw.clear_bit(0, 2) },
+        Left    => if pressed { hw.set_bit(1, 0) } else { hw.clear_bit(1, 0) },
+        Right   => if pressed { hw.set_bit(1, 1) } else { hw.clear_bit(1, 1) },
+        Fire    => if pressed { hw.set_bit(1, 2) } else { hw.clear_bit(1, 2) },
+        Tilt    => if pressed { println!("TILT!") }
+    }
+}
+
+fn slint_key_to_midway_input(key: &str) -> Option<MidwayInput> {
+    println!("Got key: {:?}", key);
+    use MidwayInput::*;
+    match key {
+        "c" => Some(Coin),
+        "1" => Some(Start1),
+        "2" => Some(Start2),
+        "\u{f702}" => Some(Left),
+        "ArrowLeft" => Some(Left),
+        "ArrowRight" => Some(Right),
+        "\u{f703}" => Some(Right),
+        " " => Some(Fire),
+        _ => None,
+    }
 }

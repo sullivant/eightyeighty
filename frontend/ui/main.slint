@@ -28,7 +28,6 @@ export { SettingsWindow }
 
 import { EmulatorDisplay } from "./components/emulatordisplay.slint";
 
-
 export component MainWindow inherits Window {
     title: "eightyeighty — Intel 8080 Emulator";
     preferred-width: 1200px;
@@ -36,6 +35,23 @@ export component MainWindow inherits Window {
     background: Theme.app-background;
 
     in-out property <image> frame;
+    callback key-pressed(string);
+    callback key-released(string);
+
+    forward-focus: my-key-handler;
+    my-key-handler := FocusScope {
+        key-pressed(event) => {
+            // debug(event.text);
+            root.key_pressed(event.text);
+            accept
+        }
+
+        key-released(event) => {
+            // debug(event.text);
+            root.key-released(event.text);
+            accept
+        }
+    }
 
     MenuBar {
         Menu {
