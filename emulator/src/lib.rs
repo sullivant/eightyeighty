@@ -170,10 +170,25 @@ impl Emulator {
                 return RunStopReason::Breakpoint(pc);
             }
 
-            let Ok(step) = self.cpu.step(&mut self.bus) else {
-                self.stop();
-                return RunStopReason::Error;
+            // let Ok(step) = self.cpu.step(&mut self.bus) else {
+            //     self.stop();
+            //     return RunStopReason::Error;
+            // };
+
+            let step = match self.cpu.step(&mut self.bus) {
+                Ok(step) => step,
+                Err(e) => {
+                    println!("CPU ERROR at PC={:04X}: {}", self.cpu.pc, e);
+                    println!("  A={:02X} B={:02X} C={:02X} D={:02X} E={:02X} H={:02X} L={:02X}",
+                        self.cpu.a, self.cpu.b, self.cpu.c, 
+                        self.cpu.d, self.cpu.e, self.cpu.h, self.cpu.l);
+                    println!("  SP={:04X} Flags={:08b}", self.cpu.sp, self.cpu.get_flags());
+                    println!("  Byte at PC: {:02X}", self.bus.read(self.cpu.pc));
+                    self.stop();
+                    return RunStopReason::Error;
+                }
             };
+
 
             self.cycles += u64::from(step.cycles);
 

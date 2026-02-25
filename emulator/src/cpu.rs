@@ -427,7 +427,7 @@ impl CPU {
             0xC2 => self.jnz(dl, dh),
             0xC3 | 0xCB => self.jmp(dl, dh),
             0xC4 => self.cnz(dl, dh, bus),                       // 17 or 11 cycles
-            0xC5 => self.push(self.c, self.b, bus),
+            0xC5 => self.push(self.b, self.c, bus),
             0xC6 | 0xCE =>  self.adi_aci(dl),
             0xC7 => self.rst(0, bus),
             0xC8 => self.rz(bus),                              // 11 or 5 cycles
@@ -442,12 +442,14 @@ impl CPU {
             0xD2 => self.jnc(dl, dh),
             0xD3 => self.data_out(bus,dl),
             0xD4 => self.cnc(dl, dh, bus),                       // 17 or 11 cycles
-            0xD5 => self.push(self.e, self.d, bus),
+            0xD5 => self.push(self.d, self.e, bus),
+            0xD6 => self.sui(dl),
             0xD7 => self.rst(2, bus),
             0xD8 => self.rc(bus),                              // 11 or 5 cycles
             0xDA => self.jc(dl, dh),
             0xDB => self.data_in(bus,dl),               
             0xDC => self.cc(dl, dh, bus),                        // 17 or 11 cycles
+            0xDE => self.sbi(dl),
             0xDF => self.rst(3, bus),
 
             0xE0 => self.rpo(bus),                             // 11 or 5 cycles
@@ -455,7 +457,7 @@ impl CPU {
             0xE2 => self.jpo(dl, dh),
             0xE3 => self.xthl(bus),
             0xE4 => self.cpo(dl, dh, bus),                       // 17 or 11 cycles
-            0xE5 => self.push(self.l, self.h, bus),
+            0xE5 => self.push(self.h, self.l, bus),
             0xE6 => self.ani(dl),
             0xE7 => self.rst(4, bus),
             0xE8 => self.rpe(bus),                             // 11 or 5 cycles
@@ -470,7 +472,7 @@ impl CPU {
             0xF2 => self.jp(dl, dh),
             0xF3 => self.di(),
             0xF4 => self.cp(dl, dh, bus),                        // 17 or 11 cycles
-            0xF5 => self.push(self.get_flags(), self.a, bus),
+            0xF5 => self.push(self.a, self.get_flags(), bus),
             0xF7 => self.rst(6, bus),
             0xF8 => self.rm(bus),                              // 11 or 5 cycles
             0xF9 => self.sphl(),

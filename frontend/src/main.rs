@@ -81,7 +81,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     if emu.run_state() == RunState::Running {
 
                         // Run the first half of the frame and fire RST1
-                        let stop_reason = emu.run_blocking(Some(CYCLES_PER_FRAME));
+                        let stop_reason = emu.run_blocking(Some(HALF_CYCLES_PER_FRAME));
 
                         match stop_reason {
                             RunStopReason::Breakpoint(pc) => {

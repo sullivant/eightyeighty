@@ -312,7 +312,7 @@ impl CPU {
         let pc_hi = self.pc >> 8;
         let pc_lo = self.pc & 0xFF;
 
-        match self.push(pc_lo as u8, pc_hi as u8, bus) {
+        match self.push(pc_hi as u8, pc_lo as u8, bus) {
             Ok(_) => (),
             Err(e) => {
                 return Err(format!(

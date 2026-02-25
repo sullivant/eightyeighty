@@ -1,5 +1,5 @@
 use crate::{
-    bus::Bus, constants::FLAG_CARRY, cpu::{CPU, Registers, will_ac}
+    bus::Bus, constants::{FLAG_AUXCARRY, FLAG_CARRY, FLAG_PARITY, FLAG_SIGN, FLAG_ZERO}, cpu::{CPU, Registers, will_ac}
 };
 
 impl CPU {
@@ -257,6 +257,26 @@ impl CPU {
 
         Ok(self.current_instruction.cycles)
     }
+
+    pub fn sbi(&mut self, dl: u8) -> Result<u8, String> {
+        let carry = u8::from(self.test_flag(FLAG_CARRY));
+        self.sui(dl.wrapping_add(carry))
+    }
+
+    pub fn sui(&mut self, dl: u8) -> Result<u8, String> {
+        let a = self.a;
+        let result = a.wrapping_sub(dl);
+        
+        self.update_flag(FLAG_CARRY, (a as u16) < (dl as u16));
+        self.update_flag(FLAG_AUXCARRY, (a & 0x0F) < (dl & 0x0F));
+        self.update_flag(FLAG_ZERO, result == 0);
+        self.update_flag(FLAG_SIGN, result & 0x80 != 0);
+        self.update_flag(FLAG_PARITY, result.count_ones() % 2 == 0);
+        
+        self.a = result;
+        Ok(self.current_instruction.cycles)
+    }
+
 
     /// SUB  / SBB (Subtract register param from A with borrow if necessary)
     /// Additionally, an optional subtrahend can be supplied, in the case of SBB

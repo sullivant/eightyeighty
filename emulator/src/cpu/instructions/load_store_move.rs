@@ -26,7 +26,7 @@ impl CPU {
         }
 
         // Push the "old" ones
-        match self.push(cl, ch, bus) {
+        match self.push(ch, cl, bus) {
             Ok(_) => (),
             Err(e) => return Err(e),
         }
@@ -53,7 +53,7 @@ impl CPU {
     ///
     /// They are pushed on like this:
     /// (sp-1)<-dh; (sp-2)<-dl; sp <- sp - 2
-    pub fn push(&mut self, dl: u8, dh: u8, bus: &mut Bus) -> Result<u8, String> {
+    pub fn push(&mut self, dh: u8, dl: u8, bus: &mut Bus) -> Result<u8, String> {
         self.sp = self.sp.wrapping_sub(1);
         // self.sp -= 1;
         bus.write(self.sp.into(), dh);
