@@ -577,7 +577,7 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
     // let mut emu = Emulator::with_io(boxed_io);
 
 
-    let path = format!("resources/roms/8080.rom");
+    let path = format!("resources/roms/8080.bin");
     match load_rom_file(&path) {
         Ok(bytes) => {
             emu.insert_rom(bytes);
