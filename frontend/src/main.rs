@@ -309,7 +309,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let name = path.file_name().unwrap().to_str();
             let path_str = name.unwrap_or("N/A");
 
-            match load_rom_file(&path.to_str().unwrap()) {
+            match load_rom_file(path.to_str().unwrap()) {
                 Ok(bytes) => {
                     let mut emu = emu_for_rom.borrow_mut();
                     emu.insert_rom(bytes, path_str.to_string());
@@ -322,7 +322,6 @@ fn main() -> Result<(), slint::PlatformError> {
 
             // Update the hardware state portion of the UI.
             {
-
                 if let Some(ui) = ui_weak_details.upgrade() {
                     let mut emu = emu_for_rom.borrow_mut();
                     if let Some(path) = emu.rom_path() {
@@ -511,7 +510,7 @@ fn update_memory_view(
     let slice = &memory[start..end]; // What we will actually display / update
 
     let bytes_per_row = 16;
-    let total_rows = (slice.len() + bytes_per_row -1) / bytes_per_row;
+    let total_rows = slice.len().div_ceil(bytes_per_row); //  (slice.len() + bytes_per_row -1) / bytes_per_row;
 
     let mut addresses: Vec<SharedString> = Vec::with_capacity(total_rows);
     let mut hex_rows: Vec<ModelRc<SharedString>> = Vec::with_capacity(total_rows);
@@ -557,7 +556,7 @@ fn update_memory_view(
     mem_data.set_asciiChars(ModelRc::new(VecModel::from(ascii_rows)));
 
     // Highlight PC
-    let pc = emu.cpu.pc as usize;
+    let pc = emu.cpu.pc;
 
     if pc >= start && pc < end {
         let offset = pc - start;
@@ -592,7 +591,7 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
     // let mut emu = Emulator::with_io(boxed_io);
 
 
-    let path = format!("resources/roms/8080.bin");
+    let path = "resources/roms/8080.bin".to_string();
     match load_rom_file(&path) {
         Ok(bytes) => {
             emu.insert_rom(bytes, path);

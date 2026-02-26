@@ -267,11 +267,11 @@ impl CPU {
         let a = self.a;
         let result = a.wrapping_sub(dl);
         
-        self.update_flag(FLAG_CARRY, (a as u16) < (dl as u16));
+        self.update_flag(FLAG_CARRY, (u16::from(a)) < u16::from(dl));
         self.update_flag(FLAG_AUXCARRY, (a & 0x0F) < (dl & 0x0F));
         self.update_flag(FLAG_ZERO, result == 0);
         self.update_flag(FLAG_SIGN, result & 0x80 != 0);
-        self.update_flag(FLAG_PARITY, result.count_ones() % 2 == 0);
+        self.update_flag(FLAG_PARITY, result.count_ones().is_multiple_of(2));
         
         self.a = result;
         Ok(self.current_instruction.cycles)
