@@ -89,7 +89,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                 emu.set_run_state(RunState::Stopped);
                             },
                             RunStopReason::Halted => {
-                                println!("CPU Halted; Waiting for an interrupt.");
+                                // println!("CPU Halted; Waiting for an interrupt.");
                                 emu.set_run_state(RunState::Running);
                             },
                             RunStopReason::Error => {
@@ -103,20 +103,20 @@ fn main() -> Result<(), slint::PlatformError> {
                         }     
 
                         // Fire interrupt RST1
-                        println!("Requesting RST1, run_state={:?}", emu.run_state());
+                        // println!("Requesting RST1, run_state={:?}", emu.run_state());
                         emu.bus.request_interrupt(1);
 
                         // Run the second half and fire RST2 
-                        println!("About to run second half, run_state={:?}", emu.run_state());
+                        // println!("About to run second half, run_state={:?}", emu.run_state());
                         let stop_reason = emu.run_blocking(Some(HALF_CYCLES_PER_FRAME));
-                        println!("Second half done, stop_reason={:?}", stop_reason);
+                        // println!("Second half done, stop_reason={:?}", stop_reason);
                         match stop_reason {
                             RunStopReason::Breakpoint(pc) => {
                                 println!("*** BREAKPOINT HIT at PC = {:04X} ***", pc);
                                 emu.set_run_state(RunState::Stopped);
                             },
                             RunStopReason::Halted => {
-                                println!("CPU Halted; Waiting for an interrupt.");
+                                // println!("CPU Halted; Waiting for an interrupt.");
                                 emu.set_run_state(RunState::Running);
                             },
                             RunStopReason::Error => {
@@ -130,7 +130,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }    
 
                         // Fire interrupt RST2
-                        println!("Requesting RST2, run_state={:?}", emu.run_state());
+                        // println!("Requesting RST2, run_state={:?}", emu.run_state());
                         emu.bus.request_interrupt(2);
                                       
                     }

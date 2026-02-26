@@ -182,17 +182,13 @@ impl CPU {
 
     pub fn process_interrupt(&mut self, bus: &mut Bus, rst: u8) -> StepResult {
         let pc_before = self.pc;
-        println!("Processing interrupt RST {rst}, PC was {:04X}", pc_before);
+        // println!("Processing interrupt RST {rst}, PC was {:04X}", pc_before);
 
         self.halted = false; // If we are processing an interrupt we un halt to allow the step to happen
 
         let _ = self.rst(rst, bus);
 
         self.interrupts_enabled = false;
-
-        if rst==2 {
-            println!("RST2 handler done, mem[2002h]={:02X}", bus.read(0x2002));
-        }
 
         StepResult { 
             pc: pc_before,
@@ -212,7 +208,7 @@ impl CPU {
     pub fn step(&mut self, bus: &mut Bus) -> Result<StepResult , String> {
 
         if self.interrupts_enabled && let Some(rst) = bus.take_interrupt() {
-            println!("Servicing interrupt RST {rst}, interrupts_enabled={}", self.interrupts_enabled);
+            // println!("Servicing interrupt RST {rst}, interrupts_enabled={}", self.interrupts_enabled);
                 return Ok(self.process_interrupt(bus, rst));
         }
 
