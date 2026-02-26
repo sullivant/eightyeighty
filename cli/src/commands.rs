@@ -412,7 +412,7 @@ fn cmd_insert(emu: &mut Emulator, _hw: &Rc<RefCell<MidwayHardware>>, args: &[&st
     // If it loads from the file, stuff it into the Emulator
     match load_rom_file(&path) {
         Ok(bytes) => {
-            emu.insert_rom(bytes);
+            emu.insert_rom(bytes, path.to_string());
         }
         Err(e) => {
             println!("File error: {}", e);

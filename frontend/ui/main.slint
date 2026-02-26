@@ -28,6 +28,9 @@ export { SettingsWindow }
 
 import { EmulatorDisplay } from "./components/emulatordisplay.slint";
 
+import { Details } from "emu/details.slint";
+export { ROMDetails } from "emu/details.slint";
+
 export component MainWindow inherits Window {
     title: "eightyeighty — Intel 8080 Emulator";
     preferred-width: 1200px;
@@ -152,12 +155,9 @@ export component MainWindow inherits Window {
             col: 1;
             row: 4;
             height: 25%;
-            background: #385769;
 
             vertical-stretch: 1;
-            Text {
-                text: "ROM Information";
-            }                         
+            Details {}                         
         }
     }
 }

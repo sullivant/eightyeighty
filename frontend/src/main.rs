@@ -10,7 +10,6 @@ use rfd::FileDialog;
 use emulator::bus::IoDevice;
 use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 use emulator::{self, Emulator, RunState, RunStopReason};
-use slint::platform::Key;
 use slint::{ToSharedString, VecModel};
 use slint::{ModelRc, SharedString};
 use slint::{SharedPixelBuffer, Rgba8Pixel, Image}; // For wiring in display for now.  Later we'll wire into hardware/midway.rs
@@ -49,6 +48,7 @@ impl IoDevice for HardwareProxy {
 fn main() -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
     let ui_weak_all = ui.as_weak();
+    let ui_weak_details = ui.as_weak();
 
     // Gather a connection to the MidwayHardware to be used in the EMU
     let hardware = Rc::new(RefCell::new(MidwayHardware::new()));
@@ -306,17 +306,32 @@ fn main() -> Result<(), slint::PlatformError> {
             .pick_file()
         {
             println!("Selected file: {:?}", path);
+            let name = path.file_name().unwrap().to_str();
+            let path_str = name.unwrap_or("N/A");
 
             match load_rom_file(&path.to_str().unwrap()) {
                 Ok(bytes) => {
                     let mut emu = emu_for_rom.borrow_mut();
-                    emu.insert_rom(bytes);
+                    emu.insert_rom(bytes, path_str.to_string());
                     emu.reset().unwrap();
                 }
                 Err(e) => {
                     println!("File error: {}", e);
                 }
             }
+
+            // Update the hardware state portion of the UI.
+            {
+
+                if let Some(ui) = ui_weak_details.upgrade() {
+                    let mut emu = emu_for_rom.borrow_mut();
+                    if let Some(path) = emu.rom_path() {
+                        let details = ui.global::<ROMDetails>();
+                        details.set_filename(path.to_shared_string());
+                    } 
+                }                
+            }
+
         }
 
     });
@@ -580,7 +595,7 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
     let path = format!("resources/roms/8080.bin");
     match load_rom_file(&path) {
         Ok(bytes) => {
-            emu.insert_rom(bytes);
+            emu.insert_rom(bytes, path);
         }
         Err(e) => {
             println!("File error: {}", e);

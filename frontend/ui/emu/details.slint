@@ -1,0 +1,66 @@
+import { Theme } from "../theme.slint";
+import { AppLogic } from "../globals.slint";
+import { ShredderIcon } from "../vendor/lucide.slint";
+
+export global ROMDetails {
+    in-out property <string> filename;
+    in-out property <int> length;
+}
+
+component InfoCell inherits Rectangle {
+    in property<string> text;
+    
+    border-radius: Theme.radius;
+    min-width: 64px;
+    height: 32px;
+
+    border-width: Theme.border-width;
+    border-color: Theme.border-color;
+    background: Theme.cell;
+
+    HorizontalLayout {
+        padding-left: 5px;
+        Rectangle { 
+            Text { 
+                color: Theme.text; text: text; width: 100%; horizontal-alignment: left;  
+            }
+        }
+    }
+}
+
+
+export component Details inherits Rectangle {
+GridLayout {
+        spacing: Theme.gap;
+        padding: Theme.padding;
+        
+        Rectangle { 
+            row:0; col:0; colspan: 3; 
+
+            border-radius: Theme.radius;
+            min-width: 64px;
+            height: 32px;
+
+            border-width: Theme.border-width;
+            border-color: Theme.border-color;
+            background: Theme.cell;
+
+            HorizontalLayout {
+                ShredderIcon {
+                    opacity: 1;
+                    size: Theme.icon-size;
+                    colorize: Theme.icon-color;
+                    vertical-alignment: ImageVerticalAlignment.center;
+                    height: 32px;
+                    width: 32px;
+                }
+                Text { 
+                    color: Theme.text; font-weight: Theme.weight-bold; text: "ROM Details"; width: 100%; horizontal-alignment: left; vertical-alignment: center; 
+                }
+            }
+        } 
+
+        InfoCell { text: "File: "+ROMDetails.filename; row:1; col:0; colspan:2; }
+        InfoCell { text: "Len: "+ROMDetails.length; row:2; col:0; colspan:2; }
+    }
+}

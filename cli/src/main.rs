@@ -162,7 +162,7 @@ fn setup_emu(hardware: &Rc<RefCell<MidwayHardware>>) -> Result<Emulator, String>
     // let mut emu = Emulator::with_io(boxed_io);
 
     println!("Inserting ROM and loading...");
-    emu.load_rom(ROM_TST.to_vec())?;
+    emu.load_rom(ROM_TST.to_vec(), "TEST ROM".to_string())?;
 
     Ok(emu)
 }

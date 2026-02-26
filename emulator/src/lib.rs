@@ -42,6 +42,7 @@ pub struct Emulator {
     cycle_budget: Option<u64>,
 
     rom: Option<Vec<u8>>, // Storing the initial untouched rom, used when loading from new, or resetting.
+    rom_path: Option<String>, // Just a reference to which file was loaded
 
     breakpoints: HashSet<u16>, // Stores breakpoints.  
 }
@@ -65,6 +66,7 @@ impl Emulator {
             cycle_budget: None,
 
             rom: None,
+            rom_path: None,
 
             breakpoints: HashSet::new(),      
         }        
@@ -84,6 +86,7 @@ impl Emulator {
             cycles: 0,
             cycle_budget: None,
             rom: None,
+            rom_path: None,
             breakpoints: HashSet::new(),
         }
     }
@@ -98,13 +101,19 @@ impl Emulator {
     }
 
     /// Inserts (readies) a rom into the machine.  But does not write anything to memory or reset the CPU.
-    pub fn insert_rom(&mut self, rom: Vec<u8>) {
+    pub fn insert_rom(&mut self, rom: Vec<u8>, path: String) {
         self.rom = Some(rom);
+        self.rom_path = Some(path);
+    }
+
+    pub fn rom_path(&mut self) -> Option<String> {
+        self.rom_path.clone()
     }
 
     /// Removes the ROM from the machine.
     pub fn remove_rom(&mut self) {
         self.rom = None;
+        self.rom_path = None;
     }
 
     /// Returns contents of ROM
@@ -143,8 +152,8 @@ impl Emulator {
     /// 
     /// ## Errors
     /// Will forward errors from `insert_rom()` and `reset()` calls.
-    pub fn load_rom(&mut self, rom: Vec<u8>) -> Result<(), String> {
-        self.insert_rom(rom);
+    pub fn load_rom(&mut self, rom: Vec<u8>, path: String) -> Result<(), String> {
+        self.insert_rom(rom, path);
         self.reset()
     }
 
