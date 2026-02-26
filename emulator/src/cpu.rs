@@ -209,7 +209,7 @@ impl CPU {
 
         if self.interrupts_enabled && let Some(rst) = bus.take_interrupt() {
             // println!("Servicing interrupt RST {rst}, interrupts_enabled={}", self.interrupts_enabled);
-                return Ok(self.process_interrupt(bus, rst));
+            return Ok(self.process_interrupt(bus, rst));
         }
 
 
