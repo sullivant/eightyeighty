@@ -36,12 +36,14 @@ impl CPU {
 
     /// Enables interrupts
     pub fn ei(&mut self) -> Result<u8, String> {
+        // println!("ei");
         self.interrupts_enabled = true;
         Ok(self.current_instruction.cycles)
     }
 
     /// Disables interrupts
     pub fn di(&mut self) -> Result<u8, String> {
+        // println!("di");
         self.interrupts_enabled = false;
         Ok(self.current_instruction.cycles)
     }

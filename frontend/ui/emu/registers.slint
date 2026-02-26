@@ -12,7 +12,9 @@ export global EmulatorRegisters {
     in-out property <int> c;
     in-out property <int> e;
     in-out property <int> h;
+    in property<string> h-hex;
     in-out property <int> l;
+    in property<string> l-hex;
 
     callback sync();
 }
@@ -77,8 +79,8 @@ export component Registers inherits Rectangle {
         InfoCell { text: "B: "+EmulatorRegisters.b; row:1; col:1; }
         InfoCell { text: "C: "+EmulatorRegisters.c; row:1; col:2; }
         InfoCell { text: "E: "+EmulatorRegisters.e; row:1; col:3; }
-        InfoCell { text: "H: "+EmulatorRegisters.h; row:1; col:4; }
-        InfoCell { text: "L: "+EmulatorRegisters.l; row:1; col:5; }
+        InfoCell { text: "H: 0x"+EmulatorRegisters.h-hex; row:1; col:4; }
+        InfoCell { text: "L: 0x"+EmulatorRegisters.l-hex; row:1; col:5; }
         InfoCell { text: "SP: 0x"+EmulatorRegisters.sp-hex; row:2; col:0; colspan: 2; }
         InfoCell { text: "PC: 0x"+EmulatorRegisters.pc-hex; row:2; col:2; colspan: 2; }
     }

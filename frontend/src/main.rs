@@ -89,8 +89,8 @@ fn main() -> Result<(), slint::PlatformError> {
                                 emu.set_run_state(RunState::Stopped);
                             },
                             RunStopReason::Halted => {
-                                println!("CPU Halted; Stopping execution.");
-                                emu.set_run_state(RunState::Stopped);
+                                println!("CPU Halted; Waiting for an interrupt.");
+                                emu.set_run_state(RunState::Running);
                             },
                             RunStopReason::Error => {
                                 println!("CPU Halted with ERROR; Stopping execution.");
@@ -103,19 +103,21 @@ fn main() -> Result<(), slint::PlatformError> {
                         }     
 
                         // Fire interrupt RST1
+                        println!("Requesting RST1, run_state={:?}", emu.run_state());
                         emu.bus.request_interrupt(1);
 
                         // Run the second half and fire RST2 
+                        println!("About to run second half, run_state={:?}", emu.run_state());
                         let stop_reason = emu.run_blocking(Some(HALF_CYCLES_PER_FRAME));
-
+                        println!("Second half done, stop_reason={:?}", stop_reason);
                         match stop_reason {
                             RunStopReason::Breakpoint(pc) => {
                                 println!("*** BREAKPOINT HIT at PC = {:04X} ***", pc);
                                 emu.set_run_state(RunState::Stopped);
                             },
                             RunStopReason::Halted => {
-                                println!("CPU Halted; Stopping execution.");
-                                emu.set_run_state(RunState::Stopped);
+                                println!("CPU Halted; Waiting for an interrupt.");
+                                emu.set_run_state(RunState::Running);
                             },
                             RunStopReason::Error => {
                                 println!("CPU Halted with ERROR; Stopping execution.");
@@ -128,6 +130,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }    
 
                         // Fire interrupt RST2
+                        println!("Requesting RST2, run_state={:?}", emu.run_state());
                         emu.bus.request_interrupt(2);
                                       
                     }
@@ -180,7 +183,9 @@ fn main() -> Result<(), slint::PlatformError> {
             regs.set_c(cpu.c as i32);
             regs.set_e(cpu.e as i32);
             regs.set_h(cpu.h as i32);
+            regs.set_h_hex(format!("{:X}", cpu.h).to_shared_string());
             regs.set_l(cpu.l as i32);
+            regs.set_l_hex(format!("{:X}", cpu.l).to_shared_string());
             regs.set_sp(cpu.sp as i32);
             regs.set_sp_hex(format!("{:X}", cpu.sp).to_shared_string());
             regs.set_pc(cpu.pc as i32);
@@ -192,14 +197,14 @@ fn main() -> Result<(), slint::PlatformError> {
                 RunState::Running => { state.set_state("State: Running".to_shared_string());},
                 RunState::Stopped => { state.set_state("State: Stopped".to_shared_string());},
             };
-            match emu.cpu.interrupts_enabled() {
-                true => { state.set_interrupts("Interrupts Enabled".to_shared_string())},
-                false=> { state.set_interrupts("Interrupts Not Enabled".to_shared_string())},
-            };
-            match emu.bus.peek_interrupt() {
-                Some(i) => { state.set_pending(format!("Pending Interrupt: {}", i).to_shared_string())},
-                None => { state.set_pending("Pending Interrupt: None".to_shared_string())},
-            };
+            // match emu.cpu.interrupts_enabled() {
+            //     true => { state.set_interrupts("Interrupts Enabled".to_shared_string())},
+            //     false=> { state.set_interrupts("Interrupts Not Enabled".to_shared_string())},
+            // };
+            // match emu.bus.peek_interrupt() {
+            //     Some(i) => { state.set_pending(format!("Pending Interrupt: {}", i).to_shared_string())},
+            //     None => { state.set_pending("Pending Interrupt: None".to_shared_string())},
+            // };
         }
 
         // Update the hardware state portion of the UI.

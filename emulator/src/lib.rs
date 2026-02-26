@@ -159,7 +159,11 @@ impl Emulator {
         self.run(target_cycles);
 
         while self.run_state == RunState::Running {
-            if self.cpu.is_halted() {
+
+            // If we have an interrupt waiting, even if we are halted, we need to 
+            // continue on so we can process that.  But if we are halted and there are no
+            // interrupts we can just burn a cycle.
+            if self.cpu.is_halted() && self.bus.peek_interrupt().is_none() {
                 self.stop();
                 return RunStopReason::Halted;
             }
