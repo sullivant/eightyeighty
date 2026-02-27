@@ -1,6 +1,12 @@
 export component EmulatorDisplay inherits Rectangle {
     in property <image> frame;
+    in property <float> scale: 2.0;
 
+    private property <length> base-width: 224px;
+    private property <length> base-height: 256px;
+
+    width: base-width * scale;
+    height: base-height * scale;
     background: black;
 
     Image {
