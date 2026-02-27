@@ -19,9 +19,6 @@ const WINDOW_SIZE_BYTES: usize = 256;
 const CYCLES_PER_FRAME: u64 = 33_333; // Will hopefully work out around 2MHZ
 const HALF_CYCLES_PER_FRAME: u64 = 16_667; // For dealing with RST1 and RST2
 
-const HIGHLIGHT_PC: Color = Color::from_rgb_u8(249, 203, 229);
-const HIGHLIGHT_SP: Color = Color::from_rgb_u8(149, 215, 246);
-
 struct HardwareProxy {
     hardware: Rc<RefCell<MidwayHardware>>,
 }
@@ -541,6 +538,8 @@ fn update_memory_view(
     let mem_data = ui.global::<MemoryViewData>();
     let mut view_highlights: Vec<CellHighlight> = Vec::new(); // Contains cells to highlight in this view, maybe...
 
+    let theme_data = ui.global::<Theme>();
+    
     let emu = emu.borrow();
     let memory = emu.bus.memory().get_data();
     let mem_len = memory.len();
@@ -606,8 +605,8 @@ fn update_memory_view(
         view_highlights.push(CellHighlight {
             row: (offset / bytes_per_row) as i32,
             col: (offset % bytes_per_row) as i32,
-            highlight_color: HIGHLIGHT_PC,
-            text_color: Color::from_rgb_u8(160, 0, 74),
+            highlight_color: theme_data.get_pc_cell(),
+            text_color: theme_data.get_pc_cell_text(),
         });
     }
 
@@ -618,8 +617,8 @@ fn update_memory_view(
         view_highlights.push(CellHighlight {
             row: (offset / bytes_per_row) as i32,
             col: (offset % bytes_per_row) as i32,
-            highlight_color: HIGHLIGHT_SP,
-            text_color: Color::from_rgb_u8(160, 0, 74),
+            highlight_color: theme_data.get_sp_cell(),
+            text_color: theme_data.get_sp_cell_text(),
         })
     }
 
