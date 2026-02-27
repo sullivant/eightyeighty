@@ -1,3 +1,10 @@
+export struct CellHighlight {
+    row: int,
+    col: int,
+    highlight-color: color,
+    text-color: color,
+}
+
 export global AppLogic {
     // This contains fns for general, over-all app control things.
     // 
@@ -20,5 +27,5 @@ export global AppLogic {
     pure callback previous_page();
     pure callback next_page();
     pure callback goto_location(string);
-
+    pure callback get-cell-highlight(row: int, col: int) -> CellHighlight; // For gathering mem cell highlighting
 }

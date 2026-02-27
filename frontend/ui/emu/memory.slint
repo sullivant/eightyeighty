@@ -1,9 +1,10 @@
 import { ScrollView, Button, LineEdit } from "std-widgets.slint";
 import { Theme } from "../theme.slint";
-import { AppLogic } from "../globals.slint";
+import { AppLogic, CellHighlight } from "../globals.slint";
 import { ChevronLeftIcon, ChevronRightIcon, RotateCcwIcon, SquareArrowLeftIcon, FolderOpenIcon} from "@lucide"; 
 // import { RotateCcwIcon } from "@lucide";
 import { ControlButton } from "../components/controlbutton.slint";
+
 
 export global MemoryViewData {
     in property<[string]> addresses;       // formatted address per row
@@ -13,19 +14,8 @@ export global MemoryViewData {
     in property<int> pcCol;
     in property<int> windowStartAddress;
     in property<int> windowSize;
+    in property<[CellHighlight]> highlights;
 }
-
-// component ControlButton inherits Rectangle {
-//     // in property<string> text;
-//     in property<image> icon;
-    
-//     border-radius: Theme.radius;
-//     width: 64px;
-//     height: 32px;
-    
-//     border-width: Theme.border-width;
-//     border-color: Theme.border-color;
-// }
 
 export component MemoryView inherits Window {
     width: 900px;
@@ -129,14 +119,16 @@ export component MemoryView inherits Window {
                                 height: 20px;
                                 border-radius: Theme.radius-thin;
 
-                                background: (row == MemoryViewData.pcRow && col == MemoryViewData.pcCol) ? Theme.pc-cell : Theme.cell;
+                                // background: (row == MemoryViewData.pcRow && col == MemoryViewData.pcCol) ? Theme.pc-cell : Theme.cell;
+                                background: AppLogic.get-cell-highlight(row, col).highlight-color;
 
                                 Text {
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                     font-family: "monospace";
                                     font-size: 11px;
-                                    color: (row == MemoryViewData.pcRow && col == MemoryViewData.pcCol) ? Theme.pc-cell-text : Theme.text;
+                                    // color: (row == MemoryViewData.pcRow && col == MemoryViewData.pcCol) ? Theme.pc-cell-text : Theme.text;
+                                    color: AppLogic.get-cell-highlight(row, col).text-color;
                                     text: MemoryViewData.hexBytes[row][col];
                                 }
                             }

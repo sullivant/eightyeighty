@@ -4,8 +4,8 @@ import { StandardButton, Button, VerticalBox } from "std-widgets.slint";
 import { Theme } from "./theme.slint";
 
 // Import the global app logic, and then export it so build.rs picks it up, too.
-import { AppLogic } from "./globals.slint";
-export { AppLogic }
+import { AppLogic, CellHighlight } from "./globals.slint";
+export { AppLogic, CellHighlight }
 
 // Components making up the main UI 
 import { EmulatorRegisters, Registers } from "./emu/registers.slint";
@@ -101,17 +101,6 @@ export component MainWindow inherits Window {
                 }
         }
             
-        // Rectangle {
-        //     col: 0;
-        //     row: 0;
-        //     rowspan: 5;
-        //     width: 60%;
-        //     height: 100%;
-        //     background: red;
-        //     Text {
-        //         text: "Display";
-        //     }            
-        // }
         Rectangle {
             col: 1;
             row: 0;

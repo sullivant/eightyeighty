@@ -10,7 +10,7 @@ use rfd::FileDialog;
 use emulator::bus::IoDevice;
 use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 use emulator::{self, Emulator, RunState, RunStopReason};
-use slint::{ToSharedString, VecModel};
+use slint::{Color, ToSharedString, VecModel};
 use slint::{ModelRc, SharedString};
 use slint::{SharedPixelBuffer, Rgba8Pixel, Image}; // For wiring in display for now.  Later we'll wire into hardware/midway.rs
 
@@ -49,6 +49,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let ui = MainWindow::new()?;
     let ui_weak_all = ui.as_weak();
     let ui_weak_details = ui.as_weak();
+    let ui_weak_highlights = ui.as_weak();
 
     // Gather a connection to the MidwayHardware to be used in the EMU
     let hardware = Rc::new(RefCell::new(MidwayHardware::new()));
@@ -63,6 +64,8 @@ fn main() -> Result<(), slint::PlatformError> {
     // For handling of the memory window
     let memory_window: Rc<RefCell<Option<MemoryView>>> = Rc::new(RefCell::new(None));
     let memory_weak: Rc<RefCell<Option<slint::Weak<MemoryView>>>> = Rc::new(RefCell::new(None));
+    let highlights: Rc<RefCell<Vec<CellHighlight>>> = Rc::new(RefCell::new(Vec::<CellHighlight>::new()));
+
 
     // A timer that allows periodic syncing
     let ui_weak_sync = ui.as_weak();
@@ -150,17 +153,18 @@ fn main() -> Result<(), slint::PlatformError> {
     let window_start_for_mem = window_start_addr.clone();
     let memory_weak_timer = memory_weak.clone();
     let emu_for_display = emu.clone();
+    let hl_for_timer = highlights.clone();
     memory_timer.start(
         slint::TimerMode::Repeated,
         Duration::from_secs(1), // 1 FPS
         move || {
-
+            let hl = hl_for_timer.clone();
             //TODO: May want to care here about if the memory view window is displayed - no need to update if it is not.
 
             let start = *window_start_for_mem.borrow();
 
             if let Some(weak) = memory_weak_timer.borrow().as_ref() {
-                update_memory_view(weak, &emu_for_mem_timer, start, WINDOW_SIZE_BYTES);
+                update_memory_view(weak, &emu_for_mem_timer, start, WINDOW_SIZE_BYTES, hl);
             }
         }
     );
@@ -233,7 +237,9 @@ fn main() -> Result<(), slint::PlatformError> {
     let emu_for_step = emu.clone();
     let window_step = window_for_actions.clone();
     let memory_weak_step = memory_weak.clone();
+    let hl_for_step = highlights.clone();
     ui.global::<AppLogic>().on_cb_step(move || {
+        let hl = hl_for_step.clone();
         {
             let mut emu = emu_for_step.borrow_mut();
             emu.step();  
@@ -241,21 +247,23 @@ fn main() -> Result<(), slint::PlatformError> {
         // Refresh memory view
         let start = *window_step.borrow();
         if let Some(weak) = memory_weak_step.borrow().as_ref() {
-            update_memory_view(weak, &emu_for_step, start, WINDOW_SIZE_BYTES);
+            update_memory_view(weak, &emu_for_step, start, WINDOW_SIZE_BYTES, hl);
         }
     });
 
     let emu_for_reset = emu.clone();
     let window_reset: Rc<RefCell<usize>> = window_for_actions.clone();
     let memory_weak_reset = memory_weak.clone();
+    let hl_for_reset = highlights.clone();
     ui.global::<AppLogic>().on_cb_reset(move || {
+        let hl = hl_for_reset.clone();
         {
             let mut emu = emu_for_reset.borrow_mut();
             emu.reset().unwrap();
         }
         let start = *window_reset.borrow();
         if let Some(weak) = memory_weak_reset.borrow().as_ref() {
-            update_memory_view(weak, &emu_for_reset, start, WINDOW_SIZE_BYTES);
+            update_memory_view(weak, &emu_for_reset, start, WINDOW_SIZE_BYTES, hl);
         }
     });
 
@@ -268,7 +276,9 @@ fn main() -> Result<(), slint::PlatformError> {
     let emu_for_stop = emu.clone();
     let window_stop = window_for_actions.clone();
     let memory_weak_stop = memory_weak.clone();
+    let hl_for_stop = highlights.clone();
     ui.global::<AppLogic>().on_cb_stop(move || {
+        let hl = hl_for_stop.clone();
         {
             let mut emu = emu_for_stop.borrow_mut();
             emu.set_run_state(RunState::Stopped);
@@ -276,7 +286,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
         let start = *window_stop.borrow();
         if let Some(weak) = memory_weak_stop.borrow().as_ref() {
-            update_memory_view(weak, &emu_for_stop, start, WINDOW_SIZE_BYTES);
+            update_memory_view(weak, &emu_for_stop, start, WINDOW_SIZE_BYTES, hl);
         }
     });
 
@@ -360,8 +370,15 @@ fn main() -> Result<(), slint::PlatformError> {
     let window_start_addr_for_memory = window_start_addr.clone();
     let memory_window_clone = memory_window.clone();
     let memory_weak_clone = memory_weak.clone();
+    let highlights_for_memory = highlights.clone();
     ui.global::<AppLogic>().on_cb_show_memory(move || {
-        // let win_ref: &MemoryView;
+
+        // Clones for use in each of the closures here.
+        let hl_prev = highlights_for_memory.clone();
+        let hl_next = highlights_for_memory.clone();
+        let hl_goto = highlights_for_memory.clone();
+        let hl_cells = highlights_for_memory.clone();
+
 
         {
             let mut slot = memory_window_clone.borrow_mut();
@@ -374,16 +391,16 @@ fn main() -> Result<(), slint::PlatformError> {
                     let emu_prev = emu_for_memory.clone();
                     let window_prev = window_start_addr_for_memory.clone();
                     let memory_weak_prev = memory_weak_clone.clone();
-
                     new_win.global::<AppLogic>().on_previous_page(move || {
                         let mut start = window_prev.borrow_mut();
+                        let hl = hl_prev.clone();
                         if *start >= WINDOW_SIZE_BYTES {
                             *start -= WINDOW_SIZE_BYTES;
                         } else {
                             *start = 0;
                         }
                         if let Some(weak) = memory_weak_prev.borrow().as_ref() {
-                            update_memory_view(weak, &emu_prev, *start, WINDOW_SIZE_BYTES);
+                            update_memory_view(weak, &emu_prev, *start, WINDOW_SIZE_BYTES, hl);
                         }
                     });
                 }
@@ -395,6 +412,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     let mem_len = emu_next.borrow().bus.memory().get_data().len();
                     new_win.global::<AppLogic>().on_next_page(move || {
                         let mut start = window_next.borrow_mut();
+                        let hl = hl_next.clone();
 
                         if *start + WINDOW_SIZE_BYTES < mem_len {
                             *start += WINDOW_SIZE_BYTES;
@@ -404,7 +422,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             *start = mem_len.saturating_sub(WINDOW_SIZE_BYTES);
                         }
                         if let Some(weak) = memory_weak_next.borrow().as_ref() {
-                            update_memory_view(weak, &emu_next, *start, WINDOW_SIZE_BYTES);
+                            update_memory_view(weak, &emu_next, *start, WINDOW_SIZE_BYTES, hl);
                         }
                     });
                 }
@@ -415,9 +433,8 @@ fn main() -> Result<(), slint::PlatformError> {
                     let window_goto = window_start_addr_for_memory.clone();
                     let memory_weak_goto = memory_weak_clone.clone();
                     let mem_len = emu_goto.borrow().bus.memory().get_data().len();
-                    
                     new_win.global::<AppLogic>().on_goto_location(move |text| {
-
+                        let hl = hl_goto.clone();
                         let text = text.trim();
 
                         if text.is_empty() {
@@ -446,7 +463,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                 }
 
                                 if let Some(weak) = memory_weak_goto.borrow().as_ref() {
-                                    update_memory_view(weak, &emu_goto, page_start, WINDOW_SIZE_BYTES);
+                                    update_memory_view(weak, &emu_goto, page_start, WINDOW_SIZE_BYTES, hl);
                                 }
                             }
 
@@ -458,6 +475,29 @@ fn main() -> Result<(), slint::PlatformError> {
                     } );
 
                 }
+                
+                // Callback for handling the highlighting of cells
+                {
+                    // This handles returning a struct of things to highlight in the memory view.  Such
+                    // as PC, SP, breakpoints, etc.
+                    // let emu_for_highlight = emu.clone();
+                    // let value = ui_weak_highlights.clone();
+                    new_win.global::<AppLogic>().on_get_cell_highlight(move |r: i32, c: i32| {
+                        let hl = hl_cells.clone();
+
+                        hl.borrow().iter()
+                            .find(|h| h.row == r && h.col == c)
+                            .cloned() // So we get a real struct back to the caller in Slint
+                            .unwrap_or(CellHighlight {
+                                row: -1,
+                                col: -1,
+                                highlight_color: Color::from_rgb_u8(250, 247, 245), 
+                                text_color: Color::from_rgb_u8(41, 19, 52),  
+                            })
+                    });
+                }
+
+
 
                 *memory_weak_clone.borrow_mut() = Some(new_win.as_weak());
                 *slot = Some(new_win);
@@ -474,8 +514,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let emu_first = emu.clone();
         let window_first = window_start_addr.clone();
         let start = window_first.borrow();
+        let hl_start = highlights.clone();
         if let Some(weak) = memory_weak.borrow().as_ref() {
-            update_memory_view(weak, &emu_first, *start, WINDOW_SIZE_BYTES);
+            update_memory_view(weak, &emu_first, *start, WINDOW_SIZE_BYTES, hl_start);
         }
     }
     slint::run_event_loop()?;
@@ -489,6 +530,7 @@ fn update_memory_view(
     emu: &Rc<RefCell<Emulator>>,
     window_start: usize,
     window_size: usize,
+    highlights: Rc<RefCell<Vec<CellHighlight>>>,
 ) {
     let Some(ui) = ui_weak.upgrade() else {
         return;
@@ -496,6 +538,7 @@ fn update_memory_view(
 
     // The props that are in the actual memory view.
     let mem_data = ui.global::<MemoryViewData>();
+    let mut view_highlights: Vec<CellHighlight> = Vec::new(); // Contains cells to highlight in this view, maybe...
 
     let emu = emu.borrow();
     let memory = emu.bus.memory().get_data();
@@ -557,15 +600,30 @@ fn update_memory_view(
 
     // Highlight PC
     let pc = emu.cpu.pc;
-
     if pc >= start && pc < end {
         let offset = pc - start;
-        mem_data.set_pcRow((offset / bytes_per_row) as i32);
-        mem_data.set_pcCol((offset % bytes_per_row) as i32);
-    } else {
-        mem_data.set_pcRow(-1);
-        mem_data.set_pcCol(-1);
+        view_highlights.push(CellHighlight {
+            row: (offset / bytes_per_row) as i32,
+            col: (offset % bytes_per_row) as i32,
+            highlight_color: Color::from_rgb_u8(249, 203, 229),
+            text_color: Color::from_rgb_u8(160, 0, 74),
+        });
     }
+
+    // And update the slint side to contain the latest version of stuff to highlight.
+    // It will be used later in the handler for on_get_cell_highlight
+    *highlights.borrow_mut() = view_highlights.clone();
+    mem_data.set_highlights(ModelRc::new(VecModel::from(view_highlights)));
+
+
+    // if pc >= start && pc < end {
+    //     let offset = pc - start;
+    //     mem_data.set_pcRow((offset / bytes_per_row) as i32);
+    //     mem_data.set_pcCol((offset % bytes_per_row) as i32);
+    // } else {
+    //     mem_data.set_pcRow(-1);
+    //     mem_data.set_pcCol(-1);
+    // }
 
     mem_data.set_windowStartAddress(start as i32);
     mem_data.set_windowSize(window_size as i32);
