@@ -19,6 +19,9 @@ const WINDOW_SIZE_BYTES: usize = 256;
 const CYCLES_PER_FRAME: u64 = 33_333; // Will hopefully work out around 2MHZ
 const HALF_CYCLES_PER_FRAME: u64 = 16_667; // For dealing with RST1 and RST2
 
+const HIGHLIGHT_PC: Color = Color::from_rgb_u8(249, 203, 229);
+const HIGHLIGHT_SP: Color = Color::from_rgb_u8(149, 215, 246);
+
 struct HardwareProxy {
     hardware: Rc<RefCell<MidwayHardware>>,
 }
@@ -480,8 +483,6 @@ fn main() -> Result<(), slint::PlatformError> {
                 {
                     // This handles returning a struct of things to highlight in the memory view.  Such
                     // as PC, SP, breakpoints, etc.
-                    // let emu_for_highlight = emu.clone();
-                    // let value = ui_weak_highlights.clone();
                     new_win.global::<AppLogic>().on_get_cell_highlight(move |r: i32, c: i32| {
                         let hl = hl_cells.clone();
 
@@ -605,9 +606,21 @@ fn update_memory_view(
         view_highlights.push(CellHighlight {
             row: (offset / bytes_per_row) as i32,
             col: (offset % bytes_per_row) as i32,
-            highlight_color: Color::from_rgb_u8(249, 203, 229),
+            highlight_color: HIGHLIGHT_PC,
             text_color: Color::from_rgb_u8(160, 0, 74),
         });
+    }
+
+    // Highlight SP
+    let sp = usize::from(emu.cpu.sp);
+    if sp > 0 && sp >= start && sp < end {
+        let offset = sp - start;
+        view_highlights.push(CellHighlight {
+            row: (offset / bytes_per_row) as i32,
+            col: (offset % bytes_per_row) as i32,
+            highlight_color: HIGHLIGHT_SP,
+            text_color: Color::from_rgb_u8(160, 0, 74),
+        })
     }
 
     // And update the slint side to contain the latest version of stuff to highlight.
