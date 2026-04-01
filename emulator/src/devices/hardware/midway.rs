@@ -1,5 +1,5 @@
 use crate::devices::io::{InputLatch, ShiftRegister};
-use crate::bus::IoDevice;
+use crate::bus::{DisplayConfig, IoDevice};
 
 /// This is the hardware configuration available for a Midway 8080 (Space Invaders) system
 #[derive(Debug)]
@@ -21,6 +21,15 @@ pub struct MidwayHardware {
 }
 
 impl IoDevice for MidwayHardware {
+    // Describe our display configuration
+    fn display_config(&self) -> Option<DisplayConfig> {
+        Some(DisplayConfig {
+            width: 224,
+            height: 256,
+            vram_start: 0x2400, // Space Invaders VRAM
+        })
+    }
+
     fn input(&mut self, port: u8) -> u8 {
         match port {
             0 => self.input_latch0.read(),

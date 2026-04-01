@@ -42,6 +42,8 @@ impl IoDevice for HardwareProxy {
     fn clear_bit(&mut self, port: u8, bit: u8) {
         self.hardware.borrow_mut().clear_bit(port, bit);
     }
+
+    // There is no display here, using the "none" setup in the initial trait is fine.
 }
 
 struct Keyboard {

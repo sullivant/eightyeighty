@@ -1,6 +1,14 @@
 use crate::memory::Memory;
 
-// For mapping I/O devices
+// For describing video configuration if necessary
+#[derive(Debug, Clone, Copy)]
+pub struct DisplayConfig {
+    pub width: usize,
+    pub height: usize,
+    pub vram_start: u16, // fits 8080 address space
+}
+
+// For mapping I/O devices and hardware
 pub trait IoDevice {
     // Standard generic 
     fn input(&mut self, port: u8) -> u8;
@@ -10,6 +18,11 @@ pub trait IoDevice {
     fn set_port(&mut self, port: u8, value: u8);
     fn set_bit(&mut self, port: u8, bit: u8);
     fn clear_bit(&mut self, port: u8, bit: u8);
+
+    // Display detail
+    fn display_config(&self) -> Option<DisplayConfig> {
+        None // NullDevice, headless configs, etc.
+    }
 }
 
 // Null Device will do... nothing.

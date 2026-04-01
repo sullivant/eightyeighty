@@ -5,7 +5,6 @@ mod constants;
 pub mod cpu;
 pub mod bus;
 mod memory;
-mod video;
 pub mod devices;
 
 use std::collections::HashSet;

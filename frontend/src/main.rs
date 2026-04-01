@@ -7,14 +7,14 @@ use std::time::Duration;
 use rfd::FileDialog;
 
 // Allows for integration with the running system as if it was MidwayHardware.
-use emulator::bus::IoDevice;
+use emulator::bus::{DisplayConfig, IoDevice};
 use emulator::devices::hardware::midway::{MidwayHardware, MidwayInput};
 use emulator::{self, Emulator, RunState, RunStopReason};
 use slint::{Color, ToSharedString, VecModel};
 use slint::{ModelRc, SharedString};
 use slint::{SharedPixelBuffer, Rgba8Pixel, Image}; // For wiring in display for now.  Later we'll wire into hardware/midway.rs
 
-const WINDOW_SIZE_BYTES: usize = 256;
+const WINDOW_SIZE_BYTES: usize = 256; // The size of our memory viewing window.  
 
 const CYCLES_PER_FRAME: u64 = 33_333; // Will hopefully work out around 2MHZ
 const HALF_CYCLES_PER_FRAME: u64 = 16_667; // For dealing with RST1 and RST2
@@ -39,6 +39,9 @@ impl IoDevice for HardwareProxy {
     }
     fn clear_bit(&mut self, port: u8, bit: u8) {
         self.hardware.borrow_mut().clear_bit(port, bit);
+    }
+    fn display_config(&self) -> Option<DisplayConfig> {
+        self.hardware.borrow().display_config()
     }
 }
 
@@ -226,7 +229,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 let emu = emu_for_display.borrow();
 
                 let frame = build_frame_from_vram(&emu);
-                ui.set_frame(frame);
+                if frame.is_some() {
+                    ui.set_frame(frame.unwrap());
+                }
             }
         }
     });
@@ -684,24 +689,24 @@ fn load_rom_file(path: &str) -> Result<Vec<u8>, io::Error> {
 }
 
 
-fn build_frame_from_vram(emu: &Emulator) -> Image {
-    const WIDTH: usize = 224;
-    const HEIGHT: usize = 256;
-    const VRAM_START: usize = 0x2400;
-
+fn build_frame_from_vram(emu: &Emulator) -> Option<Image> {
+    let display_config = match emu.bus.io.display_config() {
+        Some(dc) => dc,
+        None => { return None; }
+    };
 
     let memory = emu.bus.memory().get_data();
 
     let mut buffer =
-        SharedPixelBuffer::<Rgba8Pixel>::new(WIDTH as u32, HEIGHT as u32);
+        SharedPixelBuffer::<Rgba8Pixel>::new(display_config.width as u32, display_config.height as u32);
 
     {
         let pixels = buffer.make_mut_slice();
 
-        for y in 0..HEIGHT {
-            for x in 0..WIDTH {
+        for y in 0..display_config.height {
+            for x in 0..display_config.width {
                 // Midway stores video rotated 90°
-                let byte_index = VRAM_START + (x * HEIGHT + y) / 8;
+                let byte_index = usize::from(display_config.vram_start) + (x * display_config.height + y) / 8;
                 let bit = (memory[byte_index] >> (y % 8)) & 1;
 
                 let color = if bit == 1 {
@@ -712,14 +717,14 @@ fn build_frame_from_vram(emu: &Emulator) -> Image {
 
                 // Slint buffer is row-major
                 // let idx = y * WIDTH + x;
-                let idx = (HEIGHT - 1 - y) * WIDTH + x;
+                let idx = (display_config.height - 1 - y) * display_config.width + x;
                 pixels[idx] = color;
             }
         }
     }
 
 
-    Image::from_rgba8(buffer)
+    Some(Image::from_rgba8(buffer))
 }
 
 fn handle_input(hw: &Rc<RefCell<MidwayHardware>>, input: MidwayInput, pressed: bool) {
